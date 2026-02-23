@@ -1,146 +1,88 @@
 # RUNS: Record Update Network System
 
-🏠 **[DGS Overview](https://github.com/decentralized-game-standard)**  
-· 📦 **[AEMS](https://github.com/decentralized-game-standard/aems-standard)**  
-· ⚡ **[WOCS](https://github.com/decentralized-game-standard/wocs-standard)**  
-· 🔤 **[Ludic](https://github.com/decentralized-game-standard/ludic-notation-standard)**  
+🏠 **[DGS Overview](https://github.com/decentralized-game-standard)**
+· 📦 **[AEMS](https://github.com/decentralized-game-standard/aems-standard)**
+· ⚡ **[WOCS](https://github.com/decentralized-game-standard/wocs-standard)**
+· 🎭 **[MAPS](https://github.com/decentralized-game-standard/ludic-notation-standard)**
 · ❓ **[FAQ](https://github.com/decentralized-game-standard/.github/blob/main/profile/FAQ.md)**
 
-> **Status**: Draft / RFC  
+> **Status**: Draft / RFC
 > **Version**: 0.1.0
 
-## The Neutral Substrate for Enduring Games
+In 1956, a trucker named Malcom McLean loaded fifty-eight aluminum containers onto a converted oil tanker in Newark, New Jersey. Before that day, loading a ship took a week. Longshoremen carried each crate by hand. Every piece of cargo was a different shape, handled by different procedures, loaded by different equipment. After containers, loading took hours. Any crane could lift the box. Any ship could carry it. Any truck could haul it. The contents varied wildly — furniture, grain, electronics — but the interface was uniform. Containerization did not make shipping faster because the ships got bigger. It made shipping faster because the *shape became standard*, and everything built around that shape became interchangeable.
 
-**RUNS** (Record Update Network System) is the execution model that enables games to outlive engines, companies, and hardware cycles.
+Game engines today are pre-container cargo ships. Physics, rendering, input, audio, networking, and AI are packed into a single monolithic hull by hand. Each engine loads its cargo differently. Swap the physics? Rewrite the coupling to rendering. Swap the renderer? Rewrite the coupling to input. When the engine company moves on, the entire ship sinks, cargo and all. Every mod is restricted to hooks the engine explicitly exposes. Every game is fused to the lifespan of its engine.
 
-Inspired by Unix pipes and data-oriented design, RUNS treats game engines as composable data-flow graphs: uniform **Records** hold state, stateless **Processors** transform data, and explicit **Networks** wire everything together. Components evolve independently—mods become native extensions, obsolescence in one layer never cascades, and diverse runtimes (minimal web builds to high-performance native) share the same ecosystem like Linux modules.
+RUNS standardizes the container.
 
-RUNS is not a full engine or rule language. It is the minimal "kernel" layer: a neutral substrate for transforming data, with game-specific logic implemented in swappable Processors and coordinated across the broader Decentralized Game Standard (DGS).
+## The Model
 
-For extreme longevity and permissionless distribution, distributable artifacts—Networks, Records, Processors, and ecosystem packages—are plain-text Nostr events by convention. This ensures seamless, tamper-proof replication across relays without binaries, central hosting, or gatekeepers. Provenance chains through note IDs enable self-describing data that survives centuries.
+RUNS has five concepts. Each one earns its existence by doing exactly one thing.
 
-## Why RUNS?
+**Records** are the containers. Generic data holders with IDs and typed Fields. A Record might hold a character's position, a projectile's velocity, a door's lock state. The Record does not know what uses it. It holds data in a standard shape that any Processor can read.
 
-Current engines are monolithic and fragile:
+**Fields** are the contents inside the container. Typed values: a float for position_x, an integer for health, a boolean for is_locked. Fields can be ultra-granular primitives or bundled composites. The level of granularity is a design choice, not a protocol constraint.
 
-- Inheritance of one company's physics, rendering, and fate.
-- Mods limited to restricted scripting.
-- States tied to dying executables.
+**Processors** are the cranes and trucks. Stateless transformations that read Fields, operate on them, and write results to Fields. A physics Processor reads position and velocity, applies forces, writes new position and velocity. A render Processor reads position and sprite data, draws pixels. The Processors share nothing with each other except the Records they read from and write to. Any Processor that reads the correct Field names and types can plug into any system that writes them.
 
-RUNS unbundles everything:
+**Networks** are the shipping routes. Explicit wiring that connects Processors into data-flow chains. Input Processor → Intent Fields → Movement Processor → Transform Fields → Render Processor → Screen. The wiring is declared, not implicit. You can read a Network and trace exactly where every piece of data flows.
 
-- **Universal Modding** — Mods are new Processors or Network extensions with full privileges.
-- **Extreme Portability** — Logic runs on any compliant runtime (web, desktop, embedded).
-- **Cultural Permanence** — Serializable Records and plain-text Networks allow states to migrate across decades—resume a game long after the original runtime is gone.
-- **True Interoperability** — Shared data shapes let Processors from different developers compose freely.
-- **Permissionless Ecosystem** — Plain-text Nostr events enable decentralized discovery, forking, and coordination.
-- **Rapid Remix Prototyping** — High-level bundles (e.g., `hades:combat` + `zelda-2d:map`) resolve dynamically for instant playable sketches, then flatten to optimized binaries for polished release.
-
-## The Mental Model
-
-1. **Records** — The atoms: generic containers (entities) with IDs and Fields of state.
-2. **Fields** — The data: typed values on Records, from ultra-granular primitives (e.g., `position_x`) to bundled composites.
-3. **Processors** — The logic: pure, stateless transformations reading/writing Fields. Granular like syscalls or hierarchically bundled.
-4. **Networks** — The graph: explicit wiring of Processors into data-flow chains. Networks can bundle into higher-scale "meta-Processors" for multi-level composition.
-5. **Runtimes** — The executor: loads Networks, manages scheduling, handles input/output. Two-tier execution: dynamic resolution for prototyping/remix, compile-time flattening for per-platform performance binaries.
-
-Example simple loop:
+**Runtimes** are the ports. They load Networks, schedule Processors, and handle the boundary between the data-flow graph and the outside world (screens, speakers, input devices, clocks). Different runtimes serve different purposes: a minimal web interpreter for prototyping, a high-performance native build for shipping, a headless server for multiplayer. All of them run the same Networks.
 
 ```
 [Input Events] → (Input Processor) → [Intent Fields] → (Movement Processor) → [Transform Fields] → (Render Processor) → Screen
 ```
 
-Swap a naive Movement Processor for a full physics bundle? The chain remains intact as long as shared Fields match.
+Swap the Movement Processor for a full physics bundle. The chain stays intact because the data shape between nodes hasn't changed. The container fits the crane.
 
-## What RUNS Enables
+## What This Makes Possible
 
-- **Multi-Scale Composition** — Primitives wire into mid-level bundles (e.g., velocity integration from raw axes), which bundle into systems (e.g., character controller), all remaining uniform Processors with provenance chains to the atoms.
-- **Diverse Runtimes** — Minimal interpreters prioritize portability; pro implementations fuse graphs for bleeding-edge performance—all from the same Networks.
-- **Commons of Remixable Pigments** — Ultra-granular primitives bundle into reusable composites (like master painters mixing paints), distributed as Nostr events. Communities remix ad nauseam—prototype novel games in hours by combining high-level bundles, then build to optimized executables.
-- **DGS Integration** — WOCS coordinates Processor services and curation; AEMS provides entity definitions via parallel Nostr ecosystem; Nostr distributes plain-text packages permissionlessly.
+A modder writes a weather Processor in 2026. It reads `runs:time` and `runs:transform`, writes `weather:precipitation` and `weather:wind_direction`. In 2036, someone wires that Processor into a game that does not yet exist, running on a runtime that has not yet been built, deployed to hardware that has not yet been manufactured. The Processor still works. It reads Fields. It writes Fields. The contract is the data shape, and data shapes have no expiration date.
 
-## What RUNS Deliberately Excludes
+Mods are Processors. Not sandboxed scripts operating through a restricted API. Full Processors with the same privileges as any factory-shipped component. A modder adds a gravity Processor. A different modder adds a grappling hook Processor. A third modder wires them together in a new Network. The result is a game mechanic that none of them individually authored, assembled from parts that compose because they share a standard data interface.
 
-RUNS stays restrained and neutral:
-
-- No default renderer, physics, or input model.
-- No scripting language—Networks are the composition script.
-- No object hierarchy—pure data composition.
-- No network transport—focus on local-first state diffs.
-- No runtime dependency resolution—handled by tooling (dynamic for dev, static flattening for builds).
+A designer prototypes a new game by composing high-level bundles: a combat system from one community, a map system from another, an inventory system from a third. Each bundle is a Network of Processors published as a plain-text Nostr event. The designer wires the bundles together, and the prototype is playable within hours. When the game matures, the same Networks flatten to optimized platform-specific binaries. The prototype and the production build share the same graph. No rewrite.
 
 ## Namespace Conventions
 
-Field and Processor keys are namespaced strings (e.g., `prefix:name`). This prevents collisions in a fully compositional, decentralized ecosystem.
+Field and Processor keys use namespaced strings (`prefix:name`) to prevent collisions in a fully decentralized ecosystem.
 
-### Non-Negotiable Rules (Protocol Level)
+The `runs:` prefix is reserved exclusively for the RUNS Protocol and Standard Library. Runtimes claiming RUNS compliance must implement standard `runs:` schemas with exact keys, field names, types, and semantics. Core `runs:` schemas are pinned to this specification and the [Standard Library](https://github.com/decentralized-game-standard/runs-standard-library). Additions require RFC and overwhelming justification for universality.
 
-- The `runs:` prefix is **reserved exclusively and forever** for the RUNS Protocol and Standard Library schemas.
-- No exceptions, no grandfathering, no custom usage allowed.
-- Runtimes claiming RUNS compliance **must** implement standard `runs:` schemas with exact keys, field names, types, and semantics.
-- Deviation means the runtime or package opts out of the shared ecosystem entirely.
-- Core `runs:` schemas are pinned to this specification and the Standard Library repo. Additions require RFC and overwhelming justification for universality.
+Third-party bundles use their own short, human-readable prefixes as reusable brands (e.g., `pong:`, `hades:`, `zelda-oot:`). Bundles are published as plain-text Nostr events with a manifest:
 
-### Recommended Conventions (Ecosystem Bundles)
+```json
+{
+  "umbrella": "pong:",
+  "version": "1.4.3",
+  "note_id": "note1xyz...abc",
+  "previous_note_id": "note1def...456",
+  "author_npub": "npub1...",
+  "components": ["health", "velocity"],
+  "dependencies": {}
+}
+```
 
-Third-party bundles **must not** use `runs:`. Instead:
+Data uses clean keys: `{ "pong:health": 100 }`. Tooling resolves prefixes via manifests, detects conflicts, and enables aliasing. Bundles chain provenance via dependencies and note IDs, producing self-describing artifacts from high-level systems down to granular primitives.
 
-- Use short, human-readable **umbrella prefixes** as reusable brands (e.g., `pong:`, `hades:`, `zelda-oot:`).
-- Publish as **plain-text Nostr events** with a manifest anchoring the umbrella:
-  ```json
-  {
-    "umbrella": "pong:",                  // Reusable brand prefix (required)
-    "version": "1.4.3",                    // Semantic version (required)
-    "note_id": "note1xyz...abc",           // This event's ID (content-addressed anchor, required)
-    "previous_note_id": "note1def...456",  // Optional lineage
-    "author_npub": "npub1...",             // Optional provenance
-    "components": ["health", "velocity"],  // Exported fields/processors (required)
-    "dependencies": { /* umbrella@version or note IDs */ }
-  }
-  ```
-- Data uses clean keys: `{ "pong:health": 100 }`.
-- Tooling resolves prefixes via manifests—detects conflicts, enables aliasing.
-- Optional: Append `@version` to keys for explicit pinning in mixed compositions.
-- Bundles chain provenance via dependencies/note IDs—self-describing from high-level systems to granular primitives.
+## Architecture
 
-These conventions preserve readability while ensuring cryptographic safety and centuries-scale endurance.
+The protocol is the eternal kernel: unbreakable rules ensuring interoperability and decentralization. No default renderer, physics, or input model. No scripting language. No object hierarchy. No network transport. Networks are the composition mechanism.
 
-## Architecture: Purity in the Protocol, Flexibility in the Library
+The [Standard Library](https://github.com/decentralized-game-standard/runs-standard-library) is the shared palette: curated, optional schemas (e.g., `runs:transform`, `runs:time`, `runs:input`) for instant interoperability across the ecosystem.
 
-### Protocol – The Eternal Kernel
+The ecosystem is where flexibility flourishes: community bundles targeting protocol shapes, distributed as Nostr events, coordinated and funded through WOCS.
 
-Unbreakable rules ensuring interoperability and decentralization.
+## Integration
 
-### Standard Library – The Shared Palette
+| Standard | Role | Relationship |
+|----------|------|-------------|
+| AEMS | Persistent entities | Entities import as Records; Manifestations configure Processors |
+| MAPS | Rule descriptions | Scores implemented as Processor Networks |
+| WOCS | Coordination and funding | Funds Processor development, relay hosting, bundle curation |
 
-Curated in [runs-standard-library](https://github.com/decentralized-game-standard/runs-standard-library): optional but encouraged schemas (e.g., `runs:transform`, `runs:time`) for instant interoperability.
+## Status
 
-### Ecosystem – Where Flexibility Flourishes
-
-Community bundles targeting Protocol shapes, distributed as Nostr events.
-
-## Integration with DGS Standards
-
-| Standard | Role                          | RUNS Relationship                          |
-|----------|-------------------------------|--------------------------------------------|
-| AEMS     | Persistent artifacts          | Referenced for entity data                 |
-| Ludic    | Rule descriptions             | Implemented via Processors                 |
-| WOCS     | Coordination/services/curation| Funds Processor development, relay hosting, and bundle ranking |
-
-## Comparison
-
-| Feature       | Unity/Unreal | Bevy/Flecs     | RUNS                                      |
-|---------------|--------------|----------------|-------------------------------------------|
-| Architecture  | Monolithic   | ECS (code-first)| Data-first neutral substrate              |
-| Interop       | Closed       | Language-locked| Universal plain-text Nostr-native shapes  |
-| Modding       | Restricted API| Compile-time plugins| Runtime Network injection            |
-| Permanence    | Engine-dependent| Binary-dependent| Data/Network portability across centuries|
-| Distribution  | Stores/platforms| Git/crates  | Permissionless (Nostr relays)             |
-
-## Summary
-
-RUNS is the durable socket for decentralized games: explicit, swappable, plain-text native, provenance-chained. Combined with DGS layers, it elevates game development to nuance—engineers engineer the substrate, designers remix enduring pigments into novel experiences that evolve indefinitely without capture.
-
-Implement a Processor. Wire a Network. Build something that endures.
+RUNS is a draft specification. No production runtimes exist. The protocol defines the minimal kernel for composable game execution. Everything above the kernel — specific renderers, physics systems, input models, and game logic — lives in Processors and Networks built by whoever finds them useful.
 
 **MIT License** — Open for implementation, extension, critique.
