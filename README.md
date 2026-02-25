@@ -1,10 +1,10 @@
 # RUNS: Record Update Network System
 
-🏠 **[DGS Overview](https://github.com/decentralized-game-standard)**  
-· 📦 **[AEMS](https://github.com/decentralized-game-standard/aems-standard)**  
-· ⚡ **[WOCS](https://github.com/decentralized-game-standard/wocs-standard)**  
-· 🔤 **[Ludic](https://github.com/decentralized-game-standard/ludic-notation-standard)**  
-· ❓ **[FAQ](https://github.com/decentralized-game-standard/.github/blob/main/profile/FAQ.md)**
+🏠 **[EGS Overview](https://github.com/enduring-game-standard)**  
+· 📦 **[AEMS](https://github.com/enduring-game-standard/aems-schema)**  
+· ⚡ **[WOCS](https://github.com/enduring-game-standard/wocs-protocol)**  
+· 🎭 **[MAPS](https://github.com/enduring-game-standard/maps-notation)**  
+· ❓ **[FAQ](https://github.com/enduring-game-standard/.github/blob/main/profile/FAQ.md)**
 
 > **Status**: Draft / RFC  
 > **Version**: 0.1.0
@@ -15,7 +15,7 @@
 
 Inspired by Unix pipes and data-oriented design, RUNS treats game engines as composable data-flow graphs: uniform **Records** hold state, stateless **Processors** transform data, and explicit **Networks** wire everything together. Components evolve independently—mods become native extensions, obsolescence in one layer never cascades, and diverse runtimes (minimal web builds to high-performance native) share the same ecosystem like Linux modules.
 
-RUNS is not a full engine or rule language. It is the minimal "kernel" layer: a neutral substrate for transforming data, with game-specific logic implemented in swappable Processors and coordinated across the broader Decentralized Game Standard (DGS).
+RUNS is not a full engine or rule language. It is the minimal "kernel" layer: a neutral substrate for transforming data, with game-specific logic implemented in swappable Processors and coordinated across the broader Enduring Game Standard (EGS).
 
 For extreme longevity and permissionless distribution, distributable artifacts—Networks, Records, Processors, and ecosystem packages—are plain-text Nostr events by convention. This ensures seamless, tamper-proof replication across relays without binaries, central hosting, or gatekeepers. Provenance chains through note IDs enable self-describing data that survives centuries.
 
@@ -57,7 +57,7 @@ Swap a naive Movement Processor for a full physics bundle? The chain remains int
 - **Multi-Scale Composition** — Primitives wire into mid-level bundles (e.g., velocity integration from raw axes), which bundle into systems (e.g., character controller), all remaining uniform Processors with provenance chains to the atoms.
 - **Diverse Runtimes** — Minimal interpreters prioritize portability; pro implementations fuse graphs for bleeding-edge performance—all from the same Networks.
 - **Commons of Remixable Pigments** — Ultra-granular primitives bundle into reusable composites (like master painters mixing paints), distributed as Nostr events. Communities remix ad nauseam—prototype novel games in hours by combining high-level bundles, then build to optimized executables.
-- **DGS Integration** — WOCS coordinates Processor services and curation; AEMS provides entity definitions via parallel Nostr ecosystem; Nostr distributes plain-text packages permissionlessly.
+- **EGS Integration** — WOCS coordinates Processor services and curation; AEMS provides entity definitions via parallel Nostr ecosystem; Nostr distributes plain-text packages permissionlessly.
 
 ## What RUNS Deliberately Excludes
 
@@ -113,18 +113,18 @@ Unbreakable rules ensuring interoperability and decentralization.
 
 ### Standard Library – The Shared Palette
 
-Curated in [runs-standard-library](https://github.com/decentralized-game-standard/runs-standard-library): optional but encouraged schemas (e.g., `runs:transform`, `runs:time`) for instant interoperability.
+Curated in [runs-library](https://github.com/enduring-game-standard/runs-library): optional but encouraged schemas (e.g., `runs:transform`, `runs:time`) for instant interoperability.
 
 ### Ecosystem – Where Flexibility Flourishes
 
 Community bundles targeting Protocol shapes, distributed as Nostr events.
 
-## Integration with DGS Standards
+## Integration with EGS
 
-| Standard | Role                          | RUNS Relationship                          |
+| Component | Role                          | RUNS Relationship                          |
 |----------|-------------------------------|--------------------------------------------|
 | AEMS     | Persistent artifacts          | Referenced for entity data                 |
-| Ludic    | Rule descriptions             | Implemented via Processors                 |
+| MAPS     | Rule descriptions             | Implemented via Processors                 |
 | WOCS     | Coordination/services/curation| Funds Processor development, relay hosting, and bundle ranking |
 
 ## Comparison
@@ -139,7 +139,7 @@ Community bundles targeting Protocol shapes, distributed as Nostr events.
 
 ## Summary
 
-RUNS is the durable socket for decentralized games: explicit, swappable, plain-text native, provenance-chained. Combined with DGS layers, it elevates game development to nuance—engineers engineer the substrate, designers remix enduring pigments into novel experiences that evolve indefinitely without capture.
+RUNS is the durable socket for enduring games: explicit, swappable, plain-text native, provenance-chained. Combined with EGS layers, it elevates game development to nuance—engineers engineer the substrate, designers remix enduring pigments into novel experiences that evolve indefinitely without capture.
 
 Implement a Processor. Wire a Network. Build something that endures.
 
