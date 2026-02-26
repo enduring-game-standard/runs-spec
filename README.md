@@ -3,7 +3,7 @@
 🏠 **[EGS Overview](https://github.com/enduring-game-standard)**  
 · 📦 **[AEMS](https://github.com/enduring-game-standard/aems-schema)**  
 · ⚡ **[WOCS](https://github.com/enduring-game-standard/wocs-protocol)**  
-· 🎭 **[MAPS](https://github.com/enduring-game-standard/maps-notation)**  
+· 🎼 **[MAPS](https://github.com/enduring-game-standard/maps-notation)**  
 · ❓ **[FAQ](https://github.com/enduring-game-standard/.github/blob/main/profile/FAQ.md)**
 
 > **Status**: Draft / RFC  
