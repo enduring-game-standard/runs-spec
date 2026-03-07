@@ -11,9 +11,9 @@
 
 ## A Composable Substrate for Enduring Games
 
-**RUNS** (Record Update Network System) is a composable, plain-text architecture for game execution. Stateless Processors transform Records through explicit Networks, giving games a neutral substrate designed to outlive any single engine, company, or hardware cycle.
+**RUNS** (Record Update Network System) is a composable, plain-text source format for game logic. Stateless Processors transform Records through explicit Networks, giving games a neutral substrate designed to outlive any single engine, company, or hardware cycle. RUNS source is compiled into platform-specific binaries by runtimes — the source endures on the commons; binaries are rebuilt for each new platform.
 
-RUNS treats game engines the way Unix treats operating systems: as pipelines of small, focused components wired together. Records hold state. Processors transform it. Networks define the wiring. Each piece evolves independently. Mods are not restricted scripts — they are Processors with full privileges. Obsolescence in one layer never cascades to another. Diverse runtimes, from minimal web builds to high-performance native, share the same ecosystem.
+RUNS treats game engines the way Unix treats operating systems: as pipelines of small, focused components wired together. Records hold state. Processors transform it. Networks define the wiring. Each piece evolves independently. Variation is native: anyone can open a Network, add or replace Processors, and compile a new variant — the same way anyone can play soccer with house rules. Obsolescence in one layer never cascades to another. Diverse runtimes, from minimal web builds to high-performance native, share the same ecosystem.
 
 RUNS components — Networks, Records, Processors, and ecosystem packages — are plain-text Nostr events by convention. This is not a deployment detail. Nostr is the commons: the mechanism by which composable game components become discoverable, inheritable, and remixable across generations. Provenance chains through note IDs ensure self-describing data that any future community can find, study, and build upon without permission.
 
@@ -24,12 +24,12 @@ RUNS is not a full engine or rule language. It is the minimal kernel layer: a ne
 Current engines are monolithic and fragile:
 
 - Inheritance of one company's physics, rendering, and fate.
-- Mods limited to restricted scripting.
+- Variation limited to restricted scripting APIs — if allowed at all.
 - Game logic locked inside opaque binaries that no one outside the studio can read, maintain, or learn from.
 
 RUNS unbundles everything:
 
-- **Universal Modding** — Mods are new Processors or Network extensions with full privileges.
+- **Natural Variation** — Anyone can open a Network, swap Processors, extend Records, and compile a variant. This is not modding — it is the composability that physical games have always had.
 - **Portability** — Logic runs on any compliant runtime (web, desktop, embedded).
 - **Interoperability** — Shared data shapes let Processors from different developers compose freely.
 - **Open Commons** — Plain-text Nostr events place components in an open commons where any developer can discover, inherit, and build upon them. The teenager who pulls a combat system from one game into her own project does not need the original studio's source code or permission.
@@ -37,10 +37,11 @@ RUNS unbundles everything:
 ## The Mental Model
 
 1. **Records** — The atoms: generic containers (entities) with IDs and typed Fields.
-2. **Fields** — The data: typed values attached to Records, from ultra-granular primitives (e.g., `runs:position_x`) to bundled composites (e.g., `runs:transform`). Fields define the shared vocabulary that makes composition possible.
+2. **Fields** — The data: typed values attached to Records, from ultra-granular primitives (e.g., `runs:position_x`) to bundled composites (e.g., `runs:transform`). The type system is open — Processors define whatever input/output shapes their logic requires. The [RUNS Library](https://github.com/enduring-game-standard/runs-library) recommends common shapes for interoperability, but these are a shared vocabulary, not a closed universe.
 3. **Processors** — The logic: pure, stateless transformations that read Fields and write Fields. A Processor has no side effects and no hidden state. It can be as granular as a vector addition or as bundled as a full character controller.
 4. **Networks** — The graph: explicit wiring of Processors into data-flow chains. Networks can bundle into higher-scale meta-Processors for multi-level composition.
-5. **Runtimes** — The executor: loads Networks, manages scheduling, handles input/output. A minimal interpreter prioritizes portability; a performance-focused implementation fuses graphs for native speed. Both run the same Networks.
+5. **Runtimes** — The compiler and executor: translates RUNS source (Networks, Records, Processors) into platform-specific builds, manages scheduling, and handles input/output. A minimal interpreter prioritizes portability; a performance-focused implementation compiles and fuses graphs for native speed. Both consume the same RUNS source.
+6. **Runtime Interface** — The declared boundary between a Network's game logic and its platform-dependent endpoints. A Network declares the Fields it requires from the runtime (input: timing, player commands) and the Fields it produces for the runtime (output: spatial state, visual state, audio triggers). Swapping one runtime for another leaves the game Network — and everything inside it — unchanged. This is not a new primitive; it is a naming convention on existing components that formalizes portability.
 
 Example loop:
 
@@ -90,7 +91,7 @@ Community bundles targeting protocol shapes, published as plain-text Nostr event
 
 ## Connection to Notation and Craft
 
-RUNS is the runtime complement to the [MAPS Notation](https://github.com/enduring-game-standard/maps-notation). The connection is concrete: States in notation become Records that RUNS processes. Verbs become Processors that transform them. Arcs become Networks that wire them together. A designer who sketches a combat system in notation is writing the skeleton that the composable infrastructure reads. MAPS describes the rules; RUNS executes the game.
+RUNS is the implementation complement to [MAPS Notation](https://github.com/enduring-game-standard/maps-notation). The relationship is design-to-implementation: MAPS describes a game's rules as studyable notation; RUNS implements those rules as composable source. States in notation are implemented as Records. Verbs are implemented as Processors. Arcs are implemented as Network wiring. A designer who writes a combat system in MAPS notation is writing the blueprint from which a developer (or tool) builds the corresponding RUNS source. Both artifacts persist independently on the commons — the notation for study, the source for compilation and play.
 
 ## What RUNS Deliberately Excludes
 
@@ -100,14 +101,24 @@ RUNS stays restrained and neutral:
 - No scripting language — Networks are the composition layer.
 - No object hierarchy — pure data composition.
 - No network transport — RUNS defines local state transformation. Transport is a separate concern, handled by implementations and coordinated through WOCS.
-- No runtime dependency resolution — handled by tooling (dynamic for development, static flattening for builds).
+- No dependency resolution in the hot path — handled by tooling (dynamic resolution for development, static flattening at compile time). The gameplay tick loop is self-contained once compiled.
+
+## Lifecycle: Discover → Build → Run
+
+RUNS components are distributed through Nostr as plain-text events. This is a distribution mechanism, not a runtime dependency.
+
+- **Discovery**: Developers query Nostr relays to find Processors, Networks, Fields, and AEMS Entities/Manifestations. Dependencies are declared in manifests.
+- **Build**: A build tool resolves dependencies (from relays or local cache), flattens the Network graph, and compiles the result into a self-contained build. AEMS Manifestations become compiled lookup tables. Processor definitions become compiled functions. Network wiring becomes compiled call chains.
+- **Runtime**: The compiled build executes. The gameplay tick loop has no dependency on Nostr, network connectivity, or external services. AEMS Asset and State events may be read/written at lifecycle boundaries (load, save) but not per-frame.
+
+Nostr is the commons — the package registry where source lives. The compiled build is the deployment. The same relationship holds between any package registry and the programs built from its contents.
 
 ## Integration with EGS
 
 | Component | Role                           | RUNS Relationship                                              |
 |-----------|--------------------------------|----------------------------------------------------------------|
-| AEMS      | The things                     | Referenced for entity data                                     |
-| MAPS      | The rules                      | Notation targets Records, Processors, Networks                 |
+| AEMS      | The things                     | Entity/Manifestation data compiled into type definitions at build time; Asset/State events read/written at lifecycle boundaries (load, save) |
+| MAPS      | The rules (notation)           | Design-time blueprint; RUNS source implements MAPS Scores       |
 | WOCS      | The coordination               | Coordinates all ecosystem infrastructure — hosting, audits, development, tournaments |
 
 ## Comparison
@@ -116,7 +127,7 @@ RUNS stays restrained and neutral:
 |---------------|-------------------|------------------------------|------------------------------------------|
 | Architecture  | Monolithic        | ECS (code-first)             | Data-first composable substrate          |
 | Interop       | Closed            | Runtime-coupled              | Universal plain-text Nostr-native shapes |
-| Modding       | Restricted API    | Plugin system                | Runtime Network injection                |
+| Variation     | Restricted API    | Plugin system                | Open source — swap Processors, compile variants |
 | Permanence    | Engine-dependent  | Binary-dependent             | Plain-text portability across generations|
 | Distribution  | Stores/platforms  | Git/crates                   | Permissionless (Nostr relays)            |
 
@@ -133,7 +144,7 @@ See the [RUNS Library](https://github.com/enduring-game-standard/runs-library) f
 
 ## Summary
 
-RUNS decomposes game execution into composable, plain-text primitives that live in an open commons. Records hold state. Processors transform it. Networks wire them together. Nostr makes them discoverable and inheritable without gatekeepers. Combined with AEMS for persistent entities, MAPS for design notation, and WOCS for coordination, RUNS provides the durable substrate on which cumulative craft can compound — one Processor, one Network, one generation at a time.
+RUNS decomposes game logic into composable, plain-text source that lives in an open commons. Records hold state. Processors transform it. Networks wire them together. Nostr makes them discoverable and inheritable without gatekeepers. Combined with AEMS for persistent entities, MAPS for design notation, and WOCS for coordination, RUNS provides the durable substrate on which cumulative craft can compound — one Processor, one Network, one generation at a time.
 
 Implement a Processor. Wire a Network. Build something that endures.
 
