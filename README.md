@@ -1,4 +1,4 @@
-# RUNS: Record Update Network System
+# RUNS: Records Update on Neutral Substrate
 
 🏠 **[EGS Overview](https://github.com/enduring-game-standard)**  
 · 📦 **[AEMS](https://github.com/enduring-game-standard/aems-schema)**  
@@ -11,7 +11,7 @@
 
 ## A Composable Substrate for Enduring Games
 
-**RUNS** (Record Update Network System) is a composable, plain-text source format for game logic. Stateless Processors transform Records through explicit Networks, giving games a neutral substrate designed to outlive any single engine, company, or hardware cycle. RUNS source is compiled into platform-specific binaries by runtimes — the source endures on the commons; binaries are rebuilt for each new platform.
+**RUNS** (Records Update on Neutral Substrate) is a composable, plain-text source format for game logic. Stateless Processors transform Records through explicit Networks, giving games a neutral substrate designed to outlive any single engine, company, or hardware cycle. RUNS source is compiled into platform-specific binaries by runtimes — the source endures on the commons; binaries are rebuilt for each new platform.
 
 RUNS treats game engines the way Unix treats operating systems: as pipelines of small, focused components wired together. Records hold state. Processors transform it. Networks define the wiring. Each piece evolves independently. Variation is native: anyone can open a Network, add or replace Processors, and compile a new variant — the same way anyone can play soccer with house rules. Obsolescence in one layer never cascades to another. Diverse runtimes, from minimal web builds to high-performance native, share the same ecosystem.
 
@@ -41,7 +41,7 @@ RUNS unbundles everything:
 3. **Processors** — The logic: pure, stateless transformations that read Fields and write Fields. A Processor has no side effects and no hidden state — meaning same inputs always produce the same outputs, with no externally visible mutation between invocations. Internal computation (local variables, scratch buffers, intermediate values) is unrestricted; the contract is at the interface boundary, not inside the implementation. A Processor can be as granular as a vector addition or as bundled as a full character controller.
 4. **Networks** — The graph: explicit wiring of Processors into data-flow chains. Wiring may include **guarded Arcs** — transitions conditioned on Field values (e.g., dispatching to different Processors based on an entity's current state). This mirrors MAPS notation, where Arcs carry guard expressions. When two Processors share a data dependency on the same Field, the Network's wiring determines execution order; a linear chain is a valid and common topology. Networks can bundle into higher-scale meta-Processors for multi-level composition.
 5. **Runtimes** — The compiler and executor: translates RUNS source (Networks, Records, Processors) into platform-specific builds, manages scheduling, and handles input/output. A minimal interpreter prioritizes portability; a performance-focused implementation compiles and fuses graphs for native speed. Both consume the same RUNS source. This establishes a three-tier architecture: game logic expressed in formal Processor source (the enduring artifact), compiled by platform-specific runtimes into native execution, with non-interactable subsystems (rendering, audio synthesis, decorative simulation) provided as opaque runtime bundles outside the game logic boundary.
-6. **Runtime Interface** — The declared boundary between a Network's game logic and its platform-dependent endpoints. A Network declares the Fields it requires from the runtime (input: timing, player commands) and the Fields it produces for the runtime (output: spatial state, visual state, audio triggers). Swapping one runtime for another leaves the game Network — and everything inside it — unchanged. Any simulation whose output feeds back into game state that other Processors read is game logic — it lives inside the Network as a Processor, not outside it as a runtime service. This is not a new primitive; it is a naming convention on existing components that formalizes portability.
+6. **Runtime Interface** — The declared boundary between a Network's game logic and its platform-dependent endpoints. A Network declares the Fields it requires from the runtime (input: timing, player commands) and the Fields it produces for the runtime (output: spatial state, visual state, audio triggers). These two directions — inbound Fields provided by the runtime and outbound Fields produced by game logic — form the complete contract between a Network and its runtime. The [RUNS Library](https://github.com/enduring-game-standard/runs-library) recommends common boundary Field shapes for each direction. Swapping one runtime for another leaves the game Network — and everything inside it — unchanged. Any simulation whose output feeds back into game state that other Processors read is game logic — it lives inside the Network as a Processor, not outside it as a runtime service. This is not a new primitive; it is a naming convention on existing components that formalizes portability.
 
 Example loop:
 
@@ -50,6 +50,8 @@ Example loop:
 ```
 
 Swap a naive Movement Processor for a full physics bundle? The chain remains intact as long as shared Fields match.
+
+The `→` arrows entering and leaving the Network are boundary crossings. Input Events are inbound boundary Fields (runtime-provided). Transform Fields feeding the Render Processor are outbound boundary Fields (game-logic-produced). Everything between those boundaries is internal game logic.
 
 ## A Concrete Example
 
@@ -71,7 +73,7 @@ position.z = position.z + velocity.z * delta_time
 
 This Processor does one thing: Euler integration. It reads three Fields, writes one. Anyone can read it, reimplement it, or replace it. Published as a Nostr event, it becomes part of the commons — discoverable by any developer, composable with any Network that uses the same Fields.
 
-The `.runs-prim` body notation is a draft sketch of a formal expression language — pure, total (all programs terminate), and deterministic — whose full specification is an open design question. The design direction is clear: a language-agnostic formal notation with unambiguous semantics, so that any future runtime can parse and compile the same source. See [RUNS Expression Language](./EXPRESSION_LANGUAGE.md) for the current requirements and design constraints.
+The `.runs-prim` body notation is a formal expression language — pure, total (all programs terminate), and deterministic. The [RUNS Expression Language](./DIGS_EXPRESSION_LANGUAGE.md) specification defines the complete syntax (EBNF grammar), type system, evaluation semantics, and determinism guarantees. Any future runtime can parse and compile the same source, producing identical behavior for all valid programs.
 
 Processors wire into bundles. Bundles wire into systems. A character controller bundles movement, grounding, and collision. A game bundles controllers, rendering, and input. Every layer remains a uniform Processor, composable and inspectable from the top-level system down to the individual vector addition.
 
