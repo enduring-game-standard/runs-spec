@@ -161,7 +161,7 @@ Identify every discrete operation in the original source. Define each as a Proce
 ### Outputs
 
 1. **Processor signatures** — for each Processor: name, inputs (which Fields it reads), outputs (which Fields it writes), guards (under what entity state it executes).
-2. **Network topology** — the execution order of all Processors within a game tick, including guarded dispatch blocks and entity iteration order.
+2. **Network topology** — the execution order of all Processors within a game tick, including guarded dispatch blocks and entity iteration order. The Network must follow the formal grammar defined in the [Network Topology](./NETWORK_TOPOLOGY.md) specification: phases, dispatch with guard arcs, sub-Network bundling, and the concurrency semantics derived from Record sharing.
 3. **Data flow graph** — the graph of data dependencies between Processors, mediated by Records. Every edge in this graph must pass through a Record Field: Processor A writes Field X on Record R, Processor B reads Field X from Record R. Direct Processor-to-Processor data flow is a **Petri net violation** — Processors are transitions and Records are places; tokens never move transition-to-transition.
 
 ### How To Do It

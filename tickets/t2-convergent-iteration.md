@@ -28,3 +28,7 @@ for step in converge(max: graph.node_count):
 - Should `converge` be a statement or an expression (producing the final loop state)?
 - Can the compiler infer the bound from usage patterns, eliminating the explicit `max`?
 - Precedent: Idris/Agda fuel pattern, GLSL bounded loops.
+
+## Cross-Reference: Network-Level Bounded Iteration
+
+The [Network Topology](../NETWORK_TOPOLOGY.md) specification introduces an `iterate:` phase primitive for bounded repetition at the Network level (e.g., physics constraint solver iterations). This addresses the multi-pass-over-collections use case (Gauss-Seidel relaxation, iterative rendering) but does NOT address the within-Processor convergence case (A* early termination, Newton-Raphson). Both levels of bounded iteration are needed — `iterate:` for Network-level repetition, `converge` for DIGS-level early exit.

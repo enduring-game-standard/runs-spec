@@ -30,7 +30,7 @@ The language is:
 
 1. **Pure** — No side effects beyond declared outputs. A Processor's outputs depend only on its declared inputs. No I/O, no global mutable state, no external calls.
 2. **Total** — All programs terminate. No unbounded loops. No general recursion. Termination is provable by structural inspection of the source, not by runtime analysis.
-3. **Deterministic** — Same inputs always produce the same outputs, on every platform, forever. Fixed-point and integer types guarantee bit-exact cross-platform results. Floating-point types explicitly opt in to platform-dependent rounding.
+3. **Deterministic** — Same inputs always produce the same outputs, on every platform, forever. All numeric types — integer, fixed-point, and floating-point — produce bit-exact cross-platform results under strict evaluation. Game-defined types capture platform-specific arithmetic behavior (ones-complement, x87 extended precision, flush-to-zero) and the compiler emulates the declared behavior on any host hardware. The type declaration IS the portability contract.
 4. **Language-agnostic** — The syntax is not borrowed from any existing programming language. It is designed to be readable by a human who has never programmed.
 5. **Formally specified** — The grammar and evaluation rules in this document are precise enough that two independent implementations, written by people who never communicate, will produce identical results for all valid programs.
 
@@ -176,7 +176,7 @@ All elements must have the same type. The list's type is inferred from its eleme
 | `uint16` | 16 bits | Unsigned, wrapping | ✅ Exact |
 | `uint32` | 32 bits | Unsigned, wrapping | ✅ Exact |
 | `bool` | 1 bit | `true` or `false` | ✅ Exact |
-| `float` | 64 bits | IEEE 754 binary64 | ⚠️ See §Determinism |
+| `float` | 64 bits | IEEE 754 binary64 | ✅ Exact (see §Game-Defined Float Types) |
 | `fixed16` | 32 bits | 16.16 signed fixed-point, two's-complement | ✅ Exact |
 
 **Wrapping** means arithmetic overflow wraps modularly. `int32` max is `2147483647`; adding 1 yields `-2147483648`.
@@ -198,7 +198,9 @@ All elements must have the same type. The list's type is inferred from its eleme
 
 ### Game-Defined Types
 
-Games may define custom numeric types. A type definition specifies the representation, binary point, arithmetic rules, and value range:
+Games may define custom numeric types. A type definition specifies the representation, arithmetic rules, and value range. This mechanism handles both integer/fixed-point and floating-point platform variations.
+
+#### Integer and Fixed-Point Types
 
 ```runs-prim
 type spacewar:fixed18
@@ -209,14 +211,56 @@ type spacewar:fixed18
   range: -131071 to 131071
 ```
 
-Fields of the type definition:
+Fields of the integer/fixed-point type definition:
 - **storage** — The primitive type used to hold the value in memory.
 - **width** — The number of significant bits.
 - **binary_point** — The bit position of the binary (radix) point, counted from the right. A `binary_point` of 17 means the value is an integer (point to the right of all 18 bits). A `binary_point` of 9 means 9 bits of integer and 9 bits of fraction.
 - **complement** — Either `ones` or `twos`. Specifies the signed number representation. Ones-complement has two representations of zero (+0 and −0); two's-complement does not.
 - **range** — The inclusive range of representable values.
 
-Arithmetic operations on game-defined types follow the declared complement and width rules. A compiler targeting a two's-complement machine must emulate ones-complement behavior for types that declare `complement: ones`. This emulation is a compile-time concern — the expression language semantics are defined in terms of the declared arithmetic, not the host machine's arithmetic.
+#### Floating-Point Types
+
+```runs-prim
+type quake:x87_double
+  format: ieee754
+  storage_width: 64
+  compute_width: 80
+  significand: 64
+  exponent: 15
+  rounding: nearest_ties_to_even
+  intermediate_rounding: on_store
+  subnormals: enabled
+```
+
+```runs-prim
+type rocket_league:sse_double
+  format: ieee754
+  storage_width: 64
+  compute_width: 64
+  significand: 53
+  exponent: 11
+  rounding: nearest_ties_to_even
+  intermediate_rounding: per_operation
+  subnormals: enabled
+```
+
+Fields of the floating-point type definition:
+- **format** — The floating-point standard. Currently only `ieee754` is defined.
+- **storage_width** — The bit width when stored in memory (e.g., 64 for binary64).
+- **compute_width** — The bit width used for intermediate computations. When `compute_width` exceeds `storage_width`, intermediates retain extra precision until stored — this captures x87-style extended-precision behavior.
+- **significand** — The number of significand bits (including the implicit leading 1 for IEEE 754 binary formats: 53 for binary64, 64 for 80-bit extended).
+- **exponent** — The number of exponent bits (11 for binary64, 15 for 80-bit extended).
+- **rounding** — The IEEE 754 rounding mode. One of: `nearest_ties_to_even` (default), `toward_zero`, `toward_positive`, `toward_negative`.
+- **intermediate_rounding** — When intermediate results are rounded to `storage_width`. Either `per_operation` (round after every operation, SSE-style) or `on_store` (defer rounding until the value is stored to memory, x87-style).
+- **subnormals** — Either `enabled` (IEEE 754 compliant) or `flush_to_zero` (subnormal results are flushed to zero, as some hardware does for performance).
+
+The primitive `float` type is sugar for a specific configuration: `format: ieee754, storage_width: 64, compute_width: 64, significand: 53, exponent: 11, rounding: nearest_ties_to_even, intermediate_rounding: per_operation, subnormals: enabled`. Games whose float behavior matches this configuration may use the primitive `float` type directly. Games with different float behavior — x87 extended precision, flush-to-zero, or any other variation — declare a game-defined float type that captures their specific arithmetic.
+
+#### The Portability Principle
+
+Arithmetic operations on game-defined types follow the declared rules. A compiler targeting a two's-complement machine must emulate ones-complement behavior for types that declare `complement: ones`. A compiler targeting ARM must emulate x87 extended-precision intermediates for types that declare `compute_width: 80`. This emulation is a compile-time concern — the expression language semantics are defined in terms of the declared arithmetic, not the host machine's arithmetic.
+
+Game-defined types are the mechanism by which platform-specific arithmetic becomes portable. A type declaring `width: 18, complement: ones` does not require an 18-bit ones-complement machine. A type declaring `compute_width: 80, intermediate_rounding: on_store` does not require an x87 FPU. Both require the compiler to produce equivalent behavior using the host machine's native arithmetic. The type declaration IS the portability contract. A game written for any platform's native arithmetic runs on any future platform through this mechanism alone.
 
 ### Enum Types
 
@@ -390,6 +434,8 @@ let root = sqrt_out.root
 **Recursion prohibition**: The call graph of all Processors must form a directed acyclic graph (DAG). A Processor may not call itself, directly or through any chain of intermediate calls. The compiler verifies this statically by topologically sorting the call graph. A cycle is a compile-time error.
 
 This prohibition, combined with bounded iteration (below), guarantees totality: every Processor terminates.
+
+This DAG constraint applies to the sub-Processor call graph within DIGS bodies — it governs which Processors a body may invoke via `let result = namespace:processor(args)`. It does not constrain the Network topology, which may invoke the same Processor at multiple points per tick (e.g., a gravity Processor invoked once per entity in a dispatch loop). Network invocation is bounded iteration, not recursion. See the RUNS spec for Network semantics.
 
 ### Record Update (`with`)
 
@@ -649,7 +695,7 @@ Formally: let `E(body, inputs)` be the result of evaluating the Processor body a
 C(body)(I) == E(body, I)
 ```
 
-This is not approximate. It is bit-exact for all types except `float`.
+This is not approximate. It is bit-exact for all types, including float, under strict evaluation.
 
 ### Permitted Optimizations
 
@@ -667,12 +713,11 @@ A compiler MAY NOT:
 
 ### Float Determinism
 
-Operations on `float` values are computed using IEEE 754 binary64 arithmetic. The specification does not guarantee cross-platform bit-identical results for:
-- Transcendental functions (`sin`, `cos`, `exp`, `log`, `sqrt` on float operands)
-- Fused multiply-add optimizations
-- Expression evaluation order where intermediate rounding differs
+All float operations in DIGS (`+`, `-`, `*`, `/`, negation, comparisons) are IEEE 754 basic operations, which are required by the standard to produce correctly rounded results. DIGS has no built-in transcendental functions (`sin`, `cos`, `exp`, `log`) — games that need these implement them as Processors using basic arithmetic, which is itself deterministic. DIGS has no fused multiply-add operator — `a * b + c` is two operations with two roundings. The evaluation order is defined by the DIGS grammar and operator precedence — there is no compiler latitude to reassociate.
 
-Games that require cross-platform determinism (demo playback, lockstep netcode, tournament verification) MUST use integer or fixed-point types. The choice of type IS the determinism contract.
+The remaining sources of cross-platform float variation — intermediate precision width, subnormal handling, and rounding mode — are captured by game-defined float types (see §Game-Defined Types). A game that declares `compute_width: 80, intermediate_rounding: on_store` gets x87-style extended-precision behavior on every platform. A game that declares `compute_width: 64, intermediate_rounding: per_operation` gets SSE-style behavior on every platform. The type declaration IS the determinism contract, for float as for every other numeric type.
+
+Under strict evaluation, all DIGS code — integer, fixed-point, or float — produces bit-identical results across all conforming platforms. Cross-platform determinism is a property of the language, not a burden on the creator's type choice.
 
 ### Adapted Compilation
 
@@ -882,7 +927,7 @@ These test vectors are the "first chip" — the hardware verification vectors de
   Marks   ─────────────→ Annotations               ──→ metadata tables
 ```
 
-Records are declared in `.runs` files using a separate schema syntax (not defined in this specification). Networks are declared in `.runs` files using a separate wiring syntax. DIGS defines ONLY the body of a Processor — the computation that transforms inputs into outputs.
+Records are declared in `.runs` files using a separate schema syntax (not defined in this specification). Networks are declared in `.runs` files using the wiring syntax defined in the [Network Topology](./NETWORK_TOPOLOGY.md) specification. DIGS defines ONLY the body of a Processor — the computation that transforms inputs into outputs.
 
 ---
 
