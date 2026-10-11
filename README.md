@@ -135,7 +135,7 @@ RUNS stays restrained and neutral:
 RUNS components are distributed through Nostr as plain-text events. This is a distribution mechanism, not a runtime dependency.
 
 - **Discovery**: Developers query Nostr relays to find Processors, Networks, Fields, and AEMS Entities/Manifestations. Dependencies are declared in manifests.
-- **Build**: A build tool resolves dependencies (from relays or local cache), flattens the Network graph, and compiles the result into a self-contained build. AEMS Manifestations become compiled lookup tables. Processor definitions become compiled functions. Network wiring becomes compiled call chains.
+- **Build**: A build tool resolves dependencies (from relays or local cache), flattens the Network graph, and compiles the result into a self-contained build. Manifestation data may optionally be baked into the build as compiled lookup tables. Processor definitions become compiled functions. Network wiring becomes compiled call chains.
 - **Runtime**: The compiled build executes. The gameplay tick loop has no dependency on Nostr, network connectivity, or external services. AEMS Asset and State events may be read/written at lifecycle boundaries (load, save) but not per-frame.
 
 Nostr is the commons — the package registry where source lives. The compiled build is the deployment. The same relationship holds between any package registry and the programs built from its contents.
@@ -146,7 +146,7 @@ The full inter-protocol topology is owned by the [EGS correspondence map](https:
 
 | Component | Role                           | RUNS Relationship                                              |
 |-----------|--------------------------------|----------------------------------------------------------------|
-| AEMS      | The things                     | Entity/Manifestation data compiled into type definitions at build time; Asset/State events read/written at lifecycle boundaries (load, save) |
+| AEMS      | The things                     | Optional seams only. Manifestation data may be baked into type definitions and lookup tables at build time; Asset/State events may be read/written at lifecycle boundaries (load, save) |
 | MAPS      | The rules (notation)           | Design-time blueprint; RUNS source implements MAPS Scores       |
 | WOCS      | The coordination               | Coordinates all ecosystem infrastructure — hosting, audits, development, tournaments |
 

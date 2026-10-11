@@ -59,7 +59,7 @@ The source concordance (`01_source_concordance.md`) mapped all 1,870 PDP-1 assem
 
 ### Definition
 
-Determine what the game's entities are using the AEMS four-test rubric. Draw the boundary between game logic (RUNS), entity identity (AEMS), and platform services (runtime). Write the runtime contract.
+Determine which game nouns name things, using the AEMS object-identity test ("is this a noun for a thing, free of medium and mechanic?"). Draw the boundary between game logic (RUNS) and platform services (runtime). Write the runtime contract. AEMS is optional. A conversion that never names its things in AEMS skips the AEMS layer document.
 
 ### Inputs
 
@@ -68,35 +68,35 @@ Determine what the game's entities are using the AEMS four-test rubric. Draw the
 
 ### Outputs
 
-1. **AEMS layer document** — every candidate entity evaluated against the four-test rubric. Each candidate is either accepted (with Entity/Manifestation classification) or rejected (with reasoning). Exclusion decisions are as important as inclusion decisions.
+1. **AEMS layer document** (optional) — every candidate noun evaluated against the object-identity test. Each candidate is either accepted (an Entity naming, with a Manifestation whose tags carry its role in this game) or rejected (with reasoning). Exclusion decisions are as important as inclusion decisions.
 2. **Runtime contract** — a formal statement of the boundary: what the game logic provides (state updates, render objects, audio triggers) and what the runtime provides (timing, input, display, sound). This is the API between the two sides.
 3. **Inbound/outbound field inventory** — the exact Fields that cross the boundary in each direction.
 
 ### How To Do It
 
-- For every noun in the game (ship, torpedo, star, explosion, score, timer), run the AEMS four-test rubric.
-- For each candidate that passes: classify as Entity or Manifestation.
+- For every noun in the game (ship, torpedo, star, explosion, score, timer), apply the object-identity test.
+- For each candidate that passes: name it as an Entity, and put its role in this game on its Manifestation's tags.
 - For each candidate that fails: document WHY it was excluded.
 - Write the runtime contract BEFORE defining Records. The contract determines the shape of everything downstream.
 
 ### Acceptance Criteria
 
-- Every game noun has been evaluated against the four-test rubric
+- If the AEMS layer document is written, every game noun has been evaluated against the object-identity test
 - At least one candidate has been excluded with documented reasoning
 - The runtime contract specifies inbound and outbound Fields with types
-- The AEMS/RUNS boundary rule ("changes gameplay = RUNS, changes appearance = AEMS") has been applied to every ambiguous case
+- Every ambiguous case has been placed by behavior. Behavior is RUNS. Appearance is the client's business. AEMS carries only durable signed identity, possession, and condition
 
 ### Known Failure Modes
 
 | Failure | How it manifests | Prevention |
 |---------|-----------------|------------|
-| Entity over-identification | Too many entities, tangled Records, bloated AEMS layer | The four-test rubric. If it fails any test, it's not an entity. |
+| Entity over-identification | Too many entities, bloated AEMS layer | The object-identity test. If it is not a noun for a thing, free of medium and mechanic, it's not an Entity. A mechanical quirk never mints a new Entity. |
 | Missing the runtime boundary | Game logic contains rendering code, or runtime makes gameplay decisions | Write the contract first. If changing a value changes how the game plays, it's RUNS. |
 | Runtime contract as afterthought | Discovered ad hoc during Processor writing | Write it before Records. The Spacewar postmortem explicitly recommends this. |
 
 ### Evidence from Spacewar
 
-AEMS analysis produced 3 Entities and 4 Manifestations — far fewer than expected. Key exclusions: explosions (state transitions, not entities), the central star (environmental constant, not entity), the star catalog (cosmetic backdrop, not AEMS). The runtime contract defined 4 inbound and 3 outbound Record boundaries.
+This analysis ran under the retired four-test rubric, before the object-identity test replaced it. AEMS analysis produced 3 Entities and 4 Manifestations — far fewer than expected. Key exclusions: explosions (state transitions, not entities), the central star (environmental constant, not entity), the star catalog (cosmetic backdrop, not AEMS). The runtime contract defined 4 inbound and 3 outbound Record boundaries.
 
 ---
 
@@ -109,7 +109,7 @@ Define every piece of game state as typed Fields in named Records. Define game-s
 ### Inputs
 
 - Source concordance
-- AEMS layer document
+- AEMS layer document (if written)
 - Runtime contract
 
 ### Outputs
@@ -120,7 +120,7 @@ Define every piece of game state as typed Fields in named Records. Define game-s
 
 ### How To Do It
 
-- Start with the entity table: what Fields does each entity carry? These become Record schemas.
+- Start with the game nouns from Step 2: what Fields does each one carry? These become Record schemas.
 - Identify shared Fields (position, velocity, state) vs. entity-specific Fields (fuel, reload timer).
 - For every constant, trace its derivation: `tno = law i 16` → runtime value is `-16` (ones-complement) → 16 torpedoes per ship → used as countdown initial.
 - If the original source uses a custom numeric representation, define it formally: bit width, signed/unsigned, complement system, binary-point conventions per context.
