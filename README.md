@@ -2,179 +2,132 @@
 
 🏠 **[EGS Overview](https://github.com/enduring-game-standard)** · 📦 **[AEMS](https://github.com/enduring-game-standard/aems-schema)** · 🎯 **[AEMS Conventions](https://github.com/enduring-game-standard/aems-conventions)** · 🔧 **[RUNS](https://github.com/enduring-game-standard/runs-spec)** · 📖 **[RUNS Library](https://github.com/enduring-game-standard/runs-library)** · ⚡ **[WOCS](https://github.com/enduring-game-standard/wocs-protocol)** · 🎼 **[MAPS](https://github.com/enduring-game-standard/maps-notation)** · 🎶 **[MAPS Library](https://github.com/enduring-game-standard/maps-library)** · ❓ **[FAQ](https://github.com/enduring-game-standard/.github/blob/main/profile/FAQ.md)** · 🔤 **[Glossary](https://github.com/enduring-game-standard/.github/blob/main/profile/README.md#glossary)**
 
-> **Status**: Design stage. No working reference implementation exists yet — no parser,
-> no evaluator, no compiler. The specifications are precise enough to implement from,
-> and the first implementation is expected to correct them. Every fidelity claim in
-> this ecosystem is currently **asserted** (a person or AI judged it correct by
-> reading), not **verified** (checked mechanically against an oracle).
+> **Status.** Working draft, settled by one port. A verbatim port of Spacewar! 3.1 (the `spacewar-runs` repository, not yet published) has a reference evaluator, `tools/runs.py`, that parses RUNS, enforces its rules, and runs it. Checks compare the evaluator's Records with the original game running in the SIMH PDP-1 emulator, field by field. The syntax in these documents is the syntax that evaluator accepts. It is a draft and will change as more of Spacewar, and then other games, are ported. A compiler from RUNS to the exact original binary is in progress. So far it compiles one routine, the square root, and the result matches the original tape image by hash.
 
-## A Composable Substrate for Enduring Games
+RUNS is a plain-text form for a game's rules. Its purpose is that a game's rules outlive the machine they were written for. Anyone can read, run, and change the text, and any future runtime can rebuild it into the same game.
 
-**RUNS** (Records Update on Neutral Substrate) is a composable, plain-text source format for game logic. Stateless Processors transform Records through explicit Networks, giving games a neutral substrate designed to outlive any single engine, company, or hardware cycle. RUNS source is compiled into platform-specific binaries by runtimes — the source endures on the commons; binaries are rebuilt for each new platform.
+## What RUNS requires
 
-RUNS treats game engines the way Unix treats operating systems: as pipelines of small, focused components wired together. Records hold state. Processors transform it. Networks define the wiring. Each piece evolves independently. Variation is native: anyone can open a Network, add or replace Processors, and compile a new variant — the same way anyone can play soccer with house rules. Obsolescence in one layer never cascades to another. Diverse runtimes, from minimal web builds to high-performance native, share the same ecosystem.
+Five requirements follow from that purpose.
 
-RUNS components — Networks, Records, Processors, and ecosystem packages — are plain-text Nostr events by convention. This is not a deployment detail. Nostr is the commons: the mechanism by which composable game components become discoverable, inheritable, and remixable across generations. Provenance chains through note IDs ensure self-describing data that any future community can find, study, and build upon without permission.
+1. **The port is exact, glitches included.** Every sequence of inputs from power-on gives the same game as the original. A glitch that play can reach is part of the game. A re-release of Super Mario 64 without the backwards long jump would not be Super Mario 64. A port never changes the game to fit RUNS. Where RUNS cannot yet say what a game does, RUNS grows.
+2. **The text is the game.** RUNS is deterministic and total, so every faithful runtime produces the same game. Nothing about the game lives only in a binary.
+3. **Every rule can be swapped.** A rule is replaceable only if its whole contract is visible. A Processor's contract is the Records it reads and writes, and nothing else. A register left set, a shared scratch word, or a patched instruction would be a hidden channel. That is why all data flows through Records.
+4. **The structure is visible.** The order in which rules fire, and the conditions under which they fire, are rules too. Networks state them in the text.
+5. **Variation is native.** A house rule is an edit to one Processor or one Network line, not a fork of a program.
 
-RUNS is not a full engine or rule language. It is the minimal kernel layer: a neutral substrate for transforming data, with game-specific logic implemented in swappable Processors and coordinated across the broader Enduring Game Standard (EGS).
+## Records, Processors, and Networks
 
-## Why RUNS?
+RUNS has three parts.
 
-Current engines are monolithic and fragile:
+- **A Record** is anything the game remembers: the object table, the random number, the frame's time budget, the tunables. Global data is a Record like any other. A Record holds one set of fields, or a fixed number of each field. A **stream** is a Record that collects ordered output, such as the points the display plots.
+- **A Processor** is one rule. It declares the Records it reads and the Records it writes. Its body computes freely inside, and it may update its declared Records in place. Purity holds at the boundary. What a Processor does depends only on what it declares.
+- **A Network** fires Processors and other Networks in order, chooses with guards, and repeats with bounded loops. A Network writes nothing. A guard is any expression that writes nothing, arithmetic included.
 
-- Inheritance of one company's physics, rendering, and fate.
-- Variation limited to restricted scripting APIs — if allowed at all.
-- Game logic locked inside opaque binaries that no one outside the studio can read, maintain, or learn from.
+The topology is a Petri net. Records are the places and Processors are the transitions. No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record. RUNS has no functions. An earlier draft had them, and a call carried a value from one rule to another with no place in between, so functions were removed. The only calls left in RUNS are the word's own operators, such as `rcl`, `scr`, and `popcount`. If writers want call syntax, a tool that writes RUNS can offer it. RUNS itself has none.
 
-RUNS unbundles everything:
+The original program's subroutines, macros, and executed tunables all become Processors. A loop that runs a macro or a tunable becomes a Network loop. A subroutine's own loop stays inside its Processor. A value the original carried in a register from one routine to the next becomes a field of a Record.
 
-- **Natural Variation** — Anyone can open a Network, swap Processors, extend Records, and compile a variant. This is not modding — it is the composability that physical games have always had.
-- **Portability** — Logic runs on any compliant runtime (web, desktop, embedded).
-- **Interoperability** — Shared data shapes let Processors from different developers compose freely.
-- **Open Commons** — Plain-text Nostr events place components in an open commons where any developer can discover, inherit, and build upon them. The teenager who pulls a combat system from one game into her own project does not need the original studio's source code or permission.
+Processor bodies are written in DIGS (Deterministic Inspectable Game Syntax). Firing is sequential. A Network runs its Processors in the order it states them, and each Processor sees everything earlier ones wrote. A compiler may find concurrency from the declared reads and writes, but concurrency is not part of the model. Assuming it would change Spacewar.
 
-## The Mental Model
+Here is a complete RUNS program. A `.runs` file declares Records and Networks:
 
-1. **Records** — The atoms: generic containers (entities) with IDs and typed Fields.
-2. **Fields** — The data: typed values attached to Records, from ultra-granular primitives (e.g., `runs:position_x`) to bundled composites (e.g., `runs:transform`). The type system is open — Processors define whatever input/output shapes their logic requires. The [RUNS Library](https://github.com/enduring-game-standard/runs-library) recommends common shapes for interoperability, but these are a shared vocabulary, not a closed universe.
-3. **Processors** — The logic: pure, stateless transformations that read Fields and write Fields. A Processor has no side effects and no hidden state — meaning same inputs always produce the same outputs, with no externally visible mutation between invocations. Internal computation (local variables, scratch buffers, intermediate values) is unrestricted; the contract is at the interface boundary, not inside the implementation. A Processor can be as granular as a vector addition or as bundled as a full character controller.
-4. **Networks** — The graph: explicit wiring of Processors into data-flow chains. Wiring may include **guarded Arcs** — transitions conditioned on Field values (e.g., dispatching to different Processors based on an entity's current state). This mirrors MAPS notation, where Arcs carry guard expressions. When two Processors share a data dependency on the same Field, the Network's wiring determines execution order; a linear chain is a valid and common topology. Networks can bundle into higher-scale meta-Processors for multi-level composition.
-5. **Runtimes** — The compiler and executor: translates RUNS source (Networks, Records, Processors) into platform-specific builds, manages scheduling, and handles input/output. A minimal interpreter prioritizes portability; a performance-focused implementation compiles and fuses graphs for native speed. Both consume the same RUNS source. This establishes a three-tier architecture: game logic expressed in formal Processor source (the enduring artifact), compiled by platform-specific runtimes into native execution, with non-interactable subsystems (rendering, audio synthesis, decorative simulation) provided as opaque runtime bundles outside the game logic boundary.
-6. **Runtime Interface** — The declared boundary between a Network's game logic and its platform-dependent endpoints. A Network declares the Fields it requires from the runtime (input: timing, player commands) and the Fields it produces for the runtime (output: spatial state, visual state, audio triggers). These two directions — inbound Fields provided by the runtime and outbound Fields produced by game logic — form the complete contract between a Network and its runtime. The [RUNS Library](https://github.com/enduring-game-standard/runs-library) recommends common boundary Field shapes for each direction. Swapping one runtime for another leaves the game Network — and everything inside it — unchanged. Any simulation whose output feeds back into game state that other Processors read is game logic — it lives inside the Network as a Processor, not outside it as a runtime service. This is not a new primitive; it is a naming convention on existing components that formalizes portability.
+```runs
+record ball
+  x: word = 0
+  dx: word = 3
 
-Example loop:
+stream screen
+  x: word
 
-```
-[Input Events] → (Input Processor) → [Intent Fields] → (Movement Processor) → [Transform Fields] → (Render Processor) → Screen
-```
-
-Swap a naive Movement Processor for a full physics bundle? The chain remains intact as long as shared Fields match.
-
-The `→` arrows entering and leaving the Network are boundary crossings. Input Events are inbound boundary Fields (runtime-provided). Transform Fields feeding the Render Processor are outbound boundary Fields (game-logic-produced). Everything between those boundaries is internal game logic.
-
-## A Concrete Example
-
-A Processor is a plain-text definition specifying inputs, outputs, and a pure transformation. The `.runs-prim` format from the [RUNS Library](https://github.com/enduring-game-standard/runs-library) demonstrates how granular these components can be:
-
-```text
-processor integrate_velocity
-inputs:
-  position: vec3
-  velocity: vec3
-  delta_time: float
-outputs:
-  position: vec3
-
-position.x = position.x + velocity.x * delta_time
-position.y = position.y + velocity.y * delta_time
-position.z = position.z + velocity.z * delta_time
+network tick
+  writes: screen
+  run move_ball
+  if ball.x - 0100 >= 0:
+    run bounce
+  run draw_ball
 ```
 
-This Processor does one thing: Euler integration. It reads three Fields, writes one. Anyone can read it, reimplement it, or replace it. Published as a Nostr event, it becomes part of the commons — discoverable by any developer, composable with any Network that uses the same Fields.
+A `.runs-prim` file declares Processors:
 
-The `.runs-prim` body notation is a formal expression language — pure, total (all programs terminate), and deterministic. The [RUNS Expression Language](./DIGS_EXPRESSION_LANGUAGE.md) specification defines the complete syntax (EBNF grammar), type system, evaluation semantics, and determinism guarantees. Any future runtime can parse and compile the same source, producing identical behavior for all valid programs.
+```runs-prim
+processor move_ball
+  writes: ball
+  set ball.x = ball.x + ball.dx
 
-Processors wire into bundles. Bundles wire into systems. A character controller bundles movement, grounding, and collision. A game bundles controllers, rendering, and input. Every layer remains a uniform Processor, composable and inspectable from the top-level system down to the individual vector addition.
+processor bounce
+  writes: ball
+  set ball.dx = -ball.dx
 
-### Guarded Dispatch
-
-Networks can express data-driven routing through guarded Arcs. This is the RUNS implementation of MAPS guard expressions — a transition fires only when its condition evaluates to true over current Field values.
-
-A state machine (e.g., an enemy AI cycling through look, chase, and attack behaviors) is not a single Processor that internally dispatches. It is a Network of guarded Arcs, each routing to a named Processor:
-
-```yaml
-network enemy_behavior
-inputs:
-  mobj: doom:mobj
-outputs:
-  mobj: doom:mobj
-
-arcs:
-  - guard: mobj.state_action == "look"
-    processor: doom:ai_look
-  - guard: mobj.state_action == "chase"
-    processor: doom:ai_chase
-  - guard: mobj.state_action == "attack"
-    processor: doom:ai_attack
+processor draw_ball
+  reads: ball
+  writes: screen
+  emit screen: ball.x
 ```
 
-Each branch is a named, inspectable Processor with declared inputs and outputs. The guard expressions and the Processors they route to are all plain-text and visible in the Network graph. Large dispatch tables (hundreds of states) are organized through bundling — sub-Networks grouped by behavior phase, bundled into a meta-Processor for the entity type, composed into the top-level game Network. The decomposition is spaghetti by nature; the bundling hierarchy makes it readable.
+`tick` is a top Network, because nothing fires it, so it is a whole game. Its `writes: screen` is the game's boundary with presentation. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else.
 
-## Architecture: Protocol, Library, Ecosystem
+## Exact over every input, glitches included
 
-RUNS separates what must be universal from what should be shared from what can vary freely.
+A glitch is one of three kinds, by what it reads.
 
-### Protocol — The Kernel
+1. **A logic glitch** is the game's own logic, such as the backwards long jump. A verbatim port keeps it with no extra work. In Spacewar, the previous control word is never stored, so with sense switch 3 on, the fire button always counts as newly pressed.
+2. **A layout glitch** reads past an array, through a stale pointer, or reads one kind of object as another, such as DOOM's `spechit` overflow. In those states the rule is whatever lies next in memory, so the layout is part of the game. Where play reads the layout, the RUNS text states it.
+3. **A machine glitch** runs data as code or jumps into the middle of a routine. On that path the rule is that the machine runs those bytes. The original machine's instruction semantics are then part of the game, used only where play reaches them, and the original code bytes are part of the game's data.
 
-The mandatory rules: Records, Fields, Processors, Networks, and the `runs:` namespace reservation. A runtime claiming RUNS compliance implements these exactly. The protocol changes rarely and by RFC only.
+All three kinds share one piece, a description of the original machine. It supplies RUNS's types. For Spacewar, that is the `word`, the PDP-1's 18-bit ones' complement word. Where play reads the layout, it supplies the layout. Where play reaches machine behavior, it supplies the instruction semantics. The rest of the game is RUNS.
 
-### Standard Library — The Shared Palette
+A halt or a hang that the original reaches is a rule, not an error. Spacewar halts when a ship fires and the object table is full. In contrast, when a loop runs past its bound, a `requires:` fails, or the evaluator reaches `unreachable`, the port is wrong. These never mean the game may do anything.
 
-Curated in [runs-library](https://github.com/enduring-game-standard/runs-library): optional but recommended schemas (e.g., `runs:transform`, `runs:velocity`, `runs:delta_time`) and primitive Processors. Targeting these shapes unlocks instant interoperability — a movement Processor from one bundle drives transforms in another without adapters.
+Where play reaches layout or machine behavior is a fact to measure, not a guess. The Spacewar port measures it with `tools/reach_oracle.py`, which runs the original in SIMH through seventeen scripted matches. So far it has found no layout read that play observes. Spacewar's play reaches the machine outside the `word` type in one place. The first match reads words of core that the tape never loads, such as the scores, so their power-on contents matter. Those words come in at the game's boundary.
 
-### Ecosystem — The Commons
+## Gameplay and presentation split by consequence
 
-Community bundles targeting protocol shapes, published as plain-text Nostr events. Anyone can publish a Processor, a Network, or a full game as events that any relay can replicate. No gatekeepers. No app stores. No platform fees. Each contribution becomes part of a permanent, inheritable commons that grows the way open-source package ecosystems grow: through usage, adoption, and variation.
+Presentation is the screen, the sound, the controls, the pacing, and the machine underneath. It can be rebuilt for each platform. The game cannot. Games outlive their hardware only if the boundary between the two is thin.
 
-## Connection to Notation and Craft
+What a piece of code's effects reach decides its side, not what the code was written for. Code is presentation only if nothing in the game can observe its effects. Spacewar's central star is presentation, but it draws two random numbers each frame from the generator that also decides hyperspace jumps. Turning the star off with sense switch 6 changes hyperspace. So the star's two draws are a game rule, and only the line it draws from them is presentation.
 
-RUNS is the implementation complement to [MAPS Notation](https://github.com/enduring-game-standard/maps-notation). The relationship is design-to-implementation: MAPS describes a game's rules as studyable notation; RUNS implements those rules as composable source. The term-for-term mapping between the two vocabularies is owned by the [EGS correspondence map](https://github.com/enduring-game-standard/.github/blob/main/profile/CORRESPONDENCE.md). A designer who writes a combat system in MAPS notation is writing the blueprint from which a developer (or tool) builds the corresponding RUNS source. Both artifacts persist independently on the commons — the notation for study, the source for compilation and play.
+The game touches the machine in four ways:
 
-## What RUNS Deliberately Excludes
+1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a Record the boundary declares.
+2. A value goes out, such as a point to plot or a sound to play. It is a Record or stream the boundary declares.
+3. The machine computes something the rules then read, such as a sum that wraps or a collision a video chip latches. That computation is a rule, and it moves inside the game.
+4. Timing. Where the game's state depends on it, timing becomes a rule or a value that comes in.
 
-RUNS stays restrained and neutral:
+Only the third could widen the boundary, and the port always resolves it by moving the computation into the game. So the boundary can grow in data, but it never gains a new kind of thing.
 
-- No default renderer, physics, or input model.
-- No scripting language — Networks are the composition layer.
-- No object hierarchy — pure data composition.
-- No network transport — RUNS defines local state transformation. Transport is a separate concern, handled by implementations and coordinated through WOCS.
-- No dependency resolution in the hot path — handled by tooling (dynamic resolution for development, static flattening at compile time). The gameplay tick loop is self-contained once compiled.
+A Network can state a contract the way a Processor does, with `reads:` and `writes:`. A top Network is a whole game, and its contract is the game's boundary with presentation. The port stays verbatim. Presentation code stays where the original runs it, in the order it runs. The split says which of its effects the game must keep.
 
-## Lifecycle: Discover → Build → Run
+## The binding and the compiler
 
-RUNS components are distributed through Nostr as plain-text events. This is a distribution mechanism, not a runtime dependency.
+A **binding** maps RUNS onto one target machine. It holds only the choices play cannot observe: where each Record lives in memory, how an enum value is spelled as a word, how scratch space is laid out. Where the game states a layout, the binding follows it. The Spacewar port's PDP-1 binding, in its first form, is `tools/pdp1.py`.
 
-- **Discovery**: Developers query Nostr relays to find Processors, Networks, Fields, and AEMS Entities/Manifestations. Dependencies are declared in manifests.
-- **Build**: A build tool resolves dependencies (from relays or local cache), flattens the Network graph, and compiles the result into a self-contained build. Manifestation data may optionally be baked into the build as compiled lookup tables. Processor definitions become compiled functions. Network wiring becomes compiled call chains.
-- **Runtime**: The compiled build executes. The gameplay tick loop has no dependency on Nostr, network connectivity, or external services. AEMS Asset and State events may be read/written at lifecycle boundaries (load, save) but not per-frame.
+A compiler takes RUNS plus a binding for a target. With the original machine's binding, the goal is the original binary, exactly. With other bindings, the goal is the same game on other machines. In the Spacewar port, work in progress compiles RUNS plus the PDP-1 binding to the C dialect of the `spacewar-c` project, which its `pdp1cc` compiler turns into PDP-1 code to be matched by hash against the original binary. The square root compiles this way and matches the original tape image. A planted change to the RUNS source breaks the match, so the RUNS text, not the existing C, drives the result. The rest of the game does not compile yet.
 
-Nostr is the commons — the package registry where source lives. The compiled build is the deployment. The same relationship holds between any package registry and the programs built from its contents.
+## Relationship to other EGS protocols
 
-## Integration with EGS
+RUNS is a protocol on its own.
 
-The full inter-protocol topology is owned by the [EGS correspondence map](https://github.com/enduring-game-standard/.github/blob/main/profile/CORRESPONDENCE.md). RUNS's own edges:
+- **MAPS** is a separate protocol, a notation for studying and designing rules.
+- **AEMS** is a separate protocol for assets and things. A game's assets belong there. RUNS defines no way to read AEMS data yet.
 
-| Component | Role                           | RUNS Relationship                                              |
-|-----------|--------------------------------|----------------------------------------------------------------|
-| AEMS      | The things                     | Optional seams only. Manifestation data may be baked into type definitions and lookup tables at build time; Asset/State events may be read/written at lifecycle boundaries (load, save) |
-| MAPS      | The rules (notation)           | Design-time blueprint; RUNS source implements MAPS Scores       |
-| WOCS      | The coordination               | Coordinates all ecosystem infrastructure — hosting, audits, development, tournaments |
+## What these documents cover
 
-## Comparison
+- [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md) is the reference for Processors in `.runs-prim` files: their declarations, statements, expressions, and the `word` type.
+- [Network topology](./NETWORK_TOPOLOGY.md) is the reference for `.runs` files: types, enums, Records, streams, Networks, and the contract rules the loader enforces.
+- [Conversion process](./CONVERSION_PROCESS.md) is how to port a game to RUNS, as the Spacewar port did it.
 
-| Feature       | Unity/Unreal      | Bevy/Flecs                   | RUNS                                     |
-|---------------|-------------------|------------------------------|------------------------------------------|
-| Architecture  | Monolithic        | ECS (code-first)             | Data-first composable substrate          |
-| Interop       | Closed            | Runtime-coupled              | Universal plain-text Nostr-native shapes |
-| Variation     | Restricted API    | Plugin system                | Open source — swap Processors, compile variants |
-| Permanence    | Engine-dependent  | Binary-dependent             | Plain-text portability across generations|
-| Distribution  | Stores/platforms  | Git/crates                   | Permissionless (Nostr relays)            |
+## Open questions
 
-## Namespace Conventions
+The Spacewar port has settled the model above. These parts are still open:
 
-Field and Processor keys are namespaced strings (e.g., `prefix:name`) to prevent collisions in a decentralized ecosystem.
+- **The syntax.** It is a working draft that covers what one slice of Spacewar needed.
+- **The original-machine description.** RUNS has no settled text form for it yet. The loader skips `type` declarations, and the evaluator defines the PDP-1 `word` in code.
+- **Stated layout.** RUNS has no syntax yet for stating a layout where play reads it, because Spacewar has not needed one.
+- **Machine instruction semantics.** RUNS has no form yet for running the original machine's instructions where play reaches them.
+- **Boundary inputs.** Values that come in belong in the top Network's contract. The control word, the sense switches, and the power-on words are not ported yet, so the form of that declaration is not decided. The loader does not yet require it.
+- **Halts.** How a port writes a halt the original reaches is not decided. The Spacewar halt is not ported yet.
+- **Other games.** Decisions about floating point, recursion, run-time allocation, versions, and code with no source come from a paper exercise against other games, recorded in the port's `INTENT.md`. No port has tested them.
+- **Naming and distribution.** The draft grammar has no namespaces. How RUNS text is named, published, and shared, and what a shared library of Records and Processors would hold, is not settled. Earlier drafts proposed Nostr events and a `runs:` namespace. The port did not test either.
 
-- The `runs:` prefix is **reserved** for the RUNS Protocol and Standard Library. No exceptions.
-- Runtimes claiming compliance **must** implement `runs:` schemas with exact keys, types, and semantics.
-- Third-party bundles use short, human-readable umbrella prefixes (e.g., `pong:`, `hades:`, `spacewar:`).
-- Publish bundles as plain-text Nostr events with a manifest anchoring the umbrella prefix, version, and dependencies.
-
-See the [RUNS Library](https://github.com/enduring-game-standard/runs-library) for full namespace conventions and manifest format.
-
-## Summary
-
-RUNS decomposes game logic into composable, plain-text source that lives in an open commons. Records hold state. Processors transform it. Networks wire them together. Nostr makes them discoverable and inheritable without gatekeepers. Combined with AEMS for persistent entities, MAPS for design notation, and WOCS for coordination, RUNS provides the durable substrate on which cumulative craft can compound — one Processor, one Network, one generation at a time.
-
-Implement a Processor. Wire a Network. Build something that endures.
-
-**MIT License** — Open for implementation, extension, critique.
+**MIT License.** Open for implementation, extension, and critique.
