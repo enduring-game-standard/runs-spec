@@ -122,7 +122,7 @@ A Record in the `state:` block may declare a build-time data source:
 ```
 state:
   star_catalog:  spacewar:star_catalog
-    source: aems:manifestation/expensive_planetarium
+    source: <AEMS Manifestation reference>
 
   sectors:       doom:sector[max: 512]
     source: doom:wad/SECTORS
@@ -668,9 +668,9 @@ DIGS defines what Processors compute. This specification defines when they fire,
 
 ### AEMS (Asset-Entity-Manifestation-State)
 
-AEMS defines what things ARE — Entity identity, Manifestation variants, and presentation data. Data from AEMS artifacts may be consumed by RUNS Records through the `source:` annotation on state Records. The build tool reads the AEMS data, parses it according to a format specification, and populates the Record's initial state.
+AEMS is an independent protocol of signed claims. An Entity names a thing, a Manifestation interprets it for a game, an Asset claims possession, and a State claims condition. A build may optionally read an AEMS Manifestation through the `source:` annotation on a state Record. The build tool reads the Manifestation's content, parses it according to a format specification, and populates the Record's initial state.
 
-The format specification — how binary bytes from an AEMS Manifestation, a WAD lump, or a ROM segment map to Record fields — is a separate artifact type. Format specs declare byte offsets, endianness, field widths, and data encoding. They are plain-text, inspectable, and enduring, like everything else in the ecosystem.
+The format specification — how the content fields of an AEMS Manifestation, or the bytes of a WAD lump or a ROM segment, map to Record fields — is a separate artifact type. Format specs declare byte offsets, endianness, field widths, and data encoding. They are plain-text, inspectable, and enduring, like everything else in the ecosystem.
 
 ### MAPS (Notation)
 
