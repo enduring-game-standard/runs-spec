@@ -1,15 +1,15 @@
 # RUNS Network topology
 
-> **Status.** Working draft. This reference describes the `.runs` syntax that the Spacewar port's reference evaluator, `tools/runs.py`, accepts and enforces. Every accepted example on this page loads in that evaluator, passes its contract check, and runs. Every rejected example fails with the error quoted in its first line.
+> **Status.** Working draft. This reference describes the `.runs` syntax that the Spacewar port's reference evaluator, `tools/runs.py`, accepts and enforces. The whole of Spacewar! 3.1 is written in this syntax. Every accepted example on this page loads in that evaluator, passes `runs.check`, and runs. Every rejected example fails with the error quoted in its first line. `tools/check_examples.py` checks both.
 
-A `.runs` file declares the game's state and its structure: types, enums, Records, streams, and Networks. Processors live in `.runs-prim` files and are described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md). The loader reads every declaration kind from either kind of file, so the split between the two is a convention.
+A `.runs` file declares the game's state and its structure. It holds types, enums, Records, streams, and Networks. Processors live in `.runs-prim` files and are described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md). The loader reads every declaration kind from either kind of file, so the split between the two is a convention.
 
 ## The topology is a Petri net
 
 Records are the places. Processors are the transitions. A Network says which transitions fire, in what order, and under what conditions.
 
 - No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record.
-- RUNS has no functions. A Processor cannot call a Processor, and an expression cannot call a routine. The only calls are the word's own operators.
+- RUNS has no functions. A Processor cannot call a Processor, and an expression cannot call a routine. The only calls are the word's own operators and the instruction constructors of `type insn`.
 - A Network writes nothing. It fires Processors and other Networks, chooses with guards, and repeats with bounded loops.
 - Firing is sequential. A Network fires its statements in the order written, and each Processor sees every write made before it. A compiler may derive concurrency from the declared reads and writes. Concurrency is not part of the model.
 
@@ -17,22 +17,28 @@ The order is part of the game. In Spacewar's main loop, object *i* is tested aga
 
 ## A running example
 
-The examples on this page together form one program, a reduced version of the Spacewar port's object loop. Each object slot holds a calc routine. A torpedo counts down its life and then explodes. An explosion plots a cloud of dots and then frees its slot.
+The examples on this page together form one program, a reduced version of the Spacewar port's object loop. Each object slot holds a calc routine. A torpedo counts down its life and then explodes. An explosion plots a cloud of dots and then frees its slot. A switch on the console comes in from outside the game. While the operator holds it on, no new torpedo launches, and the frame waits.
 
 ## Declarations
 
 ### Types
 
-A `type` declaration describes a type of the original machine:
+A `type` declaration describes a type of the original machine. The loader reads `type insn` and skips every other `type` declaration:
 
 ```runs
 type word
   bits: 18
   complement: ones          # -0 exists; add and subtract are the PDP-1's
   compare: sign             # word < 0 tests the sign bit; == compares all 18 bits
+
+type insn
+  instructions: lac add dac jmp
 ```
 
-The loader skips `type` declarations and their indented lines. The evaluator defines `word`, the PDP-1's 18-bit ones' complement word, in code. How a game states the original machine's types as text is an open question. The [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) describes what `word` does.
+- `type word` is a comment to the reader. The evaluator defines `word`, the PDP-1's 18-bit ones' complement word, in code. The [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) describes what `word` does.
+- `type insn` is a word of code. `instructions:` lists the original machine's instructions that the game reaches. The evaluator knows the rules of `lac`, `lio`, `dac`, `dio`, `add`, `sub`, `jmp`, `stf`, `clf`, `szf`, `rcl`, `cma`, `ioh`, and `dpy`, and refuses any other. `display:` names the stream that `dpy` plots on. [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#code-the-game-runs) describes how a Processor builds and runs instructions.
+
+How a game states the original machine's types as text, rules included, is an open question.
 
 ### Enums
 
@@ -43,13 +49,23 @@ enum calc_routine
   none                      # a free slot
   torpedo
   explosion
+
+enum switch
+  off
+  on
+
+enum light
+  off
+  on
 ```
 
 Members are written without the enum's name, as in `objects.routine[slot] == torpedo`. An enum value can only be compared with `==` and `!=`. It has no number visible to RUNS. The binding decides how the target spells it.
 
+Two enums may share a member's name, as `switch` and `light` share `off` and `on`. The name means the member of the enum that the value is compared with or stored as.
+
 ### Records
 
-A `record` declares something the game remembers. Each indented line is a field: its name, its type, and an optional initial value.
+A `record` declares something the game remembers. Each indented line is a field with a name, a type, and an optional initial value.
 
 ```runs
 record objects[4]
@@ -66,13 +82,27 @@ record handoff
 
 record cloud
   particles: word = 0       # dots left to plot, counting up
+
+record console
+  hold: switch              # no initial value: the operator sets it
+
+record lights
+  busy: light = off
+
+record spreads[4]
+  shift: word =             # one initial value a slot
+    1
+    3
+    1
+    3
 ```
 
 - `record name` holds one value of each field.
 - `record name[N]` holds N values of each field. The count is a number literal. A number with a leading `0` is octal, so `[030]` is 24.
-- A field of a collection takes its index after the field name, as in `objects.x[slot]`, never `objects[slot].x`.
-- A field's type is `word` or an enum. The loader does not check the type name.
-- The initial value is an expression that touches no Record. A field with no initial value starts as the word 0.
+- A field of a collection takes its index after the field name, as in `objects.x[slot]`, never `objects[slot].x`. A slot past the last is an error.
+- A field's type is `word`, `insn`, or an enum.
+- The initial value is an expression that touches no Record. A field of a collection whose line ends in `=` takes one initial value a slot, one indented line each.
+- A field with no initial value is unknown until the game sets it or the world gives it. Reading it while it is unknown is an error. That is how the text says what comes in from outside the game, such as the console's switches and the words core held at power-on.
 - Global data is a Record like any other. RUNS has no separate kind for it.
 
 A field that exists only because the original passed a value in a register, such as `handoff.acceleration`, says so in a comment that names the register and the instruction.
@@ -93,9 +123,13 @@ A Network has a name, optional parameters, optional headers, and a body.
 
 ```runs
 network frame
+  reads: console
   writes: display
   if objects.routine[0] == none:
-    run launch
+    if console.hold == off:
+      run launch
+    else:
+      wait
   for slot in 0 .. 3:
     if objects.routine[slot] != none:
       run calc(slot)
@@ -122,7 +156,7 @@ network torpedo(slot)
 |--------|---------|
 | `reads: a, b` | Records the Network's contract says come in from outside it. |
 | `writes: a, b` | Records and streams the Network's contract says leave it. |
-| `requires: expression` | A precondition. If it is false when the Network fires, the port is wrong. |
+| `requires: condition` | A precondition. If it is false when the Network fires, the port is wrong. |
 
 [Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
 
@@ -138,16 +172,19 @@ A Network body may hold only these statements.
 | `match e:` | Fire the arm named by the enum value `e`. Each arm is `member: statement` on one line, or `member:` followed by an indented block. |
 | `loop at most N:` | Fire the body again and again until a guard breaks out. Running more than N passes means the port is wrong. |
 | `break` | Leave the innermost `loop`. Valid only inside a `loop`. |
-| `stop` | End this pass of the top Network. Nothing after it fires. |
+| `stop` | The machine halts, and halts again each time the operator continues it. Nothing after it fires. |
+| `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the port is wrong. |
 
 A guard is any expression that writes nothing. It can read any Record and use any operator, arithmetic included. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. One guard from the Spacewar port is `if (random.number | 0400000) + ships.uncertainty[slot] >= 0:`.
 
-A Network has no `let`, `set`, `emit`, `return`, or `continue`.
+A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
+
+A halt or a hang that the original reaches is a rule of the game. Spacewar halts when a ship fires and the object table is full, and the port writes that halt as `stop`. Spacewar also halts between games to show the scores on the console lights, and the operator may flip switches before continuing. The port writes that halt as an `emit` of the scores to a stream, then `wait`.
 
 ### The Network loop
 
-A loop in a Network must hold, among its own statements, an `if` whose only statement is `break`. That `if` is the loop's exit. By convention, its guard reads Records that the Processors in the body write. The loader does not check this. A Processor that the original ran inside a loop, such as a macro, becomes a Network loop that fires it. The explosion's dot loop is the model:
+A loop in a Network must hold, among its own statements, an `if` with an arm that ends in `break`. That `if` is the loop's exit. The arm may fire things before it breaks. By convention, the exit's guard reads Records that the Processors in the body write. The loader does not check this. A Processor that the original ran inside a loop, such as a macro, becomes a Network loop that fires it. The explosion's dot loop is the model:
 
 ```runs
 network explosion(slot)
@@ -171,10 +208,11 @@ These Processors complete the running example. [DIGS expression language](./DIGS
 
 ```runs-prim
 processor launch
-  writes: objects
+  writes: objects, lights
   set objects.routine[0] = torpedo
   set objects.counter[0] = -2
   set objects.dx[0] = 5
+  set lights.busy = on
 
 processor count_down(slot)
   writes: objects
@@ -209,9 +247,9 @@ processor next_random
   set random.number = (rar(random.number, 1) ^ 0355670) + 0355670
 
 processor plot_particle(slot)
-  reads: random, objects
+  reads: random, objects, spreads
   writes: cloud, display
-  emit display: (random.number >> 9) + objects.x[slot], 3
+  emit display: (random.number >> spreads.shift[slot]) + objects.x[slot], 3
   set cloud.particles = cloud.particles + 1
 
 processor free_slot(slot)
@@ -223,16 +261,17 @@ processor free_slot(slot)
 
 A Network can state a contract the way a Processor does. The Records it declares cross its boundary. Every other Record its Processors touch belongs to it.
 
-The loader checks the contract of every Network that has a `reads:` or `writes:` header, and of every top Network. A **top Network** is one that nothing fires. It is a whole game, and its contract is the game's boundary with presentation.
+The loader checks the contract of every Network that has a `reads:` or `writes:` header, and of every top Network. A **top Network** is one that nothing fires. A game may have several. Spacewar has three. The host fires one of its two start Networks once, when the operator starts the machine, and then fires the frame once each frame. Together the top Networks are one game, so a Record they share does not cross the boundary. Their contracts are the game's boundary with presentation.
 
-For a checked Network, "inside" means the Network and every routine it fires, directly or through sub-Networks. The loader enforces four rules:
+For a checked Network, "inside" means the Network and every routine it fires, directly or through sub-Networks. A Processor that nothing fires does not count as outside. The loader enforces five rules:
 
 1. A Record that a Processor inside writes must be in `writes:` if a Processor outside also touches it, or if it is a stream.
 2. A Record that is read inside, but not written inside, must be in `reads:` or `writes:` if a Processor outside touches it. Reads by guards count.
 3. Each Record in `writes:` must be written by a Processor inside.
-4. Each Record in `reads:` must be read inside, by a Processor or a guard.
+4. Each Record in `reads:` must be read inside, by a guard or by a Processor that declares it under `reads:` or `writes:`.
+5. A top Network must declare under `reads:` each Record with a field that has no initial value, if a routine inside reads that Record.
 
-In the example, `explosion` declares `writes: objects, display`. Processors outside it, such as `launch`, also touch `objects`, and `display` is a stream. `random` and `cloud` are touched only inside `explosion`, so they belong to it and stay out of its contract. `frame` is the top Network. Every Processor is inside it, so only the stream crosses its boundary.
+In the example, `explosion` declares `writes: objects, display`. Processors outside it, such as `launch`, also touch `objects`, and `display` is a stream. `random` and `cloud` are touched only inside `explosion`, so they belong to it and stay out of its contract. `frame` is the top Network. Every Processor is inside it, so only the stream leaves it. `console` has a field with no initial value, and the frame's guard reads it, so `console` comes in.
 
 A top Network that writes a stream must declare it. Without `writes: display`, the Spacewar frame does not load:
 
@@ -249,6 +288,18 @@ processor plot_point
   emit display: 0
 ```
 
+A top Network that reads a field with no initial value must declare its Record. Spacewar's `start_with_test_word` does not load without `reads: score`, and this frame does not load without `reads: console`:
+
+```runs-rejected
+# rejected: console comes in from outside the game
+record console
+  launch: word
+
+network frame
+  if console.launch == 0:
+    stop
+```
+
 A declared Record that nothing inside uses is also an error:
 
 ```runs-rejected
@@ -261,25 +312,30 @@ network idle
   stop
 ```
 
-Values that come in, such as the controls and the words of core the game reads at power-on, also belong in the top Network's contract. The loader does not require that declaration yet, and its form is open, because the Spacewar port has not ported those inputs.
+Which device holds each input and output field is not part of RUNS. It is the presentation side of the boundary, and the binding for each machine states it. The Spacewar port's PDP-1 binding states every console switch, light, and start address in one file, `pdp1/devices.toml`.
 
 ## What the loader and the evaluator reject
 
-The loader checks the shape of every routine before anything runs. While a routine runs, the evaluator checks every Record access.
+Before anything runs, `runs.check` checks the shape of each kind, the names each routine uses, and the contracts. While a routine runs, the evaluator checks each Processor's Record accesses, every read of an unknown field, and every bound.
 
 | Error | When |
 |-------|------|
-| `a network only fires and chooses (set)` | A Network uses `let`, `set`, `emit`, `return`, or `continue`. |
-| `a network loop needs an exit: if <guard>: break` | A Network `loop` has no `if` whose only statement is `break`. |
+| `a network only fires and chooses (set)` | A Network uses `let`, `set`, `emit`, `return`, `continue`, or `jump`. |
+| `a network loop needs an exit: an if with an arm that ends in break` | A Network `loop` has no `if` with an arm that ends in `break`. |
 | `break outside a loop` | A Network uses `break` outside a `loop`. |
-| `run belongs to a network`, `match belongs to a network`, `stop belongs to a network` | A Processor uses `run`, `match`, or `stop`. |
+| `run belongs to a network`, `match belongs to a network`, `stop belongs to a network`, `wait belongs to a network` | A Processor uses `run`, `match`, `stop`, or `wait`. |
 | `... defined twice` | Two routines share a name. |
+| `... is no routine`, `... takes N arguments` | A `run` names a routine that does not exist, or passes the wrong number of arguments. |
+| `a match's arms are members of one enum` | A `match` has arms from no enum or from several. |
 | `... leaves it; declare writes: ...` and the other contract errors | A contract breaks one of the rules in [Network contracts](#network-contracts). |
+| `... comes in from outside the game` | A top Network does not declare a Record with a field that has no initial value, and a routine inside reads it. |
+| `... initial values for N slots` | A field with one initial value a slot has the wrong number of lines. |
+| `the machine has no rules for [...]` | `type insn` lists an instruction the evaluator does not know. |
 | `match misses [...]` | A `match` that fires has no arm for some member of the enum. |
+| `... is unknown: the game has not set it, so the world gives it` | A routine reads a field with no initial value before the game sets it or the world gives it. |
 | `loop ran past its bound` | A `loop` runs more passes than its bound. |
 | `precondition fails` | A `requires:` is false when its routine fires. |
 | `reached unreachable` | An `unreachable` fires. |
-| `... is not ported` | A `run` names a routine that does not exist. |
 
 A Network that writes a Record is rejected before it runs:
 
@@ -301,7 +357,7 @@ network forever
     stop
 ```
 
-The loop bound, `requires:`, and `unreachable` errors never describe the game. If one of them fires, the port is wrong. A halt or a hang that the original reaches is a rule of the game and must be ported as one. How a port writes a halt is open.
+The loop bound, `requires:`, and `unreachable` errors never describe the game. If one of them fires, the port is wrong.
 
 ## Grammar
 
@@ -310,11 +366,12 @@ This summary describes what `tools/runs.py` accepts. Indentation is two spaces a
 ```text
 file        = { declaration }
 declaration = type | enum | record | stream | network | processor
-type        = "type" NAME { indented line }                  (skipped by the loader)
+type        = "type" "insn" { indented ( "instructions" ":" NAME { NAME } | "display" ":" NAME ) }
+            | "type" NAME { indented line }                  (skipped by the loader)
 enum        = "enum" NAME { indented NAME }
 record      = "record" NAME [ "[" NUMBER "]" ] { indented field }
 stream      = "stream" NAME { indented field }
-field       = NAME ":" TYPE [ "=" expression ]
+field       = NAME ":" TYPE [ "=" ( expression | { indented expression } ) ]
 network     = "network" NAME [ "(" NAME { "," NAME } ")" ] { indented ( header | net_stmt ) }
 header      = "reads" ":" NAME { "," NAME }
             | "writes" ":" NAME { "," NAME }
@@ -324,18 +381,17 @@ net_stmt    = "run" NAME [ "(" [ expression { "," expression } ] ")" ]
             | "for" NAME "in" expression ".." expression ":" block
             | "match" expression ":" { indented NAME ":" ( net_stmt | block ) }
             | "loop" "at" "most" expression ":" block
-            | "break" | "stop" | "unreachable"
+            | "break" | "stop" | "wait" | "unreachable"
 block       = { indented net_stmt }
 ```
 
-Names have no namespace prefix. `processor` is described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md#grammar).
+A field whose line ends in `=` takes one indented expression a slot. Names have no namespace prefix. `processor` is described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md#grammar).
 
 ## Open questions
 
-- The syntax is a working draft. It holds what one slice of Spacewar needed and will change as more is ported.
-- RUNS has no text form yet for the original-machine description, so the loader skips `type` declarations.
-- RUNS has no syntax yet for stating a Record's layout where play reads it.
-- Inputs belong in the top Network's contract. The form of that declaration, and what the loader checks about it, is not decided.
-- How a port writes a halt or a hang the original reaches is not decided.
+- The syntax is a working draft. It holds what Spacewar needed and will change as other games are ported.
+- RUNS has no text form yet for the original-machine description. The loader skips `type word`, and the evaluator holds the word's rules and the instructions' rules in code.
+- RUNS has no syntax yet for stating a Record's layout where play reads it. Spacewar's play reads no layout, so the port did not need one.
+- Names have no namespaces, and how RUNS text is named and shared is not decided.
 
 *MIT License. Open for implementation, extension, and critique.*
