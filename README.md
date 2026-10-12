@@ -6,6 +6,10 @@
 
 RUNS is a plain-text form for a game's rules. Its purpose is that a game's rules outlive the machine they were written for. Anyone can read, run, and change the text, and any future runtime can rebuild it into the same game.
 
+RUNS applies the Linux model to game execution. There is no "RUNS engine," the way there is no single "Linux OS". Each game assembles its own engine from shared components into a standalone build, the way Android and the Steam Deck are different operating systems built around the same kernel and coreutils. An open-source engine does not provide this. It removes the vendor but keeps the coupling, since the game is still written inside one engine's runtime and its version churn. RUNS removes the coupling, because the rules are source that outlives every engine that realizes them.
+
+This is design intent, and it is a claim that can be checked. The Spacewar port checks one part of it: one RUNS text, with a binding for one machine, rebuilds the original game exactly. Two parts are not yet checked. No second binding builds the same text for another machine, and no two games share components yet.
+
 ## What RUNS requires
 
 Five requirements follow from that purpose.
