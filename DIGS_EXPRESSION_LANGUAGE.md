@@ -320,6 +320,11 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `jump <word of code> at most N` | Parser | A `jump` bound is more than one number or name. |
 | `run belongs to a network`, `match belongs to a network`, `stop belongs to a network`, `wait belongs to a network` | `runs.check` | A Processor uses `run`, `match`, `stop`, or `wait`. |
 | `... does not declare reads: ...` or `... writes: ...` | `runs.check`, run time | A Processor touches a Record it did not declare. The evaluator checks this again at run time, for every word that `jump` touches too. |
+| `... declares ... under reads: and writes:` | `runs.check` | A Processor lists a Record under both. `writes:` lets it read the Record too. |
+| `... writes ...; declare writes: ...`, `... reads ...; declare reads: ...` | `runs.check` | The text touches a Record its headers do not declare. |
+| `... declares reads: ..., but nothing in it reads ...`, the same for `writes:` | `runs.check` | A header declares a Record the text never touches. |
+| `... holds ..., not ...`, `... is passed ...` | `runs.check` | A value of one type goes where another is wanted: a member into a word field, an instruction where a word goes, or a parameter passed different types by different runs. |
+| `... fires itself` | `runs.check` | A routine fires itself. A recursion is written as a stack Record and a bounded Network loop. |
 | `unknown name ...` | `runs.check` | A name is not a parameter, a local bound on every path, an enum member, or an instruction. |
 | `set ... before let` | `runs.check` | `set` names a local that `let` has not bound on every path. |
 | `let binds a local name` | `runs.check` | `let` names a Record field. |

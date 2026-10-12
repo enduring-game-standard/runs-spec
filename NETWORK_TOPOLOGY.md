@@ -124,7 +124,7 @@ A Network has a name, optional parameters, optional headers, and a body.
 ```runs
 network frame
   reads: console
-  writes: display
+  writes: display, lights
   if objects.routine[0] == none:
     if console.hold == off:
       run launch
@@ -270,6 +270,7 @@ For a checked Network, "inside" means the Network and every routine it fires, di
 3. Each Record in `writes:` must be written by a Processor inside.
 4. Each Record in `reads:` must be read inside, by a guard or by a Processor that declares it under `reads:` or `writes:`.
 5. A top Network must declare under `reads:` each Record with a field that has no initial value, if a routine inside reads that Record.
+6. A top Network must declare under `writes:` each Record that a Processor inside writes and nothing in the game reads. Such a Record only leaves the game, as Spacewar's console lights do.
 
 In the example, `explosion` declares `writes: objects, display`. Processors outside it, such as `launch`, also touch `objects`, and `display` is a stream. `random` and `cloud` are touched only inside `explosion`, so they belong to it and stay out of its contract. `frame` is the top Network. Every Processor is inside it, so only the stream leaves it. `console` has a field with no initial value, and the frame's guard reads it, so `console` comes in.
 
@@ -327,6 +328,7 @@ Before anything runs, `runs.check` checks the shape of each kind, the names each
 | `... defined twice` | Two routines share a name. |
 | `... is no routine`, `... takes N arguments` | A `run` names a routine that does not exist, or passes the wrong number of arguments. |
 | `a match's arms are members of one enum` | A `match` has arms from no enum or from several. |
+| `nothing in the game reads ..., so it leaves the game; declare writes: ...` | A top Network does not declare a Record that only leaves the game (rule 6). |
 | `... leaves it; declare writes: ...` and the other contract errors | A contract breaks one of the rules in [Network contracts](#network-contracts). |
 | `... comes in from outside the game` | A top Network does not declare a Record with a field that has no initial value, and a routine inside reads it. |
 | `... initial values for N slots` | A field with one initial value a slot has the wrong number of lines. |
