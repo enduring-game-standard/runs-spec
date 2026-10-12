@@ -2,7 +2,7 @@
 
 🏠 **[EGS Overview](https://github.com/enduring-game-standard)** · 📦 **[AEMS](https://github.com/enduring-game-standard/aems-schema)** · 🎯 **[AEMS Conventions](https://github.com/enduring-game-standard/aems-conventions)** · 🔧 **[RUNS](https://github.com/enduring-game-standard/runs-spec)** · 📖 **[RUNS Library](https://github.com/enduring-game-standard/runs-library)** · ⚡ **[WOCS](https://github.com/enduring-game-standard/wocs-protocol)** · 🎼 **[MAPS](https://github.com/enduring-game-standard/maps-notation)** · 🎶 **[MAPS Library](https://github.com/enduring-game-standard/maps-library)** · ❓ **[FAQ](https://github.com/enduring-game-standard/.github/blob/main/profile/FAQ.md)** · 🔤 **[Glossary](https://github.com/enduring-game-standard/.github/blob/main/profile/README.md#glossary)**
 
-> **Status.** Working draft, settled by one port. A verbatim port of Spacewar! 3.1 (the `spacewar-runs` repository, not yet published) writes the whole game in RUNS. Its reference evaluator, `tools/runs.py`, parses RUNS, checks it before anything runs, and runs it. Checks compare the evaluator's Records with the original game running in the SIMH PDP-1 emulator, or for the square root, with results recorded from it. Its compiler, `tools/runsc.py`, compiles the RUNS text with a PDP-1 binding to the original tape image, and the image's sha256 matches the original's. The syntax in these documents is the syntax that evaluator accepts. It is a draft and will change as other games are ported. [The compiler and what it proves](#the-compiler-and-what-it-proves) states what the port has and has not shown.
+> **Status.** Working draft, settled by one port. A verbatim port of Spacewar! 3.1 (the [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar) repository) writes the whole game in RUNS. Its reference evaluator, `tools/runs.py`, parses RUNS, checks it before anything runs, and runs it. Checks compare the evaluator's Records with the original game running in the SIMH PDP-1 emulator, or for the square root, with results recorded from it. Its compiler, `tools/runsc.py`, compiles the RUNS text with a PDP-1 binding to the original tape image, and the image's sha256 matches the original's. The syntax in these documents is the syntax that evaluator accepts. It is a draft and will change as other games are ported. [The compiler and what it proves](#the-compiler-and-what-it-proves) states what the port has and has not shown.
 
 RUNS is a plain-text form for a game's rules. Its purpose is that a game's rules outlive the machine they were written for. Anyone can read, run, and change the text, and any future runtime can rebuild it into the same game.
 
@@ -130,7 +130,7 @@ A **binding** maps RUNS onto one target machine. It holds only the choices that 
 - How the code is laid out.
 - Which device carries each boundary field.
 
-A binding holds no game logic. It has no expressions, no statements, and no number that the game computes with. Where the game states a layout, the binding follows it. The Spacewar port's PDP-1 binding is `pdp1/` in `spacewar-runs`, and `pdp1/README.md` there defines its vocabulary and the rules its compiler enforces.
+A binding holds no game logic. It has no expressions, no statements, and no number that the game computes with. Where the game states a layout, the binding follows it. The Spacewar port's PDP-1 binding is `pdp1/` in `RUNS-Spacewar`, and `pdp1/README.md` there defines its vocabulary and the rules its compiler enforces.
 
 ## The compiler and what it proves
 
@@ -174,7 +174,7 @@ RUNS is a protocol on its own.
 
 Every RUNS example in these documents loads and runs in the Spacewar port's evaluator. `tools/check_examples.py` checks this. It loads each accepted example, then all of a document's accepted examples as one program, runs `runs.check`, and runs each top Network six passes. It confirms that each rejected example fails with the error its first line quotes. It also fails on an em dash or an en dash in the documents.
 
-To run the check, put `spacewar-runs` beside this repository and run this command from this repository:
+To run the check, put `RUNS-Spacewar` beside this repository and run this command from this repository:
 
 ```sh
 python3 tools/check_examples.py
@@ -183,7 +183,7 @@ python3 tools/check_examples.py
 To point it at other directories, pass them as arguments:
 
 ```sh
-python3 tools/check_examples.py <runs-spec dir> <spacewar-runs dir>
+python3 tools/check_examples.py <runs-spec dir> <RUNS-Spacewar dir>
 ```
 
 The command exits with status 0 when every example passes.

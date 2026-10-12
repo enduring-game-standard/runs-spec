@@ -1,4 +1,4 @@
-"""Check every RUNS example in the runs-spec docs against spacewar-runs' tools/runs.py.
+"""Check every RUNS example in the runs-spec docs against RUNS-Spacewar's tools/runs.py.
 
 Fenced blocks tagged `runs` or `runs-prim` are accepted examples. Each must load
 alone. All accepted blocks of one document then load together as one program,
@@ -11,15 +11,15 @@ message contains <text>.
 
 The docs' prose must have no em dash or en dash.
 
-usage: python3 tools/check_examples.py [<runs-spec dir> [<spacewar-runs dir>]]
-The defaults are this repository and ../spacewar-runs beside it."""
+usage: python3 tools/check_examples.py [<runs-spec dir> [<RUNS-Spacewar dir>]]
+The defaults are this repository and ../RUNS-Spacewar beside it."""
 import re
 import sys
 import tempfile
 from pathlib import Path
 
 spec = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
-port = Path(sys.argv[2]) if len(sys.argv) > 2 else spec.parent / "spacewar-runs"
+port = Path(sys.argv[2]) if len(sys.argv) > 2 else spec.parent / "RUNS-Spacewar"
 sys.path.insert(0, str(port / "tools"))
 import runs  # noqa: E402
 

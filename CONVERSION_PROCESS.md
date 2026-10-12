@@ -1,6 +1,6 @@
 # How to port a game to RUNS
 
-This guide ports a game to RUNS the way the Spacewar! 3.1 port (`spacewar-runs`) did. The port is verbatim. Every sequence of inputs from power-on gives the same game, glitches included. You never change the game to fit RUNS. Where RUNS cannot say what the game does, RUNS has to grow, and that is a change to this spec.
+This guide ports a game to RUNS the way the Spacewar! 3.1 port (`RUNS-Spacewar`) did. The port is verbatim. Every sequence of inputs from power-on gives the same game, glitches included. You never change the game to fit RUNS. Where RUNS cannot say what the game does, RUNS has to grow, and that is a change to this spec.
 
 The Spacewar port is complete. Every routine of the game is written in RUNS, and the RUNS text with its PDP-1 binding compiles to the original tape image, byte for byte. Each step below names what Spacewar needed. A second game may need more.
 
