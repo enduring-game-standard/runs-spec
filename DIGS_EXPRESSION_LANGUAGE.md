@@ -107,7 +107,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `for i in a .. b:` | Run the body once for each count from `a` to `b`, both included, in ascending order. |
 | `break` | Leave the innermost `loop`. |
 | `continue` | Start the next pass of the innermost `loop`. |
-| `return` | End the Processor. |
+| `return` | End the Processor. It takes no value. |
 | `emit stream: a, b, c` | Append one entry to a declared stream, one value per field in order. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the port is wrong. |
 
@@ -218,7 +218,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 | `a << n` | The PDP-1's `sal`. Shift left `n` places, keep the sign bit, and shift the sign bit in at the bottom. `-1 << 1` is `-2`. |
 | `a >> n` | The PDP-1's `sar`. Shift right `n` places and copy the sign bit. A negative word rounds toward zero, so `-1 >> 1` is `-0`. |
 | `a == b`, `a != b` | Compare all 18 bits. `-0 == 0` is false. |
-| `a < 0`, `a <= 0`, `a > 0`, `a >= 0` | Test the sign. A word compares with 0 only. The evaluator checks this when the comparison runs, and the right side must then be the word 0. `-0 < 0` is true. `-0 <= 0` is true. `0 <= 0` is true. |
+| `a < 0`, `a <= 0`, `a > 0`, `a >= 0` | Test the sign. A word compares with 0 only. `runs.check` rejects any other right side, unless the left side is a slot or a count (a parameter or a `for` variable, as in `slot < 2`). `-0 < 0` is true. `-0 <= 0` is true. `0 <= 0` is true. |
 
 The word's own operators are the only calls in RUNS:
 
@@ -325,6 +325,14 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `... declares reads: ..., but nothing in it reads ...`, the same for `writes:` | `runs.check` | A header declares a Record the text never touches. |
 | `... holds ..., not ...`, `... is passed ...` | `runs.check` | A value of one type goes where another is wanted: a member into a word field, an instruction where a word goes, or a parameter passed different types by different runs. |
 | `... fires itself` | `runs.check` | A routine fires itself. A recursion is written as a stack Record and a bounded Network loop. |
+| `... compares a word with 0 only, or a slot or count with a number` | `runs.check` | An ordering compare has a word on the left and anything but 0 on the right. |
+| `... of two constants is constant` | `runs.check` | A comparison or operator has a constant on both sides. |
+| `... does not fit a word` (in `runs.check`) | `runs.check` | A literal is wider than 18 bits. |
+| `... has N slots, not slot ...` | `runs.check` | A constant index is past a collection's last slot. |
+| `... takes N values, not ...` | `runs.check` | A word operator gets the wrong number of operands. |
+| `its parameter ... is never read`, `the local ... is never read` | `runs.check` | A routine's parameter, or a local, is never read. A value a pair spreads into and nothing reads is named `_`. |
+| `nothing after ... runs`, `... takes nothing after it` | `runs.check` | A statement follows `break`, `continue`, `return`, `stop`, or `unreachable` in the same block, or `return` has a value. |
+| `... outside a loop` | `runs.check` | `break` or `continue` stands outside a `loop`. |
 | `unknown name ...` | `runs.check` | A name is not a parameter, a local bound on every path, an enum member, or an instruction. |
 | `set ... before let` | `runs.check` | `set` names a local that `let` has not bound on every path. |
 | `let binds a local name` | `runs.check` | `let` names a Record field. |
@@ -351,7 +359,7 @@ Each error comes from one of three stages. The parser finds an error as it reads
 A word compared with anything but 0 is rejected when it runs:
 
 ```runs-prim-rejected
-# rejected: a word compares with 0 only
+# rejected: < compares a word with 0 only, or a slot or count with a number
 record score
   first: word = 0
   second: word = 5
