@@ -28,6 +28,8 @@ RUNS has three parts.
 - **A Processor** is one rule. It declares the Records it reads and the Records it writes. Its body computes freely inside, and it may update its declared Records in place. Purity holds at the boundary. What a Processor does depends only on what it declares.
 - **A Network** fires Processors and other Networks in order, chooses with guards, and repeats with bounded loops. A Network writes nothing. A guard is any expression that writes nothing, arithmetic included.
 
+Every Record is one of three kinds: a **game** Record, an **interface** Record, or a **presentation** Record. A Processor that touches a presentation Record is part of the presentation, and it reads the interface and writes only presentation Records. [Three kinds of Record](#three-kinds-of-record) states the rules.
+
 The topology is a Petri net. Records are the places and Processors are the transitions. No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record. RUNS has no functions. An earlier draft had them, and a call carried a value from one rule to another with no place in between, so functions were removed. The only calls left in RUNS are the word's own operators, such as `rcl`, `scr`, and `popcount`, and the constructors of the original machine's instructions. If writers want call syntax, a tool that writes RUNS can offer it. RUNS itself has none.
 
 The original program's subroutines, macros, and executed tunables all become Processors. A subroutine that calls another becomes a Network. A loop that runs a macro or a tunable becomes a Network loop. A subroutine's own loop stays inside its Processor. A value the original carried in a register from one routine to the next becomes a field of a Record.
@@ -37,14 +39,16 @@ Processor bodies are written in DIGS (Deterministic Inspectable Game Syntax). Fi
 Here is a complete RUNS program. A `.runs` file declares Records and Networks:
 
 ```runs
-record ball
-  x: word = 0
+game record speed
   dx: word = 3
 
-record pad
+interface record ball
+  x: word = 0
+
+interface record pad
   held: word                # no initial value: the player's button comes in
 
-stream screen
+presentation stream screen
   x: word
 
 network tick
@@ -60,14 +64,14 @@ A `.runs-prim` file declares Processors:
 
 ```runs-prim
 processor move_ball
-  reads: pad
+  reads: pad, speed
   writes: ball
   if pad.held == 0:
-    set ball.x = ball.x + ball.dx
+    set ball.x = ball.x + speed.dx
 
 processor bounce
-  writes: ball
-  set ball.dx = -ball.dx
+  writes: speed
+  set speed.dx = -speed.dx
 
 processor draw_ball
   reads: ball
@@ -75,7 +79,7 @@ processor draw_ball
   emit screen: ball.x
 ```
 
-`tick` is a top Network, because nothing fires it, so it is a whole game. Its contract is the game's boundary with presentation. The button comes in through `reads: pad`, and the points leave through `writes: screen`. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else.
+`tick` is a top Network, because nothing fires it, so it is a whole game. The button comes in through `reads: pad`, and the points leave through `writes: screen`. The ball's speed is the game's own. Its position is in the interface, because the game moves it and the presentation shows it. `draw_ball` is the presentation. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else. To show the ball on another screen, replace `draw_ball` and `screen` and change nothing in the game.
 
 ## Exact over every input, glitches included
 
@@ -96,33 +100,40 @@ Where play reaches layout or machine behavior is a fact to measure, not a guess.
 - The game writes code and runs it. At each new game, Spacewar's outline compiler writes each ship's outline as PDP-1 instructions, and each frame the spaceship jumps into them to draw the ship. The port states this with a Record of `insn` values that the compiler fills and a `jump` that runs them by the PDP-1's rules. The outlines are presentation, but the port keeps the code and runs it where the original does.
 - Everywhere else, play reaches only the `word` type's own arithmetic, such as sums that wrap and shifts of negative numbers.
 
-## Gameplay and presentation split by consequence
+## Three kinds of Record
 
-Presentation is the screen, the sound, the controls, the pacing, and the machine underneath. It can be rebuilt for each platform. The game cannot. Games outlive their hardware only if the boundary between the two is thin.
+Presentation is the screen, the sound, the controls, the pacing, and the machine underneath. It can be rebuilt for each platform. The game cannot. A game outlives its hardware only if its presentation can be removed and replaced whole, with no change to a rule. RUNS makes that a property of the text. Every Record is one of three kinds, and each kind says which Processors may touch it.
 
-What a piece of code's effects reach decides its side, not what the code was written for. Code is presentation only if nothing in the game can observe its effects. Spacewar's central star is presentation, but it draws two random numbers each frame from the generator that also decides hyperspace jumps. Turning the star off with sense switch 6 changes hyperspace. So the star's two draws are a game rule, and only the line it draws from them is presentation.
+- **A game Record** holds what only the rules use, such as Spacewar's fuel, the random number, or a ship's angular momentum.
+- **An interface Record** holds what the game and its presentation share. The game writes what there is to show, such as each object's position and heading. The world writes what comes in, such as the controls and the switches.
+- **A presentation Record** belongs to one platform, such as the pen that traces a ship's outline, the scope's points, or the frame's time budget.
+
+A Processor that touches a presentation Record is part of the presentation. Every other Processor is part of the game. The loader enforces three rules:
+
+1. A presentation Processor touches no game Record.
+2. A presentation Processor writes no interface Record. Only the game and the world write the interface.
+3. A guard that reads a presentation Record guards only the presentation's routines.
+
+The Network fires both kinds of Processor, in the order the game needs. Remove every presentation Processor and every run of one, and what is left is the game. The rules above make its Records the same with the presentation or without it. A new platform supplies its own presentation Processors and Records, reads the same interface, and changes nothing in the game. The interface Records are the whole contract between the two.
+
+A Record's kind follows from what its values reach, not from what the code was written for. A value is the game's if any rule can observe it. Spacewar's central star draws two random numbers each frame from the generator that also decides hyperspace jumps. Turning the star off with sense switch 6 changes hyperspace. So the two draws are the game's, and only the line the star draws from them is presentation. A Processor that does both, as the original's code often does, splits in two: the game's half writes the value to an interface Record, and the presentation's half reads it.
 
 The game touches the machine in four ways:
 
-1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a field with no initial value, in a Record the boundary declares under `reads:`.
-2. A value goes out, such as a point to plot or a sound to play. It is a Record or stream the boundary declares under `writes:`.
+1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a field with no initial value, in an interface Record that the top Network declares under `reads:`.
+2. A value goes out to the presentation. It is an interface Record the game writes.
 3. The machine computes something the rules then read, such as a sum that wraps or a collision a video chip latches. That computation is a rule, and it moves inside the game.
 4. Timing. Where the game's state depends on it, timing becomes a rule or a value that comes in.
 
-Only the third could widen the boundary, and the port always resolves it by moving the computation into the game. So the boundary can grow in data, but it never gains a new kind of thing.
+Only the third could widen the boundary, and the port always resolves it by moving the computation into the game. So the interface can grow in data, but it never gains a new kind of thing.
 
-A top Network is a whole game, and its contract is the game's boundary with presentation. A game may have several top Networks, and together they are one game. Spacewar has three. The host fires one of two start Networks once, when the operator starts the machine at address 4 or 5, and then fires the frame once each frame. A Record they share does not cross the boundary.
+A top Network is one that nothing fires. A game may have several, and together they are one game. Spacewar has three. The host fires one of two start Networks once, when the operator starts the machine at address 4 or 5, and then fires the frame once each frame. A top Network's contract is what crosses between the program and the world: what comes in, and the presentation's output, such as the points the scope plots.
 
-Spacewar's boundary, as its top Networks declare it:
+`wait` is where the world takes a turn inside a firing. The host shows what has left the program and may change what comes in, and then the firing goes on.
 
-- **What comes in.** `console` holds the test word switches, the control boxes, and the six sense switches. `score` holds the two scores and the games left in the match, which start from what core held at power-on. `controls` holds which device the control word comes from, which the start address decides. `outline_code` holds the compiled outlines, which the start's new game writes before the first frame.
-- **What goes out.** `display` holds the points the scope plots. `scoreboard` holds the scores that the halt between games shows on the console lights. `lights` holds the two program flags that light for the ship that survived a game.
+Which device carries each field is not part of RUNS. A binding for each machine maps the fields that come in and go out to that machine's controls, lights, and start addresses. The Spacewar port keeps all of it for the PDP-1 in one file, `pdp1/devices.toml`, which the compiler and the checks both read.
 
-`wait` is where the world takes a turn inside a firing. The host shows what has left the game and may change what comes in, and then the firing goes on.
-
-Which device carries each field is not part of RUNS. A binding for each machine maps the boundary's fields to that machine's controls, lights, and start addresses. That mapping is the presentation side of the boundary. The Spacewar port keeps all of it for the PDP-1 in one file, `pdp1/devices.toml`, which the compiler and the checks both read.
-
-The port stays verbatim. Presentation code stays where the original runs it, in the order it runs. The split says which of its effects the game must keep.
+The Spacewar port is being split this way now, on its `split-presentation` branch. Its Records do not have kinds yet, and the loader applies the rules only to a program whose Records have them. That exception ends when the split is done. So far the split has taken the ship's outline apart from its rules. The game now computes the ship's nose, where a torpedo starts, and the outline starts its pen there. A copy of the game with the outline, the pen, the exhaust's dots, and the outline compiler deleted matches the original on 1,000 calls in SIMH, and the compiled image is still the original's.
 
 ## The binding
 
@@ -132,7 +143,7 @@ A **binding** maps RUNS onto one target machine. It holds only the choices that 
 - How each routine is entered and left.
 - Which register or word carries each value.
 - How the code is laid out.
-- Which device carries each boundary field.
+- Which device carries each field that comes in or goes out.
 
 A binding holds no game logic. It has no expressions, no statements, and no number that the game computes with. Where the game states a layout, the binding follows it. The Spacewar port's PDP-1 binding is `pdp1/` in `RUNS-Spacewar`, and `pdp1/README.md` there defines its vocabulary and the rules its compiler enforces.
 
@@ -200,7 +211,8 @@ The Spacewar port has settled the model above. These parts are still open:
 - **The original-machine description.** RUNS has no text form yet for the machine's rules. The loader skips `type word` and reads only the instruction list of `type insn`. The evaluator defines the word's arithmetic and each instruction's rule in code.
 - **Stated layout.** RUNS has no syntax yet for stating a layout where play reads it, because Spacewar's play reads none.
 - **Machine glitches.** `jump` runs code that the game writes. No port has yet run the original's own code bytes from data, so whether `jump` covers a machine glitch is untested.
-- **Gameplay and presentation by field.** The port classifies by hand, from what each effect reaches. A tool that classifies each field by consequence is not built.
+- **The kind of each Record.** The port decides each kind by hand, from what the Record's values reach. A tool that follows each value through the original in SIMH and reports where the presentation's words reach the game is not built.
+- **A second presentation.** No platform but the PDP-1 has a presentation yet, so replacing one whole is not yet shown.
 - **Other games.** Decisions about floating point, recursion, run-time allocation, versions, and code with no source come from a paper exercise against other games, recorded in the port's `INTENT.md`. No port has tested them.
 - **Naming and distribution.** The draft grammar has no namespaces. How RUNS text is named, published, and shared, and what a shared library of Records and Processors would hold, is not settled. Earlier drafts and the RUNS Library proposed Nostr events and a `runs:` namespace. The port did not test either.
 

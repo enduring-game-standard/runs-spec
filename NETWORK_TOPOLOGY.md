@@ -68,28 +68,31 @@ Two enums may share a member's name, as `switch` and `light` share `off` and `on
 A `record` declares something the game remembers. Each indented line is a field with a name, a type, and an optional initial value.
 
 ```runs
-record objects[4]
+interface record objects[4]
   routine: calc_routine = none
   x: word = 0
   counter: word = 0         # frames left, counting up toward 0
   dx: word = 0
 
-record random
+game record random
   number: word = 0
 
-record handoff
+game record handoff
   acceleration: word = 0    # what the original carries in AC into its inertia macro
 
-record cloud
+game record cloud
   particles: word = 0       # dots left to plot, counting up
 
-record console
+interface record particle
+  x: word = 0               # where the explosion puts its next dot
+
+interface record console
   hold: switch              # no initial value: the operator sets it
 
-record lights
+interface record lights
   busy: light = off
 
-record spreads[4]
+game record spreads[4]
   shift: word =             # one initial value a slot
     1
     3
@@ -97,6 +100,7 @@ record spreads[4]
     3
 ```
 
+- Each Record starts with its kind: `game`, `interface`, or `presentation`. [Three kinds of Record](#three-kinds-of-record) states what each kind allows.
 - `record name` holds one value of each field.
 - `record name[N]` holds N values of each field. The count is a number literal. A number with a leading `0` is octal, so `[030]` is 24.
 - A field of a collection takes its index after the field name, as in `objects.x[slot]`, never `objects[slot].x`. A slot past the last is an error.
@@ -112,10 +116,82 @@ A field that exists only because the original passed a value in a register, such
 A `stream` is ordered output. Each `emit` in a Processor appends one entry. A stream field's type is `word` or `int`, where `int` is a count.
 
 ```runs
-stream display
+presentation stream display
   x: word
   intensity: int
 ```
+
+A stream has a kind, as a Record does.
+
+### Three kinds of Record
+
+A game Record holds what only the rules use. An interface Record holds what the game and its presentation share: what the game writes for the presentation to show, and what the world writes for the game to read. A presentation Record belongs to one platform.
+
+A Processor that touches a presentation Record is part of the presentation. Every other Processor is part of the game. The loader enforces three rules:
+
+1. A presentation Processor touches no game Record.
+2. A presentation Processor writes no interface Record. Only the game and the world write the interface.
+3. A guard that reads a presentation Record guards only the presentation's routines. A Network that fires only presentation routines is part of the presentation too.
+
+Together these make the presentation removable. Delete every presentation Processor and every run of one, and the game's Records are the same at every step. A new platform replaces the presentation whole and changes nothing in the game.
+
+In the example, the explosion's next dot is the game's: it draws from the random number that the rest of the game also draws from. The game writes the dot to `particle`, and the presentation plots it:
+
+```runs-prim-rejected
+# rejected: processor plot_particle: touches the presentation's display and the game's random; split it, or give the game's value to an interface record
+game record random
+  number: word = 0
+
+presentation stream display
+  x: word
+
+processor plot_particle
+  reads: random
+  writes: display
+  emit display: random.number >> 3
+```
+
+The presentation may not hand anything back to the game through the interface:
+
+```runs-prim-rejected
+# rejected: processor plot_particle: the presentation writes the interface record particle; only the game and the world write it
+interface record particle
+  x: word = 0
+
+presentation stream display
+  x: word
+
+processor plot_particle
+  writes: particle, display
+  emit display: particle.x
+  set particle.x = 0
+```
+
+A game rule may not depend on the presentation's state through a guard either:
+
+```runs-rejected
+# rejected: network frame: a guard reads the presentation's budget, and the game's advance runs under it
+presentation record budget
+  left: word = 0
+
+game record clock
+  ticks: word = 0
+
+network frame
+  run spend
+  if budget.left >= 0:
+    run advance
+
+processor spend
+  writes: budget
+  set budget.left = budget.left + 1
+
+processor advance
+  writes: clock
+  set clock.ticks = clock.ticks + 1
+```
+
+The loader checks the rules only in a program whose Records have kinds. The Spacewar port's Records do not have them yet, because its split is not done. That exception ends when it is.
 
 ## Networks
 
@@ -180,6 +256,8 @@ A guard is any expression that writes nothing. It can read any Record and use an
 
 A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
 
+A Network fires the game's Processors and the presentation's in one order. `plot` above is the presentation's, and `torpedo` runs it between the game's steps. With the presentation removed, `torpedo` is `count_down`, `explode`, `coast` and `inertia` in the same order.
+
 A halt or a hang that the original reaches is a rule of the game. Spacewar halts when a ship fires and the object table is full, and the port writes that halt as `stop`. Spacewar also halts between games to show the scores on the console lights, and the operator may flip switches before continuing. The port writes that halt as an `emit` of the scores to a stream, then `wait`.
 
 ### The Network loop
@@ -192,7 +270,8 @@ network explosion(slot)
   run size_cloud
   loop at most 0400001:
     run next_random
-    run plot_particle(slot)
+    run scatter(slot)
+    run plot_particle
     if cloud.particles >= 0:
       break
   run count_down(slot)
@@ -246,11 +325,16 @@ processor next_random
   writes: random
   set random.number = (rar(random.number, 1) ^ 0355670) + 0355670
 
-processor plot_particle(slot)
+processor scatter(slot)
   reads: random, objects, spreads
-  writes: cloud, display
-  emit display: (random.number >> spreads.shift[slot]) + objects.x[slot], 3
+  writes: cloud, particle
+  set particle.x = (random.number >> spreads.shift[slot]) + objects.x[slot]
   set cloud.particles = cloud.particles + 1
+
+processor plot_particle
+  reads: particle
+  writes: display
+  emit display: particle.x, 3
 
 processor free_slot(slot)
   writes: objects
@@ -261,7 +345,7 @@ processor free_slot(slot)
 
 A Network can state a contract the way a Processor does. The Records it declares cross its boundary. Every other Record its Processors touch belongs to it.
 
-The loader checks the contract of every Network that has a `reads:` or `writes:` header, and of every top Network. A **top Network** is one that nothing fires. A game may have several. Spacewar has three. The host fires one of its two start Networks once, when the operator starts the machine, and then fires the frame once each frame. Together the top Networks are one game, so a Record they share does not cross the boundary. Their contracts are the game's boundary with presentation.
+The loader checks the contract of every Network that has a `reads:` or `writes:` header, and of every top Network. A **top Network** is one that nothing fires. A game may have several. Spacewar has three. The host fires one of its two start Networks once, when the operator starts the machine, and then fires the frame once each frame. Together the top Networks are one game, so a Record they share does not cross the boundary. Their contracts are what crosses between the program and the world: what comes in, and what the presentation sends out.
 
 For a checked Network, "inside" means the Network and every routine it fires, directly or through sub-Networks. A Processor that nothing fires does not count as outside. The loader enforces five rules:
 
@@ -272,13 +356,13 @@ For a checked Network, "inside" means the Network and every routine it fires, di
 5. A top Network must declare under `reads:` each Record with a field that has no initial value, if a routine inside reads that Record.
 6. A top Network must declare under `writes:` each Record that a Processor inside writes and nothing in the game reads. Such a Record only leaves the game, as Spacewar's console lights do.
 
-In the example, `explosion` declares `writes: objects, display`. Processors outside it, such as `launch`, also touch `objects`, and `display` is a stream. `random` and `cloud` are touched only inside `explosion`, so they belong to it and stay out of its contract. `frame` is the top Network. Every Processor is inside it, so only the stream leaves it. `console` has a field with no initial value, and the frame's guard reads it, so `console` comes in.
+In the example, `explosion` declares `writes: objects, display`. Processors outside it, such as `launch`, also touch `objects`, and `display` is a stream. `random` and `cloud` are touched only inside `explosion`, so they belong to it and stay out of its contract. `frame` is the top Network. Every Processor is inside it, so only the stream leaves it, and `lights`, which nothing reads. `console` has a field with no initial value, and the frame's guard reads it, so `console` comes in.
 
 A top Network that writes a stream must declare it. Without `writes: display`, the Spacewar frame does not load:
 
 ```runs-rejected
 # rejected: display leaves it; declare writes: display
-stream display
+presentation stream display
   x: word
 
 network frame
@@ -293,7 +377,7 @@ A top Network that reads a field with no initial value must declare its Record. 
 
 ```runs-rejected
 # rejected: console comes in from outside the game
-record console
+interface record console
   launch: word
 
 network frame
@@ -305,7 +389,7 @@ A declared Record that nothing inside uses is also an error:
 
 ```runs-rejected
 # rejected: declares reads: ['random'], but nothing inside reads them
-record random
+game record random
   number: word = 0
 
 network idle
@@ -313,7 +397,7 @@ network idle
   stop
 ```
 
-Which device holds each input and output field is not part of RUNS. It is the presentation side of the boundary, and the binding for each machine states it. The Spacewar port's PDP-1 binding states every console switch, light, and start address in one file, `pdp1/devices.toml`.
+Which device holds each field that comes in or goes out is not part of RUNS. The binding for each machine states it. The Spacewar port's PDP-1 binding states every console switch, light, and start address in one file, `pdp1/devices.toml`.
 
 ## What the loader and the evaluator reject
 
@@ -371,8 +455,9 @@ declaration = type | enum | record | stream | network | processor
 type        = "type" "insn" { indented ( "instructions" ":" NAME { NAME } | "display" ":" NAME ) }
             | "type" NAME { indented line }                  (skipped by the loader)
 enum        = "enum" NAME { indented NAME }
-record      = "record" NAME [ "[" NUMBER "]" ] { indented field }
-stream      = "stream" NAME { indented field }
+record      = kind "record" NAME [ "[" NUMBER "]" ] { indented field }
+stream      = kind "stream" NAME { indented field }
+kind        = "game" | "interface" | "presentation"
 field       = NAME ":" TYPE [ "=" ( expression | { indented expression } ) ]
 network     = "network" NAME [ "(" NAME { "," NAME } ")" ] { indented ( header | net_stmt ) }
 header      = "reads" ":" NAME { "," NAME }

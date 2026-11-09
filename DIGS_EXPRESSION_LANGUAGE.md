@@ -11,23 +11,23 @@ A Processor is one rule of the game. It declares the Records it reads and the Re
 The examples on this page together form one program with two top Networks, `demo` and `patched`. The integer square root, the random number generator, and the explosion's dot are taken from the Spacewar port. On all 65,536 inputs, the port's square root matches results that an earlier project, RUNS-Spacewar, recorded from the original running in SIMH. The check reads those recorded results and does not run SIMH itself. The plot is simplified to read one position instead of the object table.
 
 ```runs
-record square_root_call
+game record square_root_call
   entry: word = 0           # sqt: jda leaves the argument here; it doubles as the remainder
   passes_left: word = 0     # sq1
   root: word = 0            # sq2: the result
 
-record random
+interface record random
   number: word = 0          # ran
 
-record cloud
+presentation record cloud
   spread: word = 1          # which shift spreads the dots, scr 1s or scr 3s
   scatter: word = 0         # places this dot's scl shifts
 
-record position
+interface record position
   x: word = 0
   y: word = 0
 
-stream display
+presentation stream display
   x: word
   y: word
   intensity: int
@@ -69,10 +69,10 @@ Parameters are the values a Network passes with `run`, such as the slot index in
 
 ```runs-prim-rejected
 # rejected: peek does not declare reads: random
-record random
+interface record random
   number: word = 0
 
-record seen
+game record seen
   value: word = 0
 
 network top
@@ -192,7 +192,7 @@ RUNS has no `*` or `/`. Spacewar multiplies and divides with subroutines built f
 
 ```runs-prim-rejected
 # rejected: cannot read
-record area
+game record area
   width: word = 3
   size: word = 0
 
@@ -241,8 +241,8 @@ processor scatter_particle
   writes: cloud
   set cloud.scatter = popcount(random.number & 0777)
 
-# The dot is presentation. The random number drawn for it is the game:
-# hyperspace draws from the same generator.
+# The dot is presentation. The random number it reads is in the interface:
+# the draw is the game's, because hyperspace draws from the same generator.
 processor plot_particle
   reads: random, position, cloud
   writes: display
@@ -273,11 +273,11 @@ The parser needs `type insn` to read an instruction, so a file that builds instr
 type insn
   instructions: lac add dac jmp
 
-record counter
+game record counter
   value: word = 0
   step: word = 3
 
-record patch[4]
+game record patch[4]
   insn: insn                # no initial value
 
 network patched
@@ -360,7 +360,7 @@ A word compared with anything but 0 is rejected when it runs:
 
 ```runs-prim-rejected
 # rejected: < compares a word with 0 only, or a slot or count with a number
-record score
+game record score
   first: word = 0
   second: word = 5
 
@@ -377,7 +377,7 @@ An octal literal holds only octal digits:
 
 ```runs-prim-rejected
 # rejected: 09 is not an octal number
-record score
+game record score
   first: word = 0
 
 network top

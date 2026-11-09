@@ -62,11 +62,11 @@ Put only register hand-offs in `handoff`. A word the original keeps in core betw
 Here is a torpedo's flight from the Spacewar port, reduced to the x axis. The original executes the tunable `the` with `xct` and passes values through AC:
 
 ```runs
-record objects[2]
+interface record objects[2]
   x: word = 0               # nx1: position
   dx: word = 0              # ndx: velocity
 
-record handoff
+game record handoff
   coordinate: word = 0      # AC into `the`: a torpedo's coordinate, sar 9s
   acceleration: word = 0    # AC into diff: from `the`, or 0 (cla)
 
@@ -106,17 +106,19 @@ The order in which the original runs its rules is part of the game. Firing in RU
 - Do not split a loop into phases. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. A conversion that collided all objects after moving them changed 294 of 300 test frames.
 - Keep dead tests and odd ranges. Spacewar's explosion tests a size that can never pass, and its last object slot is never tested for collisions. Both stay.
 
-## 4. Split gameplay from presentation by consequence
+## 4. Give each Record a kind, and split each Processor by it
 
-Code is presentation only if nothing in the game can observe its effects.
+Each Record is the game's, the interface's, or the presentation's. [Three kinds of Record](./NETWORK_TOPOLOGY.md#three-kinds-of-record) states the rules the loader enforces. The goal is a presentation that can be removed and replaced whole, with no change to a rule.
 
-1. For each piece of display, sound, or pacing code, list every Record it changes.
-2. If the game reads any of those Records later, that effect is a rule. Spacewar's central star draws two random numbers each frame from the generator that hyperspace also uses, so the draws are rules. The line the star draws from them is presentation.
-3. Leave presentation code where the original runs it, in the order it runs. The split decides which effects the game must keep. It does not move code. Spacewar's ship outlines are presentation, and the port still runs them as the original does, as compiled code.
-4. Declare what crosses the boundary in the top Networks' contracts.
-   - Every stream the game writes, and every Record that leaves, goes in `writes:`. Spacewar's frame declares `writes: display, scoreboard, lights`.
+1. Decide each Record's kind by what its values reach, not by what the code was written for. A value is the game's if any rule can observe it. Spacewar's central star draws two random numbers each frame from the generator that hyperspace also uses, so the draws are the game's. The line the star draws from them is presentation.
+2. Put in the interface each Record that both sides need: what the game writes for the presentation to show, such as each object's position, and what comes in from the world, such as the controls.
+3. Split each Processor that touches both a game Record and a presentation Record. The original often does both in one routine. Spacewar's exhaust burns a unit of fuel and plots a dot in each pass of one loop. The game's half becomes one Processor and the presentation's half another, and the Network fires them in the original's order. A loop that holds both moves up into the Network, as a loop that runs a macro does.
+4. Where a game value reaches the presentation through a shared word, give the value its own interface field. Spacewar computed a torpedo's start from the pen that draws the ship. The game now computes the ship's nose and the torpedo from it, and the outline starts its pen at the nose. The binding keeps both names in the original's words, so the image does not change.
+5. Check the split. Remove the presentation and run the game alone against the original: every game Record must match. The Spacewar port does this for the spaceship.
+6. Declare in the top Networks' contracts what crosses between the program and the world.
+   - Every stream the presentation writes, and every Record that leaves, goes in `writes:`. Spacewar's frame declares `writes: display, scoreboard, lights`.
    - Every Record with a field that has no initial value, and that a routine inside reads, goes in `reads:`. Spacewar's frame declares `reads: console, score, controls, outline_code`. The loader refuses a top Network that misses one.
-5. Leave the devices out of RUNS. Which switch, light, or start address carries each field is the presentation side of the boundary, and the binding for each machine states it. The Spacewar port states all of them in `pdp1/devices.toml`.
+7. Leave the devices out of RUNS. Which switch, light, or start address carries each field is the binding's, and the binding for each machine states it. The Spacewar port states all of them in `pdp1/devices.toml`.
 
 ## 5. Measure where play reaches the machine
 
