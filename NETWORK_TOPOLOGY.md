@@ -191,7 +191,7 @@ processor advance
   set clock.ticks = clock.ticks + 1
 ```
 
-The loader checks the rules only in a program whose Records have kinds. The Spacewar port's Records do not have them yet, because its split is not done. That exception ends when it is.
+The loader checks the rules in a program whose Records all have kinds. A port gives its Records kinds as it converts them, and until the last one has a kind, the port's purity report lists what is left. The Spacewar port's is `tools/check_purity.py`.
 
 ## Networks
 

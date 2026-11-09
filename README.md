@@ -133,7 +133,7 @@ A top Network is one that nothing fires. A game may have several, and together t
 
 Which device carries each field is not part of RUNS. A binding for each machine maps the fields that come in and go out to that machine's controls, lights, and start addresses. The Spacewar port keeps all of it for the PDP-1 in one file, `pdp1/devices.toml`, which the compiler and the checks both read.
 
-The Spacewar port is being split this way now, on its `split-presentation` branch. Its Records do not have kinds yet, and the loader applies the rules only to a program whose Records have them. That exception ends when the split is done. So far the split has taken the ship's outline apart from its rules. The game now computes the ship's nose, where a torpedo starts, and the outline starts its pen there. A copy of the game with the outline, the pen, the exhaust's dots, and the outline compiler deleted matches the original on 1,000 calls in SIMH, and the compiled image is still the original's.
+The Spacewar port is being converted this way now, on its `split-presentation` branch. The loader applies the rules to a program whose Records all have kinds, and until the last of Spacewar's has one, the port's purity report (`tools/check_purity.py`) lists what is left. So far the split has taken the ship's outline apart from its rules. The game now computes the ship's nose, where a torpedo starts, and the outline starts its pen there. A copy of the game with the outline, the pen, the exhaust's dots, and the outline compiler deleted matches the original on 1,000 calls in SIMH, and the compiled image is still the original's.
 
 ## The binding
 
