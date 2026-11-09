@@ -32,7 +32,7 @@ RUNS has three parts.
 
 - **A Record** is anything the game remembers, such as the object table, the random number, the frame's time budget, or the tunables. It is data and nothing else. Global data is a Record like any other. A Record holds one set of fields, or a fixed number of each field. A field with no initial value is unknown until the game sets it or the world gives it. A **stream** is a Record that collects ordered output for a device, such as the points the display plots.
 - **A Processor** is one rule, and it is stateless. It declares the Records it reads and the Records it writes. It takes values from the Records it declares and gives values to the Records it declares. Its body computes with locals, and no local outlives the firing. What a Processor does depends only on what it declares.
-- **A Network** fires Processors and other Networks in order, chooses with guards, and repeats with bounded loops. A Network writes nothing. A guard is any expression that writes nothing, arithmetic included.
+- **A Network** fires Processors and other Networks in order, chooses with guards, and repeats with bounded loops. A Network writes nothing and computes nothing. A guard only tests values that Records hold, and a `run` passes only which slot a routine works on. [The order is in the text](#the-order-is-in-the-text) says why.
 
 Every Record is one of three kinds: a **game** Record, an **interface** Record, or a **presentation** Record. A Processor that touches a presentation Record is part of the presentation, and it reads the interface and writes only presentation Records. [Three kinds of Record](#three-kinds-of-record) states the rules.
 
@@ -50,6 +50,9 @@ Here is a complete RUNS program. A `.runs` file declares Records and Networks:
 game record speed
   dx: word = 3
 
+game record wall
+  past: word = 0            # how far past the wall the ball is
+
 interface record ball
   x: word = 0
 
@@ -63,7 +66,8 @@ network tick
   reads: pad
   writes: screen
   run move_ball
-  if ball.x - 0100 >= 0:
+  run reach_wall
+  if wall.past >= 0:
     run bounce
   run draw_ball
 ```
@@ -77,6 +81,11 @@ processor move_ball
   if pad.held == 0:
     set ball.x = ball.x + speed.dx
 
+processor reach_wall
+  reads: ball
+  writes: wall
+  set wall.past = ball.x - 0100
+
 processor bounce
   writes: speed
   set speed.dx = -speed.dx
@@ -87,7 +96,18 @@ processor draw_ball
   emit screen: ball.x
 ```
 
-`tick` is a top Network, because nothing fires it, so it is a whole game. The button comes in through `reads: pad`, and the points leave through `writes: screen`. The ball's speed is the game's own. Its position is in the interface, because the game moves it and the presentation shows it. `draw_ball` is the presentation. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else. To show the ball on another screen, replace `draw_ball` and `screen` and change nothing in the game.
+`tick` is a top Network, because nothing fires it, so it is a whole game. The button comes in through `reads: pad`, and the points leave through `writes: screen`. The ball's speed, and how far past the wall it is, are the game's own. `reach_wall` computes the distance into a Record, and the guard only tests it. Its position is in the interface, because the game moves it and the presentation shows it. `draw_ball` is the presentation. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else. To show the ball on another screen, replace `draw_ball` and `screen` and change nothing in the game.
+
+## The order is in the text
+
+A conversion must rebuild the original binary, so it must fire the original's rules in the original's order. The order cannot be derived from which Records each Processor reads and writes. In Spacewar, `collision` and each object's calc routine both write the object table, so the Records alone give no order between them, yet changing that order changes 294 of 300 test frames. So the text states the order, and with Records that hold only data and Processors that hold only logic, there is one way to state it.
+
+- **A line after a line is a place.** `run a` followed by `run b` means `a` puts a turn marker in a place, and `b` fires only when the marker is there. The place holds no data, only the turn. The text writes it as one line under another, and a drawing of the Network draws it as a place between the two transitions.
+- **A loop is a marker that goes around**, back to the loop's first line until the exit's guard sends it on.
+- **A guard only tests.** It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It computes nothing on a value. A condition that needs arithmetic is a Processor that computes it into a Record, and the guard tests that Record. Spacewar's breakout test, `(random.number | 0400000) + ships.uncertainty[slot] >= 0`, is the Processor `weigh_breakout`, which writes `breakout_check.margin`, and the guard `breakout_check.margin >= 0`. The image is unchanged: the binding keeps the margin in AC, where the original kept it.
+- **A `run` passes only which slot.** `run explosion(slot)` says whose marker goes through the explosion. A routine uses such a parameter only to choose a slot of a collection. A value a routine needs comes from a Record. Arithmetic on the slot, such as `slot + 1`, chooses a slot too.
+
+The loader reports a guard that computes and a `run` that passes a value as impurities, and refuses them in a program whose Records all have kinds.
 
 ## Exact over every input, glitches included
 
@@ -224,7 +244,6 @@ The command exits with status 0 when every example passes.
 The Spacewar conversion has settled the model above. These parts are still open:
 
 - **The syntax.** It is a working draft that covers what Spacewar needed.
-- **The Network side of purity.** It depends on the Network's form, which is not decided. Three questions are open. May a guard compute, or only test values that Records hold? May a `run` pass values as arguments, or must every value go through a Record? Is the firing order authored in the text, or derived from the wiring of reads and writes?
 - **The original-machine description.** RUNS has no text form yet for the machine's rules. The loader skips `type word`. The evaluator defines the word's arithmetic in code.
 - **Stated layout.** RUNS has no syntax yet for stating a layout where play reads it, because Spacewar's play reads none.
 - **Machine glitches.** No conversion has yet met a machine glitch, so no binding or compiler has yet reproduced bytes that play runs as code.

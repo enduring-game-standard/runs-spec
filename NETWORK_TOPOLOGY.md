@@ -269,7 +269,39 @@ A Network body may hold only these statements.
 | `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
 
-A guard is any expression that writes nothing. It can read any Record and use any operator, arithmetic included. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. One guard from RUNS-Spacewar is `if (random.number | 0400000) + ships.uncertainty[slot] >= 0:`.
+A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. A `run` passes only which slot the routine works on: each parameter is used only to choose a slot of a collection. The loader reports a guard that computes and a `run` that passes a value, and refuses them in a program whose Records all have kinds. The README's [The order is in the text](./README.md#the-order-is-in-the-text) says why the order is written and how each line is a place.
+
+A guard that computes is refused:
+
+```runs-rejected
+# rejected: a guard computes
+game record clock
+  ticks: word = 0
+
+network frame
+  run advance
+  if clock.ticks - 010 >= 0:
+    stop
+
+processor advance
+  writes: clock
+  set clock.ticks = clock.ticks + 1
+```
+
+So is a `run` that hands a value to the routine it fires:
+
+```runs-rejected
+# rejected: run grow passes step as a value
+game record clock
+  ticks: word = 0
+
+network frame
+  run grow(3)
+
+processor grow(step)
+  writes: clock
+  set clock.ticks = clock.ticks + step
+```
 
 A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
 
@@ -495,7 +527,6 @@ A field whose line ends in `=` takes one indented expression a slot. Names have 
 ## Open questions
 
 - The syntax is a working draft. It holds what Spacewar needed and will change as other games are converted.
-- The Network side of purity depends on the Network's form, which is not decided. Three questions are open. May a guard compute, as the RUNS-Spacewar guard above does, or only test values that Records hold? May a `run` pass values as arguments, as `run calc(slot)` does, or must every value go through a Record? Is the firing order authored in the text, as on this page, or derived from the wiring of reads and writes?
 - RUNS has no text form yet for the original-machine description. The loader skips `type word`, and the evaluator holds the word's rules and the instructions' rules in code.
 - RUNS has no syntax yet for stating a Record's layout where play reads it. Spacewar's play reads no layout, so its conversion did not need one.
 - Names have no namespaces, and how RUNS text is named and shared is not decided.
