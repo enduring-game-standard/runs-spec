@@ -100,7 +100,7 @@ processor draw_ball
 
 ## The order is in the text
 
-A conversion must rebuild the original binary, so it must fire the original's rules in the original's order. The order cannot be derived from which Records each Processor reads and writes. In Spacewar, `collision` and each object's calc routine both write the object table, so the Records alone give no order between them, yet changing that order changes 294 of 300 test frames. So the text states the order, and with Records that hold only data and Processors that hold only logic, there is one way to state it.
+The Network is derived from the game's logic, not authored. In a conversion that logic is the original program, so the order is read off the original's code: the RUNS fires the original's rules in the original's order, and nothing about it is chosen. The text records that order, because the Records do not carry it. In Spacewar, `collision` and each object's calc routine both write the object table, so their reads and writes give no order between them, yet changing that order changes 294 of 300 test frames. With Records that hold only data and Processors that hold only logic, there is one way to record it.
 
 - **A line after a line is a place.** `run a` followed by `run b` means `a` puts a turn marker in a place, and `b` fires only when the marker is there. The place holds no data, only the turn. The text writes it as one line under another, and a drawing of the Network draws it as a place between the two transitions.
 - **A loop is a marker that goes around**, back to the loop's first line until the exit's guard sends it on.
