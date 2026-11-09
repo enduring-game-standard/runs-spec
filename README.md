@@ -2,9 +2,9 @@
 
 🏠 **[EGS Overview](https://github.com/enduring-game-standard)** · 📦 **[AEMS](https://github.com/enduring-game-standard/aems-schema)** · 🎯 **[AEMS Conventions](https://github.com/enduring-game-standard/aems-conventions)** · 🔧 **[RUNS](https://github.com/enduring-game-standard/runs-spec)** · 📖 **[RUNS Library](https://github.com/enduring-game-standard/runs-library)** · ⚡ **[WOCS](https://github.com/enduring-game-standard/wocs-protocol)** · 🎼 **[MAPS](https://github.com/enduring-game-standard/maps-notation)** · 🎶 **[MAPS Library](https://github.com/enduring-game-standard/maps-library)** · ❓ **[FAQ](https://github.com/enduring-game-standard/.github/blob/main/profile/FAQ.md)** · 🔤 **[Glossary](https://github.com/enduring-game-standard/.github/blob/main/profile/README.md#glossary)**
 
-> **Status.** Draft, developed against one conversion: [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar) converts Spacewar! 3.1 to RUNS. The syntax here is the syntax its evaluator, `tools/runs.py`, accepts.
+> **Status.** Draft, developed against one conversion: [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar) converts Spacewar! 3.1 to RUNS. Its evaluator, `tools/runs.py`, loads and runs every `runs` and `runs-prim` example in these documents.
 
-RUNS is a plain-text form for a game's rules. It aims to let a game's rules outlive the machine they were written for: anyone can read, run, and change the text, and a runtime on another machine can rebuild it into the same game.
+RUNS is a plain-text form for a game's rules, so that the rules outlive the machine they were written for. Anyone can read, run, and change the text, and a runtime on another machine rebuilds it into the same game.
 
 RUNS applies the Linux model to game execution. There is no "RUNS engine," the way there is no single "Linux OS". Each game assembles its own engine from shared components into a standalone build, the way Android and the Steam Deck are different operating systems built around the same kernel and coreutils. An open-source engine removes the vendor but keeps the coupling, since the game is still written inside one engine's runtime. RUNS keeps the rules as source, apart from any engine.
 
@@ -12,7 +12,9 @@ RUNS applies the Linux model to game execution. There is no "RUNS engine," the w
 
 - [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md) is the reference for Processors in `.runs-prim` files. It covers their declarations, statements, and expressions, why a Record holds no code, and the `word` type.
 - [Network topology](./NETWORK_TOPOLOGY.md) is the reference for `.runs` files. It covers types, enums, Records, streams, Networks, top Networks, `wait`, and the contract rules the loader enforces.
-- [Conversion process](./CONVERSION_PROCESS.md) is how to convert a program to RUNS, as RUNS-Spacewar does. It maps each routine, macro, and register of the original to Records, Processors, and Networks.
+- [Machine description](./MACHINE_DESCRIPTION.md) is the reference for `.runs-machine` files. It covers the original machine's types, literals, operators and their bodies in the core, address spaces, and stated layout. The PDP-1's description is its worked example.
+- [Binding](./BINDING.md) is the reference for bindings. It covers places, conventions, storage, spelling, code layout, events and devices, machine words, the host, and the mutation gate. The PDP-1 binding is its worked example.
+- [Conversion process](./CONVERSION_PROCESS.md) is how to convert a program on any machine to RUNS. It covers the toolkit a conversion builds, describing the machine, and the mapping of each routine, register, flag, interrupt, and device of the original to Records, Processors, and Networks. Spacewar is its worked example.
 
 ## A conversion is not a port
 
@@ -20,7 +22,7 @@ A port rewrites a game for another machine. A conversion reorganizes an existing
 
 ## What RUNS requires
 
-1. **The game is exact, glitches included.** Every sequence of inputs from power-on gives the same game as the original. A glitch that play can reach is part of the game. A re-release of Super Mario 64 without the backwards long jump would not be Super Mario 64. A conversion never changes the game to fit RUNS. Where RUNS cannot yet say what a game does, RUNS grows.
+1. **The game is exact, glitches included.** Every sequence of inputs from power-on gives the same game as the original. A glitch that play can reach is part of the game. A re-release of Super Mario 64 without the backwards long jump would not be Super Mario 64. A conversion does not change the game to fit RUNS. Where RUNS cannot say what a game does, RUNS grows.
 2. **The text is the game.** RUNS is deterministic and total, so every faithful runtime produces the same game. Nothing about the game lives only in a binary.
 3. **Every rule can be swapped.** A rule is replaceable only if its whole contract is visible. A Processor's contract is the Records it reads and writes, and nothing else. A register left set, a shared scratch word, or a patched instruction would be a hidden channel. That is why all data flows through Records.
 4. **The text reads as the net.** The RUNS text is the game's Petri net, with Records as places and Processors as transitions. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code. The order in which rules fire, and the conditions under which they fire, are rules too, and the text states them.
@@ -38,9 +40,9 @@ RUNS has three parts.
 
 Every Record is one of three kinds: a **game** Record, an **interface** Record, or a **presentation** Record. [Three kinds of Record](#three-kinds-of-record) states the rules.
 
-The topology is a Petri net. Records are the places and Processors are the transitions. No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record. RUNS has no functions, because a call carries a value from one rule to another with no place in between. The only calls are the word's own operators, such as `rcl`, `scr`, and `popcount`, and the constructors of the original machine's instructions.
+The topology is a Petri net. Records are the places and Processors are the transitions. No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record. RUNS has no functions, because a call carries a value from one rule to another with no place in between. The only calls are the operators of the [machine description](./MACHINE_DESCRIPTION.md), such as the PDP-1's `rcl`, `scr`, and `popcount`, and the constructors of the original machine's instructions.
 
-Records are organized by meaning, not by where the original kept a value. [Conversion process](./CONVERSION_PROCESS.md#2-map-each-routine-to-processors-and-networks) maps each routine, macro, and register of an original program to Records, Processors, and Networks.
+Records are organized by meaning, not by where the original kept a value. [Conversion process](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) maps each routine, macro, and register of an original program to Records, Processors, and Networks.
 
 Firing is sequential. A Network runs its Processors in the order it states them, and each Processor sees everything earlier ones wrote. A compiler may find concurrency from the declared reads and writes, but concurrency is not part of the model. Assuming it would change Spacewar.
 
@@ -117,15 +119,15 @@ A glitch is one of three kinds, by what it reads.
 2. **A layout glitch** reads past an array, through a stale pointer, or reads one kind of object as another, such as DOOM's `spechit` overflow. In those states the rule is whatever lies next in memory, so the layout is part of the game. Where play reads the layout, the RUNS text states it.
 3. **A machine glitch** runs data as code or jumps into the middle of a routine. On that path the rule is what the machine does with those bytes. The RUNS text states that rule in a Processor, as it states any other. The binding and a general compiler for the machine reproduce the bytes in the binary. RUNS itself never keeps instructions in a Record to run them.
 
-All three kinds share one piece, a description of the original machine. It supplies RUNS's types. For Spacewar, that is the `word`, the PDP-1's 18-bit ones' complement word. Where play reads the layout, it supplies the layout. The rest of the game is RUNS.
+All three kinds share one piece, the [machine description](./MACHINE_DESCRIPTION.md). It supplies RUNS's types and every operator on them. For Spacewar, that is the `word`, the PDP-1's 18-bit ones' complement word. Where play reads the layout, its address spaces carry the layout the RUNS text states. The rest of the game is RUNS.
 
 A halt or a hang that the original reaches is a rule, not an error. Spacewar halts when a ship fires and the object table is full, and the conversion writes `stop`. Spacewar also halts between games to show the scores, and the conversion writes an `emit` of the scores, then `wait`. In contrast, when a loop runs past its bound, a `requires:` fails, or the evaluator reaches `unreachable`, the RUNS text is wrong.
 
-A conversion measures where play reaches layout or machine behavior. RUNS-Spacewar measures it with `tools/reach_oracle.py`, which runs the original in SIMH through seventeen scripted matches, 59 million instructions. Its findings for Spacewar are these:
+A conversion measures where play reaches layout or machine behavior, as [Conversion process](./CONVERSION_PROCESS.md#6-measure-where-play-reaches-the-machine) states. RUNS-Spacewar measures it with `tools/reach_oracle.py`, which runs scripted matches of the original in SIMH. Its findings for Spacewar are these:
 
 - Play observes no layout read. The main loop reads past the ships' two-word outline array for every torpedo slot, but only the ships' own slots use the word it loads. A check that poisons that word for every other slot still matches the original, so the binding carries the read and the RUNS text does not state it.
 - The first match reads words of core that the tape never loads, such as the scores, so their power-on contents matter. Those words are fields with no initial value, and they come in at the game's boundary.
-- The game writes code and runs it. At each new game, Spacewar's outline compiler writes each ship's outline as PDP-1 instructions, and each frame the spaceship jumps into them to draw the ship. The outlines are presentation. RUNS-Spacewar's text still states them with a Record of `insn` values and a Processor that runs them with `jump`. Both are impure, and the loader counts each one. The pure form states what the outline code draws in Processors of its own, and the binding and the compiler reproduce the instructions.
+- The game writes code and runs it. At each new game, Spacewar's outline compiler writes each ship's outline as PDP-1 instructions, and each frame the spaceship jumps into them to draw the ship. The outlines are presentation. RUNS-Spacewar's text states them with a Record of `insn` values and a Processor that runs them with `jump`. Both are impure, and the purity report counts each one. The pure form states what the outline code draws in Processors of its own, and the binding and the compiler reproduce the instructions.
 - Everywhere else, play reaches only the `word` type's own arithmetic, such as sums that wrap and shifts of negative numbers.
 
 ## Three kinds of Record
@@ -136,19 +138,13 @@ Presentation is the screen, the sound, the controls, the pacing, and the machine
 - **An interface Record** holds what the game and its presentation share. The game writes what there is to show, such as each object's position and heading. The world writes what comes in, such as the controls and the switches.
 - **A presentation Record** belongs to one platform, such as the pen that traces a ship's outline, the scope's points, or the frame's time budget.
 
-A Processor that touches a presentation Record is part of the presentation. Every other Processor is part of the game. The loader enforces three rules:
+A Processor that touches a presentation Record is part of the presentation. Every other Processor is part of the game. Every stream leaves to a device, so every stream is presentation, and a Processor that emits to one is presentation too. A presentation Processor touches no game Record and writes no interface Record, and a guard that reads a presentation Record guards only the presentation. [Three kinds of Record](./NETWORK_TOPOLOGY.md#three-kinds-of-record) states the rules as the loader enforces them.
 
-1. A presentation Processor touches no game Record.
-2. A presentation Processor writes no interface Record. Only the game and the world write the interface.
-3. A guard that reads a presentation Record guards only the presentation's routines.
-
-Every stream leaves to a device, so every stream is presentation. The loader refuses a stream of another kind with `stream <name>: a stream leaves to a device, so it is a presentation stream`. A Processor that emits to a stream touches a presentation Record, so it is presentation too.
-
-The Network fires both kinds of Processor, in the order the game needs. Remove every presentation Processor and every run of one, and what is left is the game. The rules above make its Records the same with the presentation or without it. A new platform supplies its own presentation Processors and Records, reads the same interface, and changes nothing in the game. The interface Records are the whole contract between the two.
+The Network fires both kinds of Processor, in the order the game needs. Remove every presentation Processor and every run of one, and what is left is the game. The rules make its Records the same with the presentation or without it. A new platform supplies its own presentation Processors and Records, reads the same interface, and changes nothing in the game. The interface Records are the whole contract between the two.
 
 A Record's kind follows from what its values reach, not from what the code was written for. A value is the game's if any rule can observe it. Spacewar's central star draws two random numbers each frame from the generator that also decides hyperspace jumps. Turning the star off with sense switch 6 changes hyperspace. So the two draws are the game's, and only the line the star draws from them is presentation. A Processor that does both, as the original's code often does, splits in two. The game's half writes the value to an interface Record, and the presentation's half reads it.
 
-A conversion checks its split by running the game with every presentation Processor removed against the original. Every game Record must match.
+A conversion checks its split by running the game with every presentation Processor removed against the original, as [Conversion process](./CONVERSION_PROCESS.md#5-give-each-record-a-kind-and-split-each-processor-by-it) states.
 
 The game touches the machine in four ways:
 
@@ -157,49 +153,37 @@ The game touches the machine in four ways:
 3. The machine computes something the rules then read, such as a sum that wraps or a collision a video chip latches. That computation is a rule, and it moves inside the game.
 4. Timing. Where the game's state depends on it, timing becomes a rule or a value that comes in.
 
-Only the third could widen the boundary, and a conversion always resolves it by moving the computation into the game. So the interface can grow in data, but it never gains a new kind of thing.
-
-The loader enforces the kind rules on a program whose Records all have kinds. Until then, a purity report lists every remaining impurity. RUNS-Spacewar's is `tools/check_purity.py`, and its `split-presentation` branch is splitting Spacewar this way.
+Only the third could widen the boundary, and a conversion always resolves it by moving the computation into the game. So the interface can grow in data, but it does not gain a new kind of thing.
 
 ## The binding
 
-A **binding** maps RUNS onto one target machine. It holds layout only, the choices that play cannot observe:
-
-- Where each routine and each Record field lies.
-- How each routine is entered and left.
-- Which register or word carries each value.
-- How the code is laid out.
-- Which device carries each field that comes in or goes out.
-
-A binding holds no game logic. It has no expressions, no statements, and no number that the game computes with. Where the game states a layout, the binding follows it. RUNS-Spacewar's PDP-1 binding is `pdp1/`, and `pdp1/README.md` there defines its vocabulary and the rules its compiler enforces. It states every device in one file, `pdp1/devices.toml`, which the compiler and the checks both read.
+A **binding** maps RUNS onto one target machine. It holds only choices that play cannot observe, such as where each routine and field lies, which register carries a value, how an enum is spelled in bits, and which device carries each value that comes in or goes out. It holds no game logic. [Binding](./BINDING.md) states every section a binding has, what the compiler refuses, how the host fires a game, and the mutation gate. RUNS-Spacewar's PDP-1 binding is `pdp1/`, and `pdp1/README.md` there defines its full vocabulary.
 
 ## The compiler
 
-A compiler takes RUNS plus a binding for a target. With the original machine's binding, it builds the original binary exactly. With other bindings, the goal is the same game on other machines.
+A compiler takes RUNS plus a binding for a target. With the original machine's binding, it builds the original binary exactly. With another machine's binding, it builds the same game on that machine. The compiler belongs to the target machine, and every game for that machine shares it. [Move in small steps that each compile](./CONVERSION_PROCESS.md#move-in-small-steps-that-each-compile) says what changes when a pure shape does not compile to the original binary.
 
-The compiler belongs to the target machine, and every game for that machine shares it. It changes only for an idiom that a second program for that machine would use.
-
-When a pure shape will not compile to the original binary, change the RUNS text first, then the binding, then the compiler. The RUNS text may take another pure shape. The binding may gain layout. The compiler grows last, and only by the rule above.
-
-In RUNS-Spacewar, `tools/runsc.py` compiles the RUNS text and the PDP-1 binding to the C dialect of the `spacewar-c` project, and spacewar-c's `pdp1cc` compiles that C to a tape image. All 13 units are generated from RUNS, and the image's sha256 is the original's, `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`.
+In RUNS-Spacewar, `tools/runsc.py` compiles the RUNS text and the PDP-1 binding to the C dialect of the `spacewar-c` project, and spacewar-c's `pdp1cc` compiles that C to a tape image. The image's sha256 is the original's, `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`.
 
 RUNS-Spacewar checks the conversion three ways:
 
-- **The evaluator against SIMH.** Each routine and Network runs in the evaluator and in SIMH from the same state, and the checks compare Records and points. `tools/check_all.sh` runs them on each change.
-- **The image against the original.** `runsc` compiles only RUNS that `runs.check` accepts, and refuses a binding key it does not know or a key it needs that no binding gives.
-- **The mutation gate.** `tools/check_compiled.py` mutates the RUNS of every routine and field that a binding compiles. Each mutant changes the image, is refused by `runsc` or the evaluator, or fires the same as the original on 200 seeded Record states.
+- **The evaluator against SIMH.** Each routine and Network runs in the evaluator and in SIMH from the same state, and the checks compare Records and points.
+- **The image against the original.** `runsc` builds the image from RUNS and prints `MATCH` when its hash is the original's.
+- **The mutation gate.** `tools/check_compiled.py` mutates the RUNS text and the binding, as [The mutation gate](./BINDING.md#the-mutation-gate) states.
+
+`tools/check_all.sh` runs all three.
 
 ## Relationship to other EGS protocols
 
 RUNS is a protocol on its own.
 
 - **MAPS** is a separate protocol, a notation for studying and designing rules.
-- **AEMS** is a separate protocol for assets and things. A game's assets belong there. Spacewar's ship outlines and star catalog are data on the tape, so the conversion keeps them in the RUNS text as Records. RUNS defines no way to read AEMS data yet.
+- **AEMS** is a separate protocol for assets and things. A game's assets belong there. Spacewar's ship outlines and star catalog are data on the tape, so the conversion keeps them in the RUNS text as Records. RUNS defines no way to read AEMS data.
 - **RUNS Library** is a separate repository that predates this spec and differs from it. Where they differ, this spec governs.
 
 ## Check the examples
 
-Every RUNS example in these documents loads and runs in RUNS-Spacewar's evaluator. Every accepted example gives each Record and stream a kind, so the loader checks it for purity. `tools/check_examples.py` checks this. It loads each accepted example, then all of a document's accepted examples as one program, runs `runs.check`, and runs each top Network six passes. It confirms that each rejected example fails with the error its first line quotes. It also fails on an em dash or an en dash in the documents.
+Every `runs` and `runs-prim` example in these documents loads and runs in RUNS-Spacewar's evaluator. The examples' machine is the PDP-1, and they omit the `machine pdp1` line, because that evaluator holds the [PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) in code and reads no `machine` line. Blocks tagged `runs-machine` and `text` are not run. Every accepted example gives each Record and stream a kind, so the loader checks it for purity. `tools/check_examples.py` checks this. It loads each accepted example, then all of a document's accepted examples as one program, runs `runs.check`, and runs each top Network six passes. It confirms that each rejected example fails with the error its first line quotes. It also fails on an em dash or an en dash in the documents.
 
 To run the check, put `RUNS-Spacewar` beside this repository and run this command from this repository:
 
@@ -217,12 +201,7 @@ The command exits with status 0 when every example passes.
 
 ## Open questions
 
-- **The original-machine description.** RUNS has no text form yet for the machine's rules. The loader skips `type word`, and the evaluator defines the word's arithmetic in code.
-- **Stated layout.** RUNS has no syntax yet for stating a layout where play reads it.
-- **Machine glitches.** No binding or compiler yet reproduces bytes that play runs as code.
 - **The kind of each Record.** A conversion decides each kind by hand, from what the Record's values reach. A tool could trace each value through the original in SIMH instead.
-- **A second presentation.** Only the PDP-1 has a presentation.
-- **Other games.** Floating point, recursion, run-time allocation, versions, and code with no source. RUNS-Spacewar's `INTENT.md` sketches them.
 - **Naming and distribution.** How RUNS text is named, published, and shared, and what a shared library of Records and Processors holds.
 
 **MIT License.** Open for implementation, extension, and critique.

@@ -1,6 +1,6 @@
 # DIGS: Deterministic Inspectable Game Syntax
 
-> **Status.** Working draft. This reference describes the Processor syntax that RUNS-Spacewar's reference evaluator, `tools/runs.py`, accepts and enforces. The whole of Spacewar! 3.1 is written in this syntax. Every accepted example on this page loads in that evaluator, passes `runs.check`, and runs. Every rejected example fails with the error quoted in its first line. `tools/check_examples.py` checks both.
+> Every accepted example on this page loads in RUNS-Spacewar's evaluator, `tools/runs.py`, passes `runs.check`, and runs. Every rejected example fails with the error its first line quotes. [Check the examples](./README.md#check-the-examples) says how.
 
 DIGS is the language of Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
@@ -8,7 +8,7 @@ A Processor is one rule of the game, and it is stateless. It declares the Record
 
 ## A running example
 
-The examples on this page together form one program with one top Network, `demo`. The integer square root, the random number generator, and the explosion's dot are taken from RUNS-Spacewar. On all 65,536 inputs, its square root matches results that an earlier project, RUNS-Spacewar, recorded from the original running in SIMH. The check reads those recorded results and does not run SIMH itself. The plot is simplified to read one position instead of the object table.
+The examples on this page together form one program with one top Network, `demo`. The integer square root, the random number generator, and the explosion's dot are taken from RUNS-Spacewar. The plot is simplified to read one position instead of the object table.
 
 ```runs
 game record square_root_call
@@ -63,7 +63,7 @@ processor take_entry
 | `writes: a, b` | Records and streams the body may write. A Processor may also read what it writes. |
 | `requires: condition` | A precondition. If it is false when the Processor fires, the RUNS text is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
 
-Parameters are the values a Network passes with `run`, such as the slot index in `run count_down(slot)`. They have no declared type. A Network usually passes a count.
+Parameters are the values a Network passes with `run`, such as the slot index in `run count_down(slot)`. They have no declared type. A parameter only chooses a slot of a collection, so a Network passes a count.
 
 `runs.check` checks each Processor's text before anything runs, and the evaluator checks each Record access again when it happens. A read of a Record in neither `reads:` nor `writes:` is an error, and so is a write to a Record not in `writes:`:
 
@@ -99,7 +99,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | Statement | Meaning |
 |-----------|---------|
 | `let name = e` | Bind a new local. |
-| `let (a, b) = e` | Bind two locals from a pair, such as the result of `scr`. |
+| `let (a, b) = e` | Bind one local for each element of a tuple, such as the pair `scr` gives. `_` takes an element that nothing reads. |
 | `set target = e` | Update a local bound by `let`, or a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
 | `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS text is wrong. |
@@ -150,11 +150,11 @@ processor square_root                                       # sqt
 
 An expression produces one of six kinds of value:
 
-- A **word** is the 18-bit word of the original machine. Every number literal and every Record field of type `word` is a word.
+- A value of a **machine type**, such as the PDP-1's 18-bit `word`. The [machine description](./MACHINE_DESCRIPTION.md#how-runs-uses-the-descriptions-types) gives each literal its type. On the PDP-1 every number literal is a word.
 - A **count** is an integer used as an index or a bound. A `for` index, a parameter that a Network passed as a count, and the result of `popcount` are counts.
 - A **condition** is `true` or `false`, the result of a comparison, `and`, `or`, or `not`.
 - An **enum member**, written by its name.
-- A **pair** of words, the result of `rcl`, `rcr`, `scl`, `scr`, `mus`, and `dis`, or written as `(a, b)`.
+- A **tuple**, the result of an operator that gives several values, such as the PDP-1's `rcl`, `rcr`, `scl`, `scr`, `mus`, and `dis`, or written as `(a, b)`.
 - An **instruction**, a word of code built by an instruction's name. It is impure. [A Record holds no code](#a-record-holds-no-code) describes it.
 
 ### Names and places
@@ -166,7 +166,7 @@ An expression produces one of six kinds of value:
 
 Reading a field that has no initial value, before the game sets it or the world gives it, is an error.
 
-A number literal is a run of digits. A literal with a leading `0` is octal, as in `0355670` and `-04000`, and holds only the digits 0 to 7. Other literals are decimal. A literal must fit in 18 bits. RUNS has no hexadecimal, fractional, or string literals.
+A number literal starts with a digit. The machine description's [literal forms](./MACHINE_DESCRIPTION.md#literals) say how it is read. On the PDP-1 a literal with a leading `0` is octal, as in `0355670` and `-04000`, and holds only the digits 0 to 7, other literals are decimal, and a literal fits in 18 bits. RUNS has no fractional or string literals.
 
 ### Operators
 
@@ -188,7 +188,7 @@ From the tightest binding to the loosest:
 
 Binary operators group from the left. The bitwise operators bind tighter than the comparisons, so `a | b == c` means `(a | b) == c`. Arithmetic binds tighter than `|`, so `(random.number | 0400000) + x` needs its parentheses. `and` and `or` take conditions and evaluate their right side only when they need it.
 
-RUNS has no `*` or `/`. Spacewar multiplies and divides with subroutines built from the PDP-1's multiply step and divide step. RUNS-Spacewar writes those subroutines as Processors over `mus` and `dis`, as the original writes them.
+RUNS has no `*` or `/`. A machine's multiply or divide instruction is a named operator of its description. The PDP-1 has only a multiply step and a divide step, so Spacewar's multiply and divide are Processors over `mus` and `dis`, as the original writes them.
 
 ```runs-prim-rejected
 # rejected: cannot read
@@ -208,7 +208,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 
 ## The word
 
-`word` is the PDP-1's 18-bit ones' complement word. The evaluator defines it in code. RUNS has no text form yet for the original-machine description that should supply it. RUNS-Spacewar's `tools/reach_oracle.py` checked the evaluator's adds, subtracts, shifts, and rotates against SIMH on 5,967,629 results from real play, and all of them matched. The pair operators, `mus`, and `dis` have no check of their own. RUNS-Spacewar's routines that use them, such as the multiply and the divide, match SIMH in its checks.
+Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The examples on this page use the PDP-1's, where `word` is the 18-bit ones' complement word. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
 
 | Operation | What it does |
 |-----------|--------------|
@@ -220,7 +220,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 | `a == b`, `a != b` | Compare all 18 bits. `-0 == 0` is false. |
 | `a < 0`, `a <= 0`, `a > 0`, `a >= 0` | Test the sign. A word compares with 0 only. `runs.check` rejects any other right side, unless the left side is a slot or a count (a parameter or a `for` variable, as in `slot < 2`). `-0 < 0` is true. `-0 <= 0` is true. `0 <= 0` is true. |
 
-The word's own operators are the only calls in RUNS:
+The machine description's named operators are the only calls in RUNS. The PDP-1's are these:
 
 | Operator | What it does |
 |----------|--------------|
@@ -258,11 +258,11 @@ processor plot_particle
 
 ## A Record holds no code
 
-A Record holds data and nothing else. Instructions that a Processor runs are logic. So instructions kept in a Record and run with `jump` are logic in a Record, and that is impure, in every game.
+A Record holds data and nothing else. Instructions that a Processor runs are logic. So instructions kept in a Record and run with `jump` are logic in a Record, and that is impure.
 
-Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. A pure RUNS text states what that code computes, in Processors of its own. The binary still holds the instructions. The binding and a general compiler for the machine reproduce those bytes, and RUNS itself never needs them. The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
+Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. A pure RUNS text states what that code computes, in Processors of its own. The binary holds the instructions. The binding and a general compiler for the machine reproduce those bytes, and RUNS itself does not hold them. The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
 
-The language still parses `type insn`, the instruction constructors, and `jump` only because an unfinished conversion still uses them. RUNS-Spacewar's text still draws its outlines with them. The loader counts each use as an impurity, with one of two messages:
+The language parses `type insn`, the instruction constructors, and `jump` for a text that keeps code in a Record, as RUNS-Spacewar's outline does. The loader counts each use as an impurity, with one of two messages:
 
 - `<record>.<field>: a Record holds data; instructions a Processor runs are logic`, for each field of type `insn`.
 - `processor <name>: runs instructions from a Record (jump); its logic belongs in its own text`, for each Processor that runs `jump`.
@@ -306,7 +306,7 @@ processor after_patch
 
 The pure form of `patched` is one Processor that adds the step to the value, then `after_patch`.
 
-To read a text that still uses these forms:
+To read a text that uses these forms:
 
 - A field of type `insn` holds one word of code. An expression builds an instruction by its name and operand, as in `lac(counter.value)` or `jmp(after_patch)`. An instruction with no operand, such as `cma`, is a bare name. Naming a word does not read it, so building `lac(counter.value)` is not a read of `counter`. `rcl` with one operand is the instruction. With three, it is the pair operator.
 - `jump code at most N` runs the words from `code` by the original machine's rules, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
@@ -314,7 +314,7 @@ To read a text that still uses these forms:
 
 ## What the evaluator rejects
 
-Each error comes from one of three stages. The parser finds an error as it reads the text. `runs.check` finds an error before anything runs. The evaluator finds an error while a routine runs, or as it gives each Record its initial values.
+Each error comes from one of three stages. The parser finds an error as it reads the text. `runs.check` finds an error before anything runs. The evaluator finds an error while a routine runs, or as it gives each Record its initial values. A message that names the word is the PDP-1's form of an error on a machine type. [What the loader rejects](./MACHINE_DESCRIPTION.md#what-the-loader-rejects) gives the general form.
 
 | Error | Stage | When |
 |-------|-------|------|
@@ -397,7 +397,7 @@ The loop bound, `jump` bound, `requires:`, and `unreachable` errors never descri
 
 ## Grammar
 
-This summary describes what `tools/runs.py` accepts. Indentation is two spaces a level. A comment runs from `#` to the end of the line.
+This grammar describes a Processor. Indentation is two spaces a level. A comment runs from `#` to the end of the line.
 
 ```text
 processor   = "processor" NAME [ "(" NAME { "," NAME } ")" ] { indented ( header | statement ) }
@@ -429,11 +429,6 @@ postfix     = primary { "." NAME | "[" expression "]" | "(" [ expression { "," e
 primary     = NUMBER | "true" | "false" | NAME | "(" expression { "," expression } ")"
 ```
 
-A call in `postfix` is valid only on the name of a word operator or of an instruction that `type insn` declares.
-
-## Open questions
-
-- The syntax is a working draft. It holds what Spacewar needed and will change as other games are converted.
-- RUNS has no text form yet for the original-machine description. It should supply `word` and any other type of the original machine, such as floating point.
+A call in `postfix` is valid only on the name of an operator of the machine description or of an instruction that `type insn` declares.
 
 *MIT License. Open for implementation, extension, and critique.*
