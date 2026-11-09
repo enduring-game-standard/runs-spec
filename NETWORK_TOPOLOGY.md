@@ -1,12 +1,12 @@
 # RUNS Network topology
 
-> **Status.** Working draft. This reference describes the `.runs` syntax that the Spacewar port's reference evaluator, `tools/runs.py`, accepts and enforces. The whole of Spacewar! 3.1 is written in this syntax. Every accepted example on this page loads in that evaluator, passes `runs.check`, and runs. Every rejected example fails with the error quoted in its first line. `tools/check_examples.py` checks both.
+> **Status.** Working draft. This reference describes the `.runs` syntax that RUNS-Spacewar's reference evaluator, `tools/runs.py`, accepts and enforces. The whole of Spacewar! 3.1 is written in this syntax. Every accepted example on this page loads in that evaluator, passes `runs.check`, and runs. Every rejected example fails with the error quoted in its first line. `tools/check_examples.py` checks both.
 
 A `.runs` file declares the game's state and its structure. It holds types, enums, Records, streams, and Networks. Processors live in `.runs-prim` files and are described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md). The loader reads every declaration kind from either kind of file, so the split between the two is a convention.
 
-## The topology is a Petri net
+## The text is the net
 
-Records are the places. Processors are the transitions. A Network says which transitions fire, in what order, and under what conditions.
+The RUNS text is the game's Petri net. Records are the places. Processors are the transitions. A Network says which transitions fire, in what order, and under what conditions. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
 
 - No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record.
 - RUNS has no functions. A Processor cannot call a Processor, and an expression cannot call a routine. The only calls are the word's own operators and the instruction constructors of `type insn`.
@@ -17,7 +17,7 @@ The order is part of the game. In Spacewar's main loop, object *i* is tested aga
 
 ## A running example
 
-The examples on this page together form one program, a reduced version of the Spacewar port's object loop. Each object slot holds a calc routine. A torpedo counts down its life and then explodes. An explosion plots a cloud of dots and then frees its slot. A switch on the console comes in from outside the game. While the operator holds it on, no new torpedo launches, and the frame waits.
+The examples on this page together form one program, a reduced version of Spacewar's object loop. Each object slot holds a calc routine. A torpedo counts down its life and then explodes. An explosion plots a cloud of dots and then frees its slot. A switch on the console comes in from outside the game. While the operator holds it on, no new torpedo launches, and the frame waits.
 
 ## Declarations
 
@@ -30,13 +30,10 @@ type word
   bits: 18
   complement: ones          # -0 exists; add and subtract are the PDP-1's
   compare: sign             # word < 0 tests the sign bit; == compares all 18 bits
-
-type insn
-  instructions: lac add dac jmp
 ```
 
 - `type word` is a comment to the reader. The evaluator defines `word`, the PDP-1's 18-bit ones' complement word, in code. The [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) describes what `word` does.
-- `type insn` is a word of code. `instructions:` lists the original machine's instructions that the game reaches. The evaluator knows the rules of `lac`, `lio`, `dac`, `dio`, `add`, `sub`, `jmp`, `stf`, `clf`, `szf`, `rcl`, `cma`, `ioh`, and `dpy`, and refuses any other. `display:` names the stream that `dpy` plots on. [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#code-the-game-runs) describes how a Processor builds and runs instructions.
+- `type insn` is a word of code, and a field of type `insn` is impure. The language still parses it only because an unfinished conversion, Spacewar's outline, still uses it. `instructions:` lists the original machine's instructions that the text builds. The evaluator knows the rules of `lac`, `lio`, `dac`, `dio`, `add`, `sub`, `jmp`, `stf`, `clf`, `szf`, `rcl`, `cma`, `ioh`, and `dpy`, and refuses any other. `display:` names the stream that `dpy` plots on. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) says why the loader counts each use as an impurity.
 
 How a game states the original machine's types as text, rules included, is an open question.
 
@@ -77,8 +74,8 @@ interface record objects[4]
 game record random
   number: word = 0
 
-game record handoff
-  acceleration: word = 0    # what the original carries in AC into its inertia macro
+game record motion
+  acceleration: word = 0    # added to an object's velocity; AC into the inertia macro
 
 game record cloud
   particles: word = 0       # dots left to plot, counting up
@@ -104,12 +101,12 @@ game record spreads[4]
 - `record name` holds one value of each field.
 - `record name[N]` holds N values of each field. The count is a number literal. A number with a leading `0` is octal, so `[030]` is 24.
 - A field of a collection takes its index after the field name, as in `objects.x[slot]`, never `objects[slot].x`. A slot past the last is an error.
-- A field's type is `word`, `insn`, or an enum.
+- A field's type is `word` or an enum. A field of type `insn` parses, and it is impure.
 - The initial value is an expression that touches no Record. A field of a collection whose line ends in `=` takes one initial value a slot, one indented line each.
 - A field with no initial value is unknown until the game sets it or the world gives it. Reading it while it is unknown is an error. That is how the text says what comes in from outside the game, such as the console's switches and the words core held at power-on.
 - Global data is a Record like any other. RUNS has no separate kind for it.
 
-A field that exists only because the original passed a value in a register, such as `handoff.acceleration`, says so in a comment that names the register and the instruction.
+Records are organized by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next, such as the acceleration above, is a field of the Record of the concern it belongs to, named for what it means. A comment may name the register and the instruction. No Record collects the values that pass through one register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it.
 
 ### Streams
 
@@ -121,7 +118,25 @@ presentation stream display
   intensity: int
 ```
 
-A stream has a kind, as a Record does.
+A stream has a kind, as a Record does. Every stream leaves to a device, so every stream is presentation, and a Processor that emits to a stream is presentation too. A stream of another kind does not load:
+
+```runs-prim-rejected
+# rejected: stream score: a stream leaves to a device, so it is a presentation stream
+game record points
+  value: word = 0
+
+game stream score
+  value: word
+
+network frame
+  writes: score
+  run show
+
+processor show
+  reads: points
+  writes: score
+  emit score: points.value
+```
 
 ### Three kinds of Record
 
@@ -135,7 +150,7 @@ A Processor that touches a presentation Record is part of the presentation. Ever
 
 Together these make the presentation removable. Delete every presentation Processor and every run of one, and the game's Records are the same at every step. A new platform replaces the presentation whole and changes nothing in the game.
 
-In the example, the explosion's next dot is the game's: it draws from the random number that the rest of the game also draws from. The game writes the dot to `particle`, and the presentation plots it:
+In the example, the explosion's next dot is the game's, because it draws from the random number that the rest of the game also draws from. The game writes the dot to `particle`, and the presentation plots it:
 
 ```runs-prim-rejected
 # rejected: processor plot_particle: touches the presentation's display and the game's random; split it, or give the game's value to an interface record
@@ -191,7 +206,9 @@ processor advance
   set clock.ticks = clock.ticks + 1
 ```
 
-The loader checks the rules in a program whose Records all have kinds. A port gives its Records kinds as it converts them, and until the last one has a kind, the port's purity report lists what is left. The Spacewar port's is `tools/check_purity.py`.
+A conversion proves its split by observation. It runs the game with every presentation Processor removed against the original, and every game Record must match.
+
+The loader enforces these rules on a program whose Records all have kinds, so a finished conversion is checked with no switch to remove. A conversion gives its Records kinds as it converts them. Until the last one has a kind, the conversion's purity report lists every remaining impurity, and nothing is exempt from it. RUNS-Spacewar's report is `tools/check_purity.py`.
 
 ## Networks
 
@@ -232,7 +249,7 @@ network torpedo(slot)
 |--------|---------|
 | `reads: a, b` | Records the Network's contract says come in from outside it. |
 | `writes: a, b` | Records and streams the Network's contract says leave it. |
-| `requires: condition` | A precondition. If it is false when the Network fires, the port is wrong. |
+| `requires: condition` | A precondition. If it is false when the Network fires, the RUNS text is wrong. |
 
 [Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
 
@@ -246,19 +263,19 @@ A Network body may hold only these statements.
 | `if g:` ... `elif g:` ... `else:` | Fire the first arm whose guard is true. |
 | `for i in a .. b:` | Fire the body once for each count from `a` to `b`, both included, in ascending order. If `b` is less than `a`, the body does not fire. The bounds may use an outer index. |
 | `match e:` | Fire the arm named by the enum value `e`. Each arm is `member: statement` on one line, or `member:` followed by an indented block. |
-| `loop at most N:` | Fire the body again and again until a guard breaks out. Running more than N passes means the port is wrong. |
+| `loop at most N:` | Fire the body again and again until a guard breaks out. Running more than N passes means the RUNS text is wrong. |
 | `break` | Leave the innermost `loop`. Valid only inside a `loop`. |
 | `stop` | The machine halts, and halts again each time the operator continues it. Nothing after it fires. |
 | `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
-| `unreachable` | Mark a path the game never takes. Reaching it means the port is wrong. |
+| `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
 
-A guard is any expression that writes nothing. It can read any Record and use any operator, arithmetic included. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. One guard from the Spacewar port is `if (random.number | 0400000) + ships.uncertainty[slot] >= 0:`.
+A guard is any expression that writes nothing. It can read any Record and use any operator, arithmetic included. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. One guard from RUNS-Spacewar is `if (random.number | 0400000) + ships.uncertainty[slot] >= 0:`.
 
 A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
 
 A Network fires the game's Processors and the presentation's in one order. `plot` above is the presentation's, and `torpedo` runs it between the game's steps. With the presentation removed, `torpedo` is `count_down`, `explode`, `coast` and `inertia` in the same order.
 
-A halt or a hang that the original reaches is a rule of the game. Spacewar halts when a ship fires and the object table is full, and the port writes that halt as `stop`. Spacewar also halts between games to show the scores on the console lights, and the operator may flip switches before continuing. The port writes that halt as an `emit` of the scores to a stream, then `wait`.
+A halt or a hang that the original reaches is a rule of the game. Spacewar halts when a ship fires and the object table is full, and the conversion writes that halt as `stop`. Spacewar also halts between games to show the scores on the console lights, and the operator may flip switches before continuing. The conversion writes that halt as an `emit` of the scores to a stream, then `wait`.
 
 ### The Network loop
 
@@ -303,13 +320,13 @@ processor explode(slot)
   set objects.counter[slot] = -2
 
 processor coast
-  writes: handoff
-  set handoff.acceleration = 0
+  writes: motion
+  set motion.acceleration = 0
 
 processor inertia(slot)
-  reads: handoff
+  reads: motion
   writes: objects
-  set objects.dx[slot] = handoff.acceleration + objects.dx[slot]
+  set objects.dx[slot] = motion.acceleration + objects.dx[slot]
   set objects.x[slot] = (objects.dx[slot] >> 3) + objects.x[slot]
 
 processor plot(slot)
@@ -397,7 +414,7 @@ network idle
   stop
 ```
 
-Which device holds each field that comes in or goes out is not part of RUNS. The binding for each machine states it. The Spacewar port's PDP-1 binding states every console switch, light, and start address in one file, `pdp1/devices.toml`.
+Which device holds each field that comes in or goes out is not part of RUNS. The binding for each machine states it. RUNS-Spacewar's PDP-1 binding states every console switch, light, and start address in one file, `pdp1/devices.toml`.
 
 ## What the loader and the evaluator reject
 
@@ -417,6 +434,7 @@ Before anything runs, `runs.check` checks the shape of each kind, the names each
 | `... comes in from outside the game` | A top Network does not declare a Record with a field that has no initial value, and a routine inside reads it. |
 | `... initial values for N slots` | A field with one initial value a slot has the wrong number of lines. |
 | `the machine has no rules for [...]` | `type insn` lists an instruction the evaluator does not know. |
+| `stream ...: a stream leaves to a device, so it is a presentation stream` | A program whose Records all have kinds declares a stream that is not presentation. |
 | `match misses [...]` (also in `runs.check`) | A `match` that fires has no arm for some member of the enum. |
 | `... is unknown: the game has not set it, so the world gives it` | A routine reads a field with no initial value before the game sets it or the world gives it. |
 | `loop ran past its bound` | A `loop` runs more passes than its bound. |
@@ -443,7 +461,7 @@ network forever
     stop
 ```
 
-The loop bound, `requires:`, and `unreachable` errors never describe the game. If one of them fires, the port is wrong.
+The loop bound, `requires:`, and `unreachable` errors never describe the game. If one of them fires, the RUNS text is wrong.
 
 ## Grammar
 
@@ -476,9 +494,10 @@ A field whose line ends in `=` takes one indented expression a slot. Names have 
 
 ## Open questions
 
-- The syntax is a working draft. It holds what Spacewar needed and will change as other games are ported.
+- The syntax is a working draft. It holds what Spacewar needed and will change as other games are converted.
+- The Network side of purity depends on the Network's form, which is not decided. Three questions are open. May a guard compute, as the RUNS-Spacewar guard above does, or only test values that Records hold? May a `run` pass values as arguments, as `run calc(slot)` does, or must every value go through a Record? Is the firing order authored in the text, as on this page, or derived from the wiring of reads and writes?
 - RUNS has no text form yet for the original-machine description. The loader skips `type word`, and the evaluator holds the word's rules and the instructions' rules in code.
-- RUNS has no syntax yet for stating a Record's layout where play reads it. Spacewar's play reads no layout, so the port did not need one.
+- RUNS has no syntax yet for stating a Record's layout where play reads it. Spacewar's play reads no layout, so its conversion did not need one.
 - Names have no namespaces, and how RUNS text is named and shared is not decided.
 
 *MIT License. Open for implementation, extension, and critique.*

@@ -1,16 +1,30 @@
-# How to port a game to RUNS
+# How to convert a program to RUNS
 
-This guide ports a game to RUNS the way the Spacewar! 3.1 port (`RUNS-Spacewar`) did. The port is verbatim. Every sequence of inputs from power-on gives the same game, glitches included. You never change the game to fit RUNS. Where RUNS cannot say what the game does, RUNS has to grow, and that is a change to this spec.
+This guide converts an existing program to RUNS the way `RUNS-Spacewar` converts Spacewar! 3.1. A conversion is not a port. It reorganizes the original program, from its assembly or from code lifted from it, into RUNS. Every sequence of inputs from power-on gives the same game, glitches included. You never change the game to fit RUNS. Where RUNS cannot say what the game does, RUNS has to grow, and that is a change to this spec.
 
-The Spacewar port is complete. Every routine of the game is written in RUNS, and the RUNS text with its PDP-1 binding compiles to the original tape image, byte for byte. Each step below names what Spacewar needed. A second game may need more.
+At every step, the RUNS text plus a binding rebuilds the original binary. The binary proves the behavior. Purity is the structure, and the structure is what the conversion changes.
+
+The Spacewar conversion is not finished. Every routine of the game is written in RUNS, and the RUNS text with its PDP-1 binding compiles to the original tape image, byte for byte. Its purity report still lists impurities. Each section below names what Spacewar needed. A second game may need more.
 
 ## Before you start
 
 You need:
 
-- The original program, as source or as machine code. Code with no source is ported from its machine code.
+- The original program, as source or as machine code. Code with no source is converted from its machine code.
 - The original running in an emulator you can script and whose state you can read. Spacewar uses SIMH running an image of the original program. The running original is the authority. Reading the source is not.
-- The reference evaluator, `tools/runs.py` in the Spacewar port. It parses RUNS, runs `runs.check` before anything runs, and runs a Network over Records.
+- The reference evaluator, `tools/runs.py` in RUNS-Spacewar. It parses RUNS, runs `runs.check` before anything runs, and runs a Network over Records.
+
+## Move in small steps that each compile
+
+A conversion moves in small steps. Each step rebuilds the original binary from the RUNS text and the binding, and passes the checks in [Compile with a binding](#7-compile-with-a-binding), before the next step begins.
+
+The conversion's progress is a report of every remaining impurity. RUNS-Spacewar's report is `tools/check_purity.py`. Nothing is exempt. A flag, a marker, or an exception that hides an impurity from the report is not allowed. The loader enforces the kind rules on a program whose Records all have kinds, so a finished conversion is checked with no switch to remove.
+
+When a pure shape will not compile to the original binary, the binding or the compiler grows. Purity never bends. Look for the change in this order:
+
+1. The RUNS text. Find another pure shape for the rule.
+2. The binding. It holds layout only.
+3. The compiler. It belongs to the target machine, and every game for that machine shares it. Change it only for an idiom that a second program for that machine would use.
 
 ## 1. Find every Record
 
@@ -22,13 +36,17 @@ A Record field is any word of the original that carries meaning from one routine
 4. Drop words that only the machine uses and play never observes, such as a cursor kept in an instruction's address field. They belong to the binding.
 5. Keep global data in Records like any other state. Data on the tape, such as Spacewar's star catalog and ship outlines, is a Record whose field takes one initial value a slot.
 6. Give a field no initial value if its value comes from outside the game. Spacewar's scores start from whatever core held at power-on, so `score` has no initial value.
-7. Keep one field for one word, even when the original reads it under two meanings. Spacewar's divide keeps the dividend's high half and then the remainder in one word, and the port keeps one field.
+7. Keep one field for one word, even when the original reads it under two meanings. Spacewar's divide keeps the dividend's high half and then the remainder in one word, and the conversion keeps one field.
 
 A routine word that names which code runs an object is a state. Make it an enum. In Spacewar, the calc routine word becomes `enum calc_routine`, and the sign bit that marks whether an object collides is a function of that enum. A program flag that a routine sets and tests is an enum too, as a field when it carries from one firing to the next and as a local when the routine clears it before it reads it.
 
 ## 2. Map each routine to Processors and Networks
 
-The original passes values between routines in registers. RUNS passes every value through a Record. Map each way the original shares a rule:
+The original passes values between routines in registers. RUNS passes every value through a Record.
+
+Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment may name the register and the instruction. Do not collect register carries into one Record named for the register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it.
+
+Map each way the original shares a rule:
 
 | In the original | In RUNS |
 |-----------------|---------|
@@ -40,7 +58,7 @@ The original passes values between routines in registers. RUNS passes every valu
 | A jump into a run of copies, past as many as a number says | A counted `for` from a local. The binding lays it out as the jump. |
 | A store of an address part (`dap`) | A `set` that keeps the rest of the word, as in `set f = f & 0770000 \| 020`. |
 | A skip return (`dvd` returns one word further when the quotient fits) | An enum field whose members are the outcomes. The binding says which member skips. |
-| A tunable executed with `xct` | A Processor of its own. What it takes from and leaves in the registers are fields of a `handoff` Record. |
+| A tunable executed with `xct` | A Processor of its own. What it takes from and leaves in the registers are fields of the Records of the concerns they belong to. |
 | A macro (`random`, `diff`) | A Processor. A macro that works on one axis at a time becomes one Processor per axis. |
 | A loop that runs a macro or a tunable | A Network `loop at most N:` that fires the Processor and exits on a guard. |
 | A routine that runs a macro or a tunable | A Network that fires Processors in the original's order. |
@@ -52,21 +70,19 @@ The original passes values between routines in registers. RUNS passes every valu
 | A jump through a table on a number | An `if` chain over the values. |
 | A halt that the operator continues past | An `emit` of what the halt shows, then `wait`. |
 | A halt that halts again when continued | `stop`. |
-| Code the program writes, then runs | A Record field of type `insn` that the writer fills, and a Processor that runs it with `jump`. A place in the code is a slot index, and the binding holds the address. |
-| A word the routine rewrites, then copies into the code | A field of type `insn` whose initial value is the word the tape holds. |
-| An instruction built at run time and executed | The rule it computes. Spacewar's explosion builds a shift from a random number, and the port writes a shift by `popcount` places. |
-| A value carried in a register between two rules | A field of `handoff`, with a comment naming the register and the instruction. |
+| Code the program writes, then runs | Processors that state what the code computes. The binding and the compiler reproduce the code's words. A Record of `insn` values run with `jump` is impure. |
+| A word the routine rewrites, then copies into the code | A field that holds what the word means. The binding and the compiler reproduce the instruction around it. |
+| An instruction built at run time and executed | The rule it computes. Spacewar's explosion builds a shift from a random number, and the conversion writes a shift by `popcount` places. |
+| A value carried in a register between two rules | A field of the Record of the concern it belongs to, named for what it means. |
 
-Put only register hand-offs in `handoff`. A word the original keeps in core between two rules is a Record field named for what it means.
-
-Here is a torpedo's flight from the Spacewar port, reduced to the x axis. The original executes the tunable `the` with `xct` and passes values through AC:
+Here is a torpedo's flight from Spacewar, reduced to the x axis. The original executes the tunable `the` with `xct` and passes values through AC. The values belong to the space warpage, so they are fields of `warpage`. RUNS-Spacewar's text still keeps them in `handoff`.
 
 ```runs
 interface record objects[2]
   x: word = 0               # nx1: position
   dx: word = 0              # ndx: velocity
 
-game record handoff
+game record warpage
   coordinate: word = 0      # AC into `the`: a torpedo's coordinate, sar 9s
   acceleration: word = 0    # AC into diff: from `the`, or 0 (cla)
 
@@ -80,17 +96,17 @@ network torpedo_flight
 ```runs-prim
 processor warp_from_x(slot)                                 # lac i mx1; sar 9s
   reads: objects
-  writes: handoff
-  set handoff.coordinate = objects.x[slot] >> 9
+  writes: warpage
+  set warpage.coordinate = objects.x[slot] >> 9
 
 processor torpedo_space_warpage                             # the
-  writes: handoff
-  set handoff.acceleration = handoff.coordinate >> 9
+  writes: warpage
+  set warpage.acceleration = warpage.coordinate >> 9
 
 processor inertia_x(slot)                                   # diff \mdx, mx1, (sar 3s
-  reads: handoff
+  reads: warpage
   writes: objects
-  set objects.dx[slot] = handoff.acceleration + objects.dx[slot]
+  set objects.dx[slot] = warpage.acceleration + objects.dx[slot]
   set objects.x[slot] = (objects.dx[slot] >> 3) + objects.x[slot]
 ```
 
@@ -114,15 +130,16 @@ Each Record is the game's, the interface's, or the presentation's. [Three kinds 
 2. Put in the interface each Record that both sides need: what the game writes for the presentation to show, such as each object's position, and what comes in from the world, such as the controls.
 3. Split each Processor that touches both a game Record and a presentation Record. The original often does both in one routine. Spacewar's exhaust burns a unit of fuel and plots a dot in each pass of one loop. The game's half becomes one Processor and the presentation's half another, and the Network fires them in the original's order. A loop that holds both moves up into the Network, as a loop that runs a macro does.
 4. Where a game value reaches the presentation through a shared word, give the value its own interface field. Spacewar computed a torpedo's start from the pen that draws the ship. The game now computes the ship's nose and the torpedo from it, and the outline starts its pen at the nose. The binding keeps both names in the original's words, so the image does not change.
-5. Check the split. Remove the presentation and run the game alone against the original: every game Record must match. The Spacewar port does this for the spaceship.
-6. Declare in the top Networks' contracts what crosses between the program and the world.
+5. Make every stream presentation. Every stream leaves to a device, so a stream of another kind does not load. A Processor that emits to a stream is presentation, so split from it any work that touches a game Record.
+6. Prove the split by observation. Run the game with every presentation Processor removed against the original. Every game Record must match. RUNS-Spacewar does this for the spaceship.
+7. Declare in the top Networks' contracts what crosses between the program and the world.
    - Every stream the presentation writes, and every Record that leaves, goes in `writes:`. Spacewar's frame declares `writes: display, scoreboard, lights`.
    - Every Record with a field that has no initial value, and that a routine inside reads, goes in `reads:`. Spacewar's frame declares `reads: console, score, controls, outline_code`. The loader refuses a top Network that misses one.
-7. Leave the devices out of RUNS. Which switch, light, or start address carries each field is the binding's, and the binding for each machine states it. The Spacewar port states all of them in `pdp1/devices.toml`.
+8. Leave the devices out of RUNS. Which switch, light, or start address carries each field is the binding's, and the binding for each machine states it. RUNS-Spacewar states all of them in `pdp1/devices.toml`.
 
 ## 5. Measure where play reaches the machine
 
-Do not guess where the game depends on the machine. Measure it by running the original through real play. The Spacewar port's `tools/reach_oracle.py` runs seventeen scripted matches in SIMH, 59 million instructions, and names every data access by the Record field or source label it lands in. It reports these kinds of site:
+Do not guess where the game depends on the machine. Measure it by running the original through real play. RUNS-Spacewar's `tools/reach_oracle.py` runs seventeen scripted matches in SIMH, 59 million instructions, and names every data access by the Record field or source label it lands in. It reports these kinds of site:
 
 - One instruction that reads several places, such as a read past the end of an array.
 - Reads of core the program never loaded. In Spacewar, the scores and the game count start from whatever core held at power-on, and the first match reads them.
@@ -133,36 +150,36 @@ Do not guess where the game depends on the machine. Measure it by running the or
 
 Then decide each site:
 
-| What play reaches | What the port does |
+| What play reaches | What the conversion does |
 |-------------------|--------------------|
 | The word's arithmetic | Nothing more. The `word` type already states it. |
 | Core the program never loaded | Fields with no initial value, which the top Networks declare under `reads:`. |
-| Code the program writes, then runs | A Record of `insn` values and `jump`. |
+| Code the program writes, then runs | Processors that state what the code computes. The binding and the compiler reproduce the code. |
 | A halt or a hang | `stop`, or `emit` then `wait`. |
 | A layout that play observes | State the layout in the RUNS text. RUNS has no syntax for this yet, because Spacewar has not needed one. |
 | A layout that play does not observe | Leave it to the binding. |
 
-A read past an array is not a layout glitch until play observes it. Prove that it does not before you leave it to the binding. Spacewar's main loop reads past the ships' two-word outline array for every torpedo slot. The port's `tools/check_frame.py poison` patches SIMH so that every such read loads a jump to address 0, and 1,500 frames with collisions still match the evaluator. With the ships' own slots poisoned too, SIMH stops at once, so the check can fail. Play never observes the read, and the binding carries it.
+A read past an array is not a layout glitch until play observes it. Prove that it does not before you leave it to the binding. Spacewar's main loop reads past the ships' two-word outline array for every torpedo slot. RUNS-Spacewar's `tools/check_frame.py poison` patches SIMH so that every such read loads a jump to address 0, and 1,500 frames with collisions still match the evaluator. With the ships' own slots poisoned too, SIMH stops at once, so the check can fail. Play never observes the read, and the binding carries it.
 
 Make the tool check itself against the emulator. The Spacewar tool compares its copy of core with SIMH's at the end of each match, and its model of the word's arithmetic with SIMH's results.
 
-## 6. Grade the port against the original
+## 6. Grade the conversion against the original
 
 Run the RUNS source in the evaluator and the original in the emulator from the same Records, then compare every field and every output point.
 
-1. Write a check that maps each Record field to the original's memory. The Spacewar port's `tools/pdp1.py` takes the addresses from the original's symbol table.
+1. Write a check that maps each Record field to the original's memory. RUNS-Spacewar's `tools/pdp1.py` takes the addresses from the original's symbol table.
 2. For a small routine, check every input. Spacewar's sine and cosine matched SIMH on all 2^18 input words each, in a run by hand.
 3. For calc routines and Networks, check many seeded states with the edge cases. The Spacewar frame Network matched SIMH on 1,500 frames that held 4,747 collisions and 2,009,045 points.
 4. Check the inputs. The Spacewar game control matched SIMH on 3,000 seeded cases, 1,226 of them starting from random power-on scores, and an evaluator field that is unknown where SIMH holds a value counts as a difference. The one exception is the `lights` Record, program flags 1 and 2, which keep what the machine held at power-on and which nothing reads.
-5. Make sure each check can fail. Plant defects in the RUNS source, such as an off-by-one or a dropped random draw, and confirm the check catches each one. The Spacewar port does this with `tools/mutate.sh`.
+5. Make sure each check can fail. Plant defects in the RUNS source, such as an off-by-one or a dropped random draw, and confirm the check catches each one. RUNS-Spacewar does this with `tools/mutate.sh`.
 
-If a loop runs past its bound, a `requires:` fails, or `unreachable` fires, the port is wrong. Fix the port. Never treat those errors as the game's behavior.
+If a loop runs past its bound, a `requires:` fails, or `unreachable` fires, the RUNS text is wrong. Fix the text. Never treat those errors as the game's behavior.
 
 ## 7. Compile with a binding
 
-A compiler takes RUNS plus a binding for a target. With the original machine's binding, the result is the original binary, exactly.
+A compiler takes RUNS plus a binding for a target. With the original machine's binding, the result is the original binary, exactly. Every step of a conversion runs this compile.
 
-The binding holds only choices that play cannot observe:
+The binding holds layout only, the choices that play cannot observe:
 
 - Tape order. Where each routine and each Record field lies.
 - Calling conventions. How each routine is entered and left, such as `jda`, `jsp`, `xct`, or a skip return.
@@ -170,21 +187,21 @@ The binding holds only choices that play cannot observe:
 - Code layout. Where a block of code lies when the original lays it out of order.
 - Devices. Which switch, light, or start address carries each boundary field.
 
-A binding holds no game logic. It has no expressions, no statements, and no number that the game computes with. The Spacewar port's binding is `pdp1/`, a TOML file for each unit plus `devices.toml`, and `pdp1/README.md` defines its vocabulary.
+A binding holds no game logic. It has no expressions, no statements, and no number that the game computes with. RUNS-Spacewar's binding is `pdp1/`, a TOML file for each unit plus `devices.toml`, and `pdp1/README.md` defines its vocabulary.
 
 The Spacewar compiler, `tools/runsc.py`, writes the C dialect of the `spacewar-c` project, and spacewar-c's `pdp1cc` compiles that C to a tape image. `runsc` refuses RUNS that `runs.check` rejects, a binding key it does not know, a key it needs that no binding gives, a name the RUNS text does not have, and a read of a shared word that holds another name. It lays code out by rules of its own, keyed on the shape of the RUNS text.
 
-Prove that the RUNS text, not the binding, decides the image. The Spacewar port's `tools/check_compiled.py` mutates the RUNS of every routine and field that a binding compiles. Among other mutations, it changes each number, each field reference, each operator, and each enum member, deletes each statement, and swaps each pair of adjacent statements. Each mutant must change the image, be refused by `runsc` or the evaluator, or be shown the same game. A mutant is the same game when it is the same text, or when it fires the same as the original on 200 seeded Record states and at least 50 of those firings run clean through the mutated routine. It also deletes each binding key, which must change the image or be refused, so no key is dead.
+Prove that the RUNS text, not the binding, decides the image. RUNS-Spacewar's `tools/check_compiled.py` mutates the RUNS of every routine and field that a binding compiles. Among other mutations, it changes each number, each field reference, each operator, and each enum member, deletes each statement, and swaps each pair of adjacent statements. Each mutant must change the image, be refused by `runsc` or the evaluator, or be shown the same game. A mutant is the same game when it is the same text, or when it fires the same as the original on 200 seeded Record states and at least 50 of those firings run clean through the mutated routine. It also deletes each binding key, which must change the image or be refused, so no key is dead.
 
-A unit counts as ported when all of these pass:
+A step is done when all of these pass:
 
 1. `runsc` prints `MATCH`.
 2. `check_compiled` passes.
-3. Each RUNS routine of the unit matches the original in the emulator, over every input or over a seeded sample with the edge cases.
-4. The checks of earlier units still pass. In the Spacewar port, `tools/check_all.sh` runs them all.
+3. Each RUNS routine the step changed matches the original in the emulator, over every input or over a seeded sample with the edge cases.
+4. The checks of earlier steps still pass. In RUNS-Spacewar, `tools/check_all.sh` runs them all.
 
 ## Assets
 
-Assets, such as art and sound, are the concern of AEMS, a separate protocol. Spacewar's ship outlines and star catalog are data on the tape, so the port keeps them in the RUNS text as Records. Conceptually they are assets.
+Assets, such as art and sound, are the concern of AEMS, a separate protocol. Spacewar's ship outlines and star catalog are data on the tape, so the conversion keeps them in the RUNS text as Records. Conceptually they are assets.
 
 *MIT License. Open for implementation, extension, and critique.*

@@ -1,14 +1,14 @@
 # DIGS: Deterministic Inspectable Game Syntax
 
-> **Status.** Working draft. This reference describes the Processor syntax that the Spacewar port's reference evaluator, `tools/runs.py`, accepts and enforces. The whole of Spacewar! 3.1 is written in this syntax. Every accepted example on this page loads in that evaluator, passes `runs.check`, and runs. Every rejected example fails with the error quoted in its first line. `tools/check_examples.py` checks both.
+> **Status.** Working draft. This reference describes the Processor syntax that RUNS-Spacewar's reference evaluator, `tools/runs.py`, accepts and enforces. The whole of Spacewar! 3.1 is written in this syntax. Every accepted example on this page loads in that evaluator, passes `runs.check`, and runs. Every rejected example fails with the error quoted in its first line. `tools/check_examples.py` checks both.
 
 DIGS is the language of Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
-A Processor is one rule of the game. It declares the Records it reads and the Records it writes. Inside its body it computes freely. It binds locals, loops, and updates its declared Records in place. Purity holds at the boundary. What a Processor does depends only on the Records and parameters it declares, and its only effects are on the Records it declares as written.
+A Processor is one rule of the game, and it is stateless. It declares the Records it reads and the Records it writes. It takes values from the Records it declares and gives values to the Records it declares. Inside its body it binds locals and loops, and no local outlives the firing. What a Processor does depends only on the Records and parameters it declares, and its only effects are on the Records it declares as written. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
 
 ## A running example
 
-The examples on this page together form one program with two top Networks, `demo` and `patched`. The integer square root, the random number generator, and the explosion's dot are taken from the Spacewar port. On all 65,536 inputs, the port's square root matches results that an earlier project, RUNS-Spacewar, recorded from the original running in SIMH. The check reads those recorded results and does not run SIMH itself. The plot is simplified to read one position instead of the object table.
+The examples on this page together form one program with one top Network, `demo`. The integer square root, the random number generator, and the explosion's dot are taken from RUNS-Spacewar. On all 65,536 inputs, its square root matches results that an earlier project, RUNS-Spacewar, recorded from the original running in SIMH. The check reads those recorded results and does not run SIMH itself. The plot is simplified to read one position instead of the object table.
 
 ```runs
 game record square_root_call
@@ -61,7 +61,7 @@ processor take_entry
 |--------|---------|
 | `reads: a, b` | Records the body may read. |
 | `writes: a, b` | Records and streams the body may write. A Processor may also read what it writes. |
-| `requires: condition` | A precondition. If it is false when the Processor fires, the port is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
+| `requires: condition` | A precondition. If it is false when the Processor fires, the RUNS text is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
 
 Parameters are the values a Network passes with `run`, such as the slot index in `run count_down(slot)`. They have no declared type. A Network usually passes a count.
 
@@ -102,14 +102,14 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `let (a, b) = e` | Bind two locals from a pair, such as the result of `scr`. |
 | `set target = e` | Update a local bound by `let`, or a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
-| `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the port is wrong. |
-| `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, by the original machine's rules. [Code the game runs](#code-the-game-runs) describes it. |
+| `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS text is wrong. |
+| `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, by the original machine's rules. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
 | `for i in a .. b:` | Run the body once for each count from `a` to `b`, both included, in ascending order. |
 | `break` | Leave the innermost `loop`. |
 | `continue` | Start the next pass of the innermost `loop`. |
 | `return` | End the Processor. It takes no value. |
 | `emit stream: a, b, c` | Append one entry to a declared stream, one value per field in order. |
-| `unreachable` | Mark a path the game never takes. Reaching it means the port is wrong. |
+| `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
 
@@ -155,7 +155,7 @@ An expression produces one of six kinds of value:
 - A **condition** is `true` or `false`, the result of a comparison, `and`, `or`, or `not`.
 - An **enum member**, written by its name.
 - A **pair** of words, the result of `rcl`, `rcr`, `scl`, `scr`, `mus`, and `dis`, or written as `(a, b)`.
-- An **instruction**, a word of code built by an instruction's name. [Code the game runs](#code-the-game-runs) describes it.
+- An **instruction**, a word of code built by an instruction's name. It is impure. [A Record holds no code](#a-record-holds-no-code) describes it.
 
 ### Names and places
 
@@ -188,7 +188,7 @@ From the tightest binding to the loosest:
 
 Binary operators group from the left. The bitwise operators bind tighter than the comparisons, so `a | b == c` means `(a | b) == c`. Arithmetic binds tighter than `|`, so `(random.number | 0400000) + x` needs its parentheses. `and` and `or` take conditions and evaluate their right side only when they need it.
 
-RUNS has no `*` or `/`. Spacewar multiplies and divides with subroutines built from the PDP-1's multiply step and divide step. The port writes those subroutines as Processors over `mus` and `dis`, as the original writes them.
+RUNS has no `*` or `/`. Spacewar multiplies and divides with subroutines built from the PDP-1's multiply step and divide step. RUNS-Spacewar writes those subroutines as Processors over `mus` and `dis`, as the original writes them.
 
 ```runs-prim-rejected
 # rejected: cannot read
@@ -208,7 +208,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 
 ## The word
 
-`word` is the PDP-1's 18-bit ones' complement word. The evaluator defines it in code. RUNS has no text form yet for the original-machine description that should supply it. The Spacewar port's `tools/reach_oracle.py` checked the evaluator's adds, subtracts, shifts, and rotates against SIMH on 5,967,629 results from real play, and all of them matched. The pair operators, `mus`, and `dis` have no check of their own. The port's routines that use them, such as the multiply and the divide, match SIMH in the port's checks.
+`word` is the PDP-1's 18-bit ones' complement word. The evaluator defines it in code. RUNS has no text form yet for the original-machine description that should supply it. RUNS-Spacewar's `tools/reach_oracle.py` checked the evaluator's adds, subtracts, shifts, and rotates against SIMH on 5,967,629 results from real play, and all of them matched. The pair operators, `mus`, and `dis` have no check of their own. RUNS-Spacewar's routines that use them, such as the multiply and the divide, match SIMH in its checks.
 
 | Operation | What it does |
 |-----------|--------------|
@@ -256,20 +256,21 @@ processor plot_particle
   emit display: high, low, 3
 ```
 
-## Code the game runs
+## A Record holds no code
 
-Some games write code and then run it. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. RUNS states this with two forms.
+A Record holds data and nothing else. Instructions that a Processor runs are logic. So instructions kept in a Record and run with `jump` are logic in a Record, and that is impure, in every game.
 
-- **Instructions are values.** A field of type `insn` holds one word of code. An expression builds an instruction by its name and operand, as in `lac(counter.value)`, `jmp(after_patch)`, or `stf(5)`. An instruction with no operand, such as `cma`, is a bare name. The operand names a word of a Record, a word of code, a routine, or a number. Naming a word does not read it, so building `lac(counter.value)` is not a read of `counter`. The machine description's `type insn` lists the instructions a game may build. [Network topology](./NETWORK_TOPOLOGY.md#types) describes it.
-- **`jump` runs code.** `jump code at most N` runs the words from `code` by the original machine's rules, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
+Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. A pure RUNS text states what that code computes, in Processors of its own. The binary still holds the instructions. The binding and a general compiler for the machine reproduce those bytes, and RUNS itself never needs them. The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
 
-`rcl` with one operand is the instruction. With three, it is the pair operator.
+The language still parses `type insn`, the instruction constructors, and `jump` only because an unfinished conversion still uses them. RUNS-Spacewar's text still draws its outlines with them. The loader counts each use as an impurity, with one of two messages:
 
-The parser needs `type insn` to read an instruction, so a file that builds instructions loads only together with the file that declares `type insn`. This example keeps both in one file.
+- `<record>.<field>: a Record holds data; instructions a Processor runs are logic`, for each field of type `insn`.
+- `processor <name>: runs instructions from a Record (jump); its logic belongs in its own text`, for each Processor that runs `jump`.
 
-`patch` has no initial value, so `patched` declares `reads: patch`, although `write_patch` sets every word before `run_patch` reads one. The loader's check is static and does not follow the order of writes. Spacewar's frame declares its compiled outlines the same way, because the tape does not load them and a new game compiles them before the first frame.
+A program whose Records all have kinds does not load while it keeps instructions in a Record:
 
-```runs
+```runs-prim-rejected
+# rejected: patch.insn: a Record holds data; instructions a Processor runs are logic
 type insn
   instructions: lac add dac jmp
 
@@ -293,8 +294,6 @@ processor write_patch
   set patch.insn[2] = dac(counter.value)
   set patch.insn[3] = jmp(after_patch)
 
-# The code adds the step to the value, then jumps to after_patch, which the
-# Network runs next.
 processor run_patch
   reads: patch
   writes: counter
@@ -305,7 +304,13 @@ processor after_patch
   set counter.step = -counter.step
 ```
 
-The evaluator knows the rules of the instructions Spacewar reaches, and no others. RUNS has no text form yet for those rules.
+The pure form of `patched` is one Processor that adds the step to the value, then `after_patch`.
+
+To read a text that still uses these forms:
+
+- A field of type `insn` holds one word of code. An expression builds an instruction by its name and operand, as in `lac(counter.value)` or `jmp(after_patch)`. An instruction with no operand, such as `cma`, is a bare name. Naming a word does not read it, so building `lac(counter.value)` is not a read of `counter`. `rcl` with one operand is the instruction. With three, it is the pair operator.
+- `jump code at most N` runs the words from `code` by the original machine's rules, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
+- The parser needs `type insn` to read an instruction, so a file that builds instructions loads only together with the file that declares it. [Network topology](./NETWORK_TOPOLOGY.md#types) describes `type insn`.
 
 ## What the evaluator rejects
 
@@ -388,7 +393,7 @@ processor reset
   set score.first = 09
 ```
 
-The loop bound, `jump` bound, `requires:`, and `unreachable` errors never describe the game. If one of them fires, the port is wrong.
+The loop bound, `jump` bound, `requires:`, and `unreachable` errors never describe the game. If one of them fires, the RUNS text is wrong.
 
 ## Grammar
 
@@ -428,8 +433,7 @@ A call in `postfix` is valid only on the name of a word operator or of an instru
 
 ## Open questions
 
-- The syntax is a working draft. It holds what Spacewar needed and will change as other games are ported.
-- RUNS has no text form yet for the original-machine description. It should supply `word`, the rules of each instruction `type insn` lists, and any other type of the original machine, such as floating point.
-- Spacewar runs code it wrote itself, and `jump` covers that case. No port has yet needed to run the original's own code bytes from data, as a machine glitch does, so whether `jump` covers that case too is untested.
+- The syntax is a working draft. It holds what Spacewar needed and will change as other games are converted.
+- RUNS has no text form yet for the original-machine description. It should supply `word` and any other type of the original machine, such as floating point.
 
 *MIT License. Open for implementation, extension, and critique.*
