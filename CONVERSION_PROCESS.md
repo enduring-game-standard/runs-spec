@@ -2,7 +2,7 @@
 
 This guide converts an existing program on any machine to RUNS. Its worked example is `RUNS-Spacewar`, which converts Spacewar! 3.1 on the PDP-1. Each rule is stated for any machine first, then shown on Spacewar.
 
-A **conversion** is not a port. It reorganizes the **original** program, from its source, from code lifted from it, or from its machine code, into RUNS. Every sequence of inputs from power-on gives the same game, glitches included. The game does not change to fit RUNS. Where RUNS cannot say what the game does, RUNS grows, and that growth is a change to this spec.
+A **conversion** is not a port. It reorganizes the **original** program, from its source, from code lifted from it, or from its machine code, into RUNS. Every sequence of inputs from power-on gives the same game, glitches included. The game does not change to fit RUNS. Where RUNS cannot say what the game does, RUNS grows, and that growth is a change to this spec. Every decision about the language that a conversion makes lands in this spec in the same step, with an example the conversion's tools run. A decision the spec does not state leaves the spec stale.
 
 At every step, the RUNS text plus the original machine's declarations rebuilds the original binary. The binary checks the behavior. Purity is the structure, and the structure is what the conversion changes.
 
@@ -105,7 +105,7 @@ The conversion has one script that runs every check above in order and fails on 
 
 - **Takes.** Nothing but the repository.
 - **Gives.** One line per check, and a nonzero exit on the first failure.
-- **Spacewar.** `tools/check_all.sh` runs the compile, the mutation gate on a sample of 8000 mutants, and the comparison checks. The full gate, the reach oracle, the purity report, and `tools/mutate.sh` run by hand.
+- **Spacewar.** `tools/check_all.sh` runs the compile, the mutation gate on a sample of 8000 mutants, the comparison checks, and this spec's examples against the conversion's evaluator (`tools/check_examples.py`). The full gate, the reach oracle, the purity report, and `tools/mutate.sh` run by hand.
 
 ## Move in small steps that each compile
 
