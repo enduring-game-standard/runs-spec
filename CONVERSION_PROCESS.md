@@ -123,6 +123,8 @@ The declarations are never the place to make hard text compile. Their count of e
 
 A step is one routine, one Record, or one change of shape. A step that moves several routines at once hides which change broke a check.
 
+When one change of shape sweeps every unit of the text, such as splitting each Processor as far as it goes, take the riskiest unit first and finish it end to end before the rest. The risk is the compiler's: count the values each split hands from one piece to the next through a field where the original kept them in a register, the control flow inside the routines, and the routines the declarations name. The unit with the most of these, and a comparison check strong enough to catch a wrong binary, goes first. Pieces it shares with other units get one file in that unit, and the other units' routines point to that file during the sweep.
+
 **Done when** the five conditions of [8. Compile with the declarations](#8-compile-with-the-declarations) pass after every step.
 
 ## 1. Describe the machine
