@@ -202,7 +202,7 @@ processor advance
   set clock.ticks = clock.ticks + 1
 ```
 
-The loader enforces these rules on a program whose Records all have kinds, so a finished conversion is checked with no switch to remove. Until the last Record has a kind, the conversion's purity report lists every impurity. RUNS-Spacewar's report is `tools/check_purity.py`. [Give each Record a kind](./CONVERSION_PROCESS.md#5-give-each-record-a-kind-and-split-each-processor-by-it) says how a conversion splits its Processors and checks the split.
+The loader refuses a program that breaks these rules, and a Record with no kind breaks them. A conversion in progress reads its text with the purity report, which lists every impurity rather than stopping at the first. RUNS-Spacewar's report is `tools/check_purity.py`. [Give each Record a kind](./CONVERSION_PROCESS.md#5-give-each-record-a-kind-and-split-each-processor-by-it) says how a conversion splits its Processors and checks the split.
 
 ## Networks
 
@@ -263,7 +263,7 @@ A Network body may hold only these statements.
 | `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
 
-A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. A `run` passes only which slot the routine works on: each parameter is used only to choose a slot of a collection. The loader reports a guard that computes and a `run` that passes a value, and refuses them in a program whose Records all have kinds. The README's [The order is in the text](./README.md#the-order-is-in-the-text) says why the order is written and how each line is a place.
+A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. A `run` passes only which slot the routine works on: each parameter is used only to choose a slot of a collection. The loader reports a guard that computes and a `run` that passes a value, and refuses them. The README's [The order is in the text](./README.md#the-order-is-in-the-text) says why the order is written and how each line is a place.
 
 A guard that computes is refused:
 
@@ -460,7 +460,8 @@ Before anything runs, `runs.check` checks the shape of each kind, the names each
 | `... comes in from outside the game` | A top Network does not declare a Record with a field that has no initial value, and a routine inside reads it. |
 | `... initial values for N slots` | A field with one initial value a slot has the wrong number of lines. |
 | `the machine has no rules for [...]` | `type insn` lists an instruction the evaluator does not know. |
-| `stream ...: a stream leaves to a device, so it is a presentation stream` | A program whose Records all have kinds declares a stream that is not presentation. |
+| `stream ...: a stream leaves to a device, so it is a presentation stream` | A stream has a kind other than presentation. |
+| `...: say whether it is a game, interface or presentation record` | A Record has no kind. |
 | `match misses [...]` (also in `runs.check`) | A `match` that fires has no arm for some member of the enum. |
 | `... is unknown: the game has not set it, so the world gives it` | A routine reads a field with no initial value before the game sets it or the world gives it. |
 | `loop ran past its bound` | A `loop` runs more passes than its bound. |

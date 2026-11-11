@@ -109,7 +109,7 @@ The Network is derived from the game's logic, not authored. In a conversion that
 - **A guard only tests.** It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It computes nothing on a value. A condition that needs arithmetic is a Processor that computes it into a Record, and the guard tests that Record. Spacewar's breakout test, `(random.number | 0400000) + ships.uncertainty[slot] >= 0`, is the Processor `weigh_breakout`, which writes `breakout_check.margin`, and the guard `breakout_check.margin >= 0`. The image is unchanged: the binding keeps the margin in AC, where the original kept it.
 - **A `run` passes only which slot.** `run explosion(slot)` says whose marker goes through the explosion. A routine uses such a parameter only to choose a slot of a collection. A value a routine needs comes from a Record. Arithmetic on the slot, such as `slot + 1`, chooses a slot too.
 
-The loader reports a guard that computes and a `run` that passes a value as impurities, and refuses them in a program whose Records all have kinds.
+The loader reports a guard that computes and a `run` that passes a value as impurities and refuses them.
 
 ## Exact over every input, glitches included
 

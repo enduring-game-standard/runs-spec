@@ -267,7 +267,7 @@ The language parses `type insn`, the instruction constructors, and `jump` for a 
 - `<record>.<field>: a Record holds data; instructions a Processor runs are logic`, for each field of type `insn`.
 - `processor <name>: runs instructions from a Record (jump); its logic belongs in its own text`, for each Processor that runs `jump`.
 
-A program whose Records all have kinds does not load while it keeps instructions in a Record:
+A program does not load while it keeps instructions in a Record:
 
 ```runs-prim-rejected
 # rejected: patch.insn: a Record holds data; instructions a Processor runs are logic

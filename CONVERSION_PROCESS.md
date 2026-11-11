@@ -111,7 +111,7 @@ The conversion has one script that runs every check above in order and fails on 
 
 A conversion moves in small steps. Each step rebuilds the original binary from the RUNS text and the binding, and passes the checks in [8. Compile with a binding](#8-compile-with-a-binding), before the next step begins.
 
-The conversion's progress is the purity report. Nothing is exempt. A flag, a marker, or an exception that hides an impurity from the report is not allowed. The loader enforces the kind rules on a program whose Records all have kinds, so a finished conversion is checked with no switch to remove.
+The conversion's progress is the purity report. Nothing is exempt. A flag, a marker, or an exception that hides an impurity from the report is not allowed. The loader refuses every impurity, a Record with no kind included. Only the purity report reads a text that is not yet pure, so a finished conversion is checked with no switch to remove.
 
 When a pure shape does not compile to the original binary, the binding or the compiler grows. Purity stays as it is. Look for the change in this order:
 
