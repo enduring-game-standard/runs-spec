@@ -4,7 +4,7 @@
 
 DIGS is the language of Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
-A Processor is one rule of the game, and it is stateless. It declares the Records it reads and the Records it writes. It takes values from the Records it declares and gives values to the Records it declares. Inside its body it binds locals and loops, and no local outlives the firing. What a Processor does depends only on the Records and parameters it declares, and its only effects are on the Records it declares as written. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
+A Processor is one rule of the game, and it is stateless. It declares the Records it reads and the Records it writes. It takes values from the Records it declares and gives values to the Records it declares. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on the Records and parameters it declares, and its only effects are on the Records it declares as written. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
 
 ## A running example
 
@@ -98,8 +98,8 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 
 | Statement | Meaning |
 |-----------|---------|
-| `let name = e` | Bind a new local. |
-| `let (a, b) = e` | Bind one local for each element of a tuple, such as the pair `scr` gives. `_` takes an element that nothing reads. |
+| `let name = e` | Declare a new local. |
+| `let (a, b) = e` | Declare one local for each element of a tuple, such as the pair `scr` gives. `_` takes an element that nothing reads. |
 | `set target = e` | Update a local bound by `let`, or a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
 | `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS text is wrong. |
@@ -170,7 +170,7 @@ A number literal starts with a digit. The machine description's [literal forms](
 
 ### Operators
 
-From the tightest binding to the loosest:
+From the tightest to the loosest:
 
 | Level | Operators |
 |-------|-----------|
@@ -186,7 +186,7 @@ From the tightest binding to the loosest:
 | 10 | `and` |
 | 11 | `or` |
 
-Binary operators group from the left. The bitwise operators bind tighter than the comparisons, so `a | b == c` means `(a | b) == c`. Arithmetic binds tighter than `|`, so `(random.number | 0400000) + x` needs its parentheses. `and` and `or` take conditions and evaluate their right side only when they need it.
+Binary operators group from the left. The bitwise operators group tighter than the comparisons, so `a | b == c` means `(a | b) == c`. Arithmetic groups tighter than `|`, so `(random.number | 0400000) + x` needs its parentheses. `and` and `or` take conditions and evaluate their right side only when they need it.
 
 RUNS has no `*` or `/`. A machine's multiply or divide instruction is a named operator of its description. The PDP-1 has only a multiply step and a divide step, so Spacewar's multiply and divide are Processors over `mus` and `dis`, as the original writes them.
 
@@ -260,7 +260,7 @@ processor plot_particle
 
 A Record holds data and nothing else. Instructions that a Processor runs are logic. So instructions kept in a Record and run with `jump` are logic in a Record, and that is impure.
 
-Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. A pure RUNS text states what that code computes, in Processors of its own. The binary holds the instructions. The binding and a general compiler for the machine reproduce those bytes, and RUNS itself does not hold them. The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
+Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. A pure RUNS text states what that code computes, in Processors of its own. The binary holds the instructions. A general compiler for the machine reproduces those bytes, and RUNS itself does not hold them. The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
 
 The language parses `type insn`, the instruction constructors, and `jump` for a text that keeps code in a Record, as RUNS-Spacewar's outline does. The loader counts each use as an impurity, with one of two messages:
 

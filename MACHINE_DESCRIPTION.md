@@ -47,7 +47,7 @@ The loader reads a program in this order:
 ### How RUNS uses the description's types
 
 - A field's type is an enum, `int` in a stream, or a type of the description.
-- An operator symbol in RUNS text, such as `a + b`, runs the operator the description binds to that symbol for the operands' types. A call by name, such as `rcl(h, l, 2)`, runs the operator of that name.
+- An operator symbol in RUNS text, such as `a + b`, runs the operator the description gives that symbol for the operands' types. A call by name, such as `rcl(h, l, 2)`, runs the operator of that name.
 - A name that is not an operator of the description, a declared instruction, or a RUNS form is refused. A routine is run, not called.
 - An operator's result may be a tuple. RUNS takes it apart with `let (a, b) = ...` or `set (a, b) = ...`, one place per element. `_` takes an element that nothing reads.
 - **Counts meet machine types.** A count is RUNS's own integer, and RUNS computes on counts itself. If either operand of `+`, `-`, `==`, `!=`, `<`, `<=`, `>`, or `>=` is a count, the other converts to a count by its type's `as count` operator, and RUNS computes on the two integers. In every other place, a count where an operator's parameter is a machine type converts to that type by the type's `as literal` operator. A value of a machine type where RUNS needs a count, such as an index or a loop bound, converts by its type's `as count` operator.
@@ -121,7 +121,7 @@ A literal is a whole number with no sign. `-04000` is the operator `unary -` app
 
 ## Operators
 
-An **operator** is a total, deterministic function from values to values that the description defines. Every operation RUNS text performs on a value of a machine type is an operator. An operator has a signature, an optional binding, optional `requires:` lines, and a body:
+An **operator** is a total, deterministic function from values to values that the description defines. Every operation RUNS text performs on a value of a machine type is an operator. An operator has a signature, an optional symbol, optional `requires:` lines, and a body:
 
 ```runs-machine
 operator add(a: word, b: word) -> word as +
@@ -140,11 +140,11 @@ operator add(a: word, b: word) -> word as +
 - The result is one type, or a tuple of two or more in parentheses, such as `(word, word)` or `(byte, bit, bit)`.
 - `count` is a RUNS count, an integer with no bound. `cond` is a RUNS condition. In the core a `cond` is a 1-bit vector, where 1 is true.
 
-### Bindings
+### Symbols
 
-`as` binds an operator to a symbol of RUNS text, or names it as one of a type's two conversions. An operator with no `as` is called by its name, as `rcl(h, l, 2)` is.
+`as` gives an operator a symbol of RUNS text, or names it as one of a type's two conversions. An operator with no `as` is called by its name, as `rcl(h, l, 2)` is.
 
-| Binding | RUNS text | Signature |
+| Symbol | RUNS text | Signature |
 |---------|-----------|-----------|
 | `as +`, `as -`, `as &`, `as \|`, `as ^` | `a + b` and the others | Two operands, one result. |
 | `as <<`, `as >>` | `a << n`, `a >> n` | Two operands, one result. |
@@ -153,7 +153,7 @@ operator add(a: word, b: word) -> word as +
 | `as literal` | A literal, or a count where the type is wanted | One `count`, result the type. |
 | `as count` | A value of the type where a count is wanted | One operand of the type, result `count`. |
 
-Several operators may bind one symbol if their operand types differ. RUNS text picks the one whose parameter types match the operands. Two operators that bind one symbol to the same operand types are refused. An operator's name is unique in the description.
+Several operators may take one symbol if their operand types differ. RUNS text picks the one whose parameter types match the operands. Two operators that take one symbol on the same operand types are refused. An operator's name is unique in the description.
 
 A type allows exactly the operations the description defines for it. An 8-bit micro's description may give `byte` no `+` at all, because the machine adds only with carry. RUNS text then writes `adc`.
 
@@ -216,12 +216,12 @@ A condition is a 1-bit vector. `and`, `or`, and `not` join conditions as they jo
 
 | Statement | Meaning |
 |-----------|---------|
-| `let name = e` | Bind a name. If an enclosing block of the body already binds it, rebind it there: the name holds the new value through the rest of that block. The new value has the old one's type and width. |
-| `let (a, b) = e` | Take a tuple apart, one name per element. `_` takes an element and binds nothing. |
+| `let name = e` | Give a name a value. If an enclosing block of the body already names it, the `let` sets it there: the name holds the new value through the rest of that block. The new value has the old one's type and width. |
+| `let (a, b) = e` | Take a tuple apart, one name per element. `_` takes an element and names nothing. |
 | `if c:` ... `elif c:` ... `else:` | Run the first arm whose 1-bit condition is 1. |
-| `for i in a .. b:` | Run the block once for each integer from a to b, both included, ascending. a and b are evaluated once, before the first pass. If a > b, the block does not run. `_` in place of `i` binds nothing. |
+| `for i in a .. b:` | Run the block once for each integer from a to b, both included, ascending. a and b are evaluated once, before the first pass. If a > b, the block does not run. `_` in place of `i` names nothing. |
 
-A block is a run of statements, each on its own line, indented two spaces from the line that opens it. A body is a block whose last line is its **value**: an expression, or an `if` with an `else` whose every arm is a block that ends in a value. A name bound in a block is gone when the block ends, unless it rebinds a name of an enclosing block.
+A block is a run of statements, each on its own line, indented two spaces from the line that opens it. A body is a block whose last line is its **value**: an expression, or an `if` with an `else` whose every arm is a block that ends in a value. A name a block gives is gone when the block ends, unless it is a name of an enclosing block.
 
 Every `for` runs a finite number of passes, so every body ends. A body that reaches `div` or `mod` by 0, or `x[i]` with i outside the vector, has no result for that operand, and the description is wrong. The evaluator stops with the error.
 
@@ -265,7 +265,7 @@ processor add_high
   set score.high = high
 ```
 
-A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The binding says which register holds the field.
+A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
 ## Floating point
 
@@ -340,7 +340,7 @@ A machine with several memories that play reads, such as a console's video memor
 
 ## Stated layout
 
-In a layout glitch, play reads past the last slot of a collection, or reads one kind of object as another. In that state the rule is whatever lies there in memory, so the layout is part of the game. The RUNS text states it with a **layout** declaration in a `.runs` file. The binding places everything the layout does not, and follows the layout where it states it.
+In a layout glitch, play reads past the last slot of a collection, or reads one kind of object as another. In that state the rule is whatever lies there in memory, so the layout is part of the game. The RUNS text states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
 
 ```text
 layout ram
@@ -398,17 +398,17 @@ game record lines
 
 `hits` takes units 0x0300 to 0x030f. `lines.count` lies at 0x0310, and `lines.first` at 0x0311 and 0x0312. A read of `hits.line[8]` reaches 0x0310 and 0x0311. Little-endian, the unit at 0x0310 is the low byte. So the read gives `cat(low byte of lines.first, lines.count)`, and the Processor declares `reads: lines`. A write of `hits.line[8]` sets `lines.count` to the value's low byte and the low byte of `lines.first` to its high byte.
 
-A reference the original kept as an address becomes an index into the collection it points into. The binding spells the index as the machine's address. A stale reference is an index the game kept after its slot changed meaning. In range, it reads that slot as it is now. Past the end, it reads what the layout puts there.
+A reference the original kept as an address becomes an index into the collection it points into. The declarations spell the index as the machine's address. A stale reference is an index the game kept after its slot changed meaning. In range, it reads that slot as it is now. Past the end, it reads what the layout puts there.
 
 ## Instructions are not part of the description
 
 `type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own text. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-A machine glitch runs data as code or jumps into the middle of a routine. Its rule is what the machine does with those bytes on that path, and the RUNS text states that rule in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler and the binding.
+A machine glitch runs data as code or jumps into the middle of a routine. Its rule is what the machine does with those bytes on that path, and the RUNS text states that rule in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
-A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves are the binding's. [Binding](./BINDING.md) states them. The description holds types, literals, operators, and address spaces.
+A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves belong to the machine's declarations. [Declarations](./DECLARATIONS.md) states them. The description holds types, literals, operators, and address spaces.
 
 ## The PDP-1 description
 
@@ -605,7 +605,7 @@ The PDP-1 description states `core` for a PDP-1 game whose play reads layout. Sp
 
 ## A second machine: an 8-bit byte with carry
 
-A generic 8-bit micro has two's complement bytes, a carry flag, a 16-bit address bus, and little-endian memory, as a 6502 does. Its description has the same form with other parameters. The sketches in [Binding](./BINDING.md) bind a game on this machine:
+A generic 8-bit micro has two's complement bytes, a carry flag, a 16-bit address bus, and little-endian memory, as a 6502 does. Its description has the same form with other parameters. The sketches in [Declarations](./DECLARATIONS.md) declare a game on this machine:
 
 ```runs-machine
 machine micro8
@@ -704,12 +704,12 @@ Each error comes from one of four stages. The description stage finds an error a
 | `operator <X>: vec takes a constant width` | Description | `vec`'s width is not a constant of 1 or more. |
 | `operator <X>: returns <a>, not <b>` | Description | The body's value has another type, width, or tuple size than the signature's result. |
 | `operator <X>: a body ends in its value` | Description | A block that must give a value does not end in an expression or an `if` with `else` whose every arm gives one. |
-| `operator <X>: let changes <name> from <a> to <b>` | Description | A `let` rebinds a name with a value of another type or width. |
+| `operator <X>: let changes <name> from <a> to <b>` | Description | A `let` gives a name a value of another type or width. |
 | `operator <X>: unknown name <name>` | Description | A body uses a name that is not a parameter or a name bound on every path. |
-| `operator <X> as <b>: takes <n> operands` | Description | A binding's operator has the wrong number of parameters for its binding. |
-| `operator <X> as <b>: a comparison gives cond` | Description | A comparison binding's result is not `cond`. |
+| `operator <X> as <b>: takes <n> operands` | Description | An operator has the wrong number of parameters for its symbol. |
+| `operator <X> as <b>: a comparison gives cond` | Description | A comparison operator's result is not `cond`. |
 | `operator <X> as literal takes one count and gives a type`, `operator <X> as count takes one type and gives a count` | Description | A conversion's signature is wrong. |
-| `operators <X> and <Y> both take <b> on (<types>)` | Description | Two operators bind one symbol to the same operand types. |
+| `operators <X> and <Y> both take <b> on (<types>)` | Description | Two operators take one symbol on the same operand types. |
 | `operator <X>: cites no operation <text>` | Description | A citation names a format, operation, rounding, or NaN rule the tables above do not list. |
 | `<t> is not an octal number` (or `binary`, `decimal`, `hexadecimal`) | Parser | A literal holds a digit outside its base. |
 | `<X> is not an operator of the machine; a routine is run, not called` | Parser | RUNS text calls a name that is not an operator of the description or a declared instruction. |
@@ -763,12 +763,12 @@ space_line  = "unit" ":" NUMBER
             | "address" ":" NUMBER
             | "order" ":" ( "little_endian" | "big_endian" )
 
-operator    = "operator" NAME "(" [ param { "," param } ] ")" "->" result [ "as" binding ]
+operator    = "operator" NAME "(" [ param { "," param } ] ")" "->" result [ "as" symbol ]
               { indented requires } ( indented cites | body )
 param       = NAME ":" tname | NUMBER
 result      = tname | "(" tname "," tname { "," tname } ")"
 tname       = NAME | "count" | "cond"
-binding     = "+" | "-" | "&" | "|" | "^" | "<<" | ">>"
+symbol      = "+" | "-" | "&" | "|" | "^" | "<<" | ">>"
             | "==" | "!=" | "<" | "<=" | ">" | ">="
             | "unary" "-" | "~" | "literal" | "count"
 requires    = "requires" ":" cexpr "else" STRING

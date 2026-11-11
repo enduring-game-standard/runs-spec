@@ -13,12 +13,12 @@ RUNS applies the Linux model to game execution. There is no "RUNS engine," the w
 - [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md) is the reference for Processors in `.runs-prim` files. It covers their declarations, statements, and expressions, why a Record holds no code, and the `word` type.
 - [Network topology](./NETWORK_TOPOLOGY.md) is the reference for `.runs` files. It covers types, enums, Records, streams, Networks, top Networks, `wait`, and the contract rules the loader enforces.
 - [Machine description](./MACHINE_DESCRIPTION.md) is the reference for `.runs-machine` files. It covers the original machine's types, literals, operators and their bodies in the core, address spaces, and stated layout. The PDP-1's description is its worked example.
-- [Binding](./BINDING.md) is the reference for bindings. It covers places, conventions, storage, spelling, code layout, events and devices, machine words, the host, and the mutation gate. The PDP-1 binding is its worked example.
+- [Declarations](./DECLARATIONS.md) is the reference for a machine's declarations. It covers where a change goes, why the declarations only shrink, places, conventions, storage, spelling, code layout, events and devices, machine words, the host, and the mutation gate. The PDP-1 declarations are its worked example.
 - [Conversion process](./CONVERSION_PROCESS.md) is how to convert a program on any machine to RUNS. It covers the toolkit a conversion builds, describing the machine, and the mapping of each routine, register, flag, interrupt, and device of the original to Records, Processors, and Networks. Spacewar is its worked example.
 
 ## A conversion is not a port
 
-A port rewrites a game for another machine. A conversion reorganizes an existing program into RUNS. It starts from the program's assembly, or from code lifted from it, and moves the program's rules into Records and Processors. At every step, the RUNS text plus a binding rebuilds the original binary, so the binary checks the behavior while the conversion changes the structure.
+A port rewrites a game for another machine. A conversion reorganizes an existing program into RUNS. It starts from the program's assembly, or from code lifted from it, and moves the program's rules into Records and Processors. At every step, the RUNS text plus the original machine's declarations rebuilds the original binary, so the binary checks the behavior while the conversion changes the structure.
 
 ## What RUNS requires
 
@@ -106,7 +106,7 @@ The Network is derived from the game's logic, not authored. In a conversion that
 
 - **A line after a line is a place.** `run a` followed by `run b` means `a` puts a turn marker in a place, and `b` fires only when the marker is there. The place holds no data, only the turn. The text writes it as one line under another, and a drawing of the Network draws it as a place between the two transitions.
 - **A loop is a marker that goes around**, back to the loop's first line until the exit's guard sends it on.
-- **A guard only tests.** It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It computes nothing on a value. A condition that needs arithmetic is a Processor that computes it into a Record, and the guard tests that Record. Spacewar's breakout test, `(random.number | 0400000) + ships.uncertainty[slot] >= 0`, is the Processor `weigh_breakout`, which writes `breakout_check.margin`, and the guard `breakout_check.margin >= 0`. The image is unchanged: the binding keeps the margin in AC, where the original kept it.
+- **A guard only tests.** It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It computes nothing on a value. A condition that needs arithmetic is a Processor that computes it into a Record, and the guard tests that Record. Spacewar's breakout test, `(random.number | 0400000) + ships.uncertainty[slot] >= 0`, is the Processor `weigh_breakout`, which writes `breakout_check.margin`, and the guard `breakout_check.margin >= 0`. The image is unchanged. The compiler keeps the margin in AC, where the original kept it, because no declaration gives `breakout_check` a word.
 - **A `run` passes only which slot.** `run explosion(slot)` says whose marker goes through the explosion. A routine uses such a parameter only to choose a slot of a collection. A value a routine needs comes from a Record. Arithmetic on the slot, such as `slot + 1`, chooses a slot too.
 
 The loader reports a guard that computes and a `run` that passes a value as impurities and refuses them.
@@ -117,7 +117,7 @@ A glitch is one of three kinds, by what it reads.
 
 1. **A logic glitch** is the game's own logic, such as the backwards long jump. A conversion keeps it with no extra work. In Spacewar, the previous control word is never stored, so with sense switch 3 on, the fire button always counts as newly pressed. The conversion keeps it.
 2. **A layout glitch** reads past an array, through a stale pointer, or reads one kind of object as another, such as DOOM's `spechit` overflow. In those states the rule is whatever lies next in memory, so the layout is part of the game. Where play reads the layout, the RUNS text states it.
-3. **A machine glitch** runs data as code or jumps into the middle of a routine. On that path the rule is what the machine does with those bytes. The RUNS text states that rule in a Processor, as it states any other. The binding and a general compiler for the machine reproduce the bytes in the binary. RUNS itself never keeps instructions in a Record to run them.
+3. **A machine glitch** runs data as code or jumps into the middle of a routine. On that path the rule is what the machine does with those bytes. The RUNS text states that rule in a Processor, as it states any other. A general compiler for the machine reproduces the bytes in the binary. RUNS itself never keeps instructions in a Record to run them.
 
 All three kinds share one piece, the [machine description](./MACHINE_DESCRIPTION.md). It supplies RUNS's types and every operator on them. For Spacewar, that is the `word`, the PDP-1's 18-bit ones' complement word. Where play reads the layout, its address spaces carry the layout the RUNS text states. The rest of the game is RUNS.
 
@@ -125,9 +125,9 @@ A halt or a hang that the original reaches is a rule, not an error. Spacewar hal
 
 A conversion measures where play reaches layout or machine behavior, as [Conversion process](./CONVERSION_PROCESS.md#6-measure-where-play-reaches-the-machine) states. RUNS-Spacewar measures it with `tools/reach_oracle.py`, which runs scripted matches of the original in SIMH. Its findings for Spacewar are these:
 
-- Play observes no layout read. The main loop reads past the ships' two-word outline array for every torpedo slot, but only the ships' own slots use the word it loads. A check that poisons that word for every other slot still matches the original, so the binding carries the read and the RUNS text does not state it.
+- Play observes no layout read. The main loop reads past the ships' two-word outline array for every torpedo slot, but only the ships' own slots use the word it loads. A check that poisons that word for every other slot still matches the original, so the image's layout carries the read and the RUNS text does not state it.
 - The first match reads words of core that the tape never loads, such as the scores, so their power-on contents matter. Those words are fields with no initial value, and they come in at the game's boundary.
-- The game writes code and runs it. At each new game, Spacewar's outline compiler writes each ship's outline as PDP-1 instructions, and each frame the spaceship jumps into them to draw the ship. The outlines are presentation. RUNS-Spacewar's text states them with a Record of `insn` values and a Processor that runs them with `jump`. Both are impure, and the purity report counts each one. The pure form states what the outline code draws in Processors of its own, and the binding and the compiler reproduce the instructions.
+- The game writes code and runs it. At each new game, Spacewar's outline compiler writes each ship's outline as PDP-1 instructions, and each frame the spaceship jumps into them to draw the ship. The outlines are presentation. RUNS-Spacewar's text states them with a Record of `insn` values and a Processor that runs them with `jump`. Both are impure, and the purity report counts each one. The pure form states what the outline code draws in Processors of its own, and the compiler reproduces the instructions.
 - Everywhere else, play reaches only the `word` type's own arithmetic, such as sums that wrap and shifts of negative numbers.
 
 ## Three kinds of Record
@@ -155,21 +155,21 @@ The game touches the machine in four ways:
 
 Only the third could widen the boundary, and a conversion always resolves it by moving the computation into the game. So the interface can grow in data, but it does not gain a new kind of thing.
 
-## The binding
+## The declarations
 
-A **binding** maps RUNS onto one target machine. It holds only choices that play cannot observe, such as where each routine and field lies, which register carries a value, how an enum is spelled in bits, and which device carries each value that comes in or goes out. It holds no game logic. [Binding](./BINDING.md) states every section a binding has, what the compiler refuses, how the host fires a game, and the mutation gate. RUNS-Spacewar's PDP-1 binding is `pdp1/`, and `pdp1/README.md` there defines its full vocabulary.
+A machine's **declarations** are the half of its package that never runs. They hold only choices that play cannot observe, such as where each routine and field lies, which register carries a value, how an enum is spelled in bits, and which device carries each value that comes in or goes out. They record the original programmer's arbitrary choices, never game logic, and a port leaves them behind with that machine's presentation. They are not a place to make hard RUNS text compile, and their count of entries only shrinks. [Declarations](./DECLARATIONS.md) states every section they have, where a change goes, what the compiler refuses, how the host fires a game, and the mutation gate. RUNS-Spacewar's PDP-1 declarations are `pdp1/`, and `pdp1/README.md` there defines their full vocabulary.
 
 ## The compiler
 
-A compiler takes RUNS plus a binding for a target. With the original machine's binding, it builds the original binary exactly. With another machine's binding, it builds the same game on that machine. The compiler belongs to the target machine, and every game for that machine shares it. [Move in small steps that each compile](./CONVERSION_PROCESS.md#move-in-small-steps-that-each-compile) says what changes when a pure shape does not compile to the original binary.
+A compiler takes RUNS plus a target's declarations. With the original machine's declarations, it builds the original binary exactly. With another machine's declarations, it builds the same game on that machine. The compiler belongs to the target machine, and every game for that machine shares it. When a pure shape does not compile to the original binary, the RUNS text changes first, then the compiler gains a general rule, as [Where a change goes](./DECLARATIONS.md#where-a-change-goes) states.
 
-In RUNS-Spacewar, `tools/runsc.py` compiles the RUNS text and the PDP-1 binding to the C dialect of the `spacewar-c` project, and spacewar-c's `pdp1cc` compiles that C to a tape image. The image's sha256 is the original's, `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`.
+In RUNS-Spacewar, `tools/runsc.py` compiles the RUNS text and the PDP-1 declarations to the C dialect of the `spacewar-c` project, and spacewar-c's `pdp1cc` compiles that C to a tape image. The image's sha256 is the original's, `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`.
 
 RUNS-Spacewar checks the conversion three ways:
 
 - **The evaluator against SIMH.** Each routine and Network runs in the evaluator and in SIMH from the same state, and the checks compare Records and points.
 - **The image against the original.** `runsc` builds the image from RUNS and prints `MATCH` when its hash is the original's.
-- **The mutation gate.** `tools/check_compiled.py` mutates the RUNS text and the binding, as [The mutation gate](./BINDING.md#the-mutation-gate) states.
+- **The mutation gate.** `tools/check_compiled.py` mutates the RUNS text and the declarations, as [The mutation gate](./DECLARATIONS.md#the-mutation-gate) states.
 
 `tools/check_all.sh` runs all three.
 

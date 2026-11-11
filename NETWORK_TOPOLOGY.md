@@ -52,7 +52,7 @@ enum light
   on
 ```
 
-Members are written without the enum's name, as in `objects.routine[slot] == torpedo`. An enum value can only be compared with `==` and `!=`. It has no number visible to RUNS. The binding decides how the target spells it.
+Members are written without the enum's name, as in `objects.routine[slot] == torpedo`. An enum value can only be compared with `==` and `!=`. It has no number visible to RUNS. The target's declarations decide how it is spelled.
 
 Two enums may share a member's name, as `switch` and `light` share `off` and `on`. The name means the member of the enum that the value is compared with or stored as.
 
@@ -440,7 +440,7 @@ network idle
   stop
 ```
 
-Which device holds each field that comes in or goes out is not part of RUNS. The binding for each machine states it, under [Events and devices](./BINDING.md#events-and-devices).
+Which device holds each field that comes in or goes out is not part of RUNS. Each machine's declarations state it, under [Events and devices](./DECLARATIONS.md#events-and-devices).
 
 ## What the loader and the evaluator reject
 
