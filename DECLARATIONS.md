@@ -1,20 +1,20 @@
 # RUNS declarations
 
-A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is spelled in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no rule reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same Rules region on other hardware ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 313-320), leaves them behind with that machine's Realization Processors.
+A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is encoded in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no rule reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same Rules region on other hardware ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 313-320), leaves them behind with that machine's Realization Processors.
 
-_Avoid_: binding. The name is retired, because it read as a layer where hard RUNS text could be solved. RUNS-Spacewar's code keeps it. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
+_Avoid_: binding. The name is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps it. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
 
-Three texts build an image. The RUNS text is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS text computes with. The declarations state how one target carries that RUNS text. A **compiler** for the target reads all three and writes the image. With the original machine's declarations, the image is the original binary, byte for byte. With another machine's declarations, the image is the same game on that machine. In CONTEXT.md's words (294-311), the compiler's work is baking and the image is a Build: one Rules region, one Realization region, one target.
+Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. With the original machine's declarations, the image is the original binary, byte for byte. With another machine's declarations, the image is the same game on that machine. In CONTEXT.md's words (294-311), the compiler's work is baking and the image is a Build: one Rules region, one Realization region, one target.
 
 This document specifies the declarations in general terms, then shows each part on RUNS-Spacewar's PDP-1 declarations, `pdp1/` in [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar). Its `pdp1/README.md` defines the full PDP-1 vocabulary. Each section also carries a sketch of declarations that a conversion would design for the byte-addressed machine of [A second machine](./MACHINE_DESCRIPTION.md#a-second-machine-an-8-bit-byte-with-carry), `micro8`, with registers `A`, `X` and `Y`, a status register `P`, and a vertical-blank interrupt. The sketches illustrate the form. They are not a vocabulary any compiler reads.
 
-The sketches declare the ball game of the [README](./README.md#records-processors-and-networks): the Records `speed`, `wall`, `ball` and `pad`, the stream `screen`, the Processors `move_ball`, `reach_wall`, `bounce` and `draw_ball`, and the top Network `tick`. A sketch names a Processor as the text writes it, and a field the `tick` wires to one of its inputs or outputs, such as `ball.x`. Where a sketch needs an enum or a status flag the README's game lacks, it names one and says so.
+The sketches declare the ball game of the [README](./README.md#records-processors-and-networks): the Records `speed`, `wall`, `ball` and `pad`, the stream `screen`, the Processors `move_ball`, `reach_wall`, `bounce` and `draw_ball`, and the top Network `tick`. A sketch names a Processor as the source writes it, and a field the `tick` wires to one of its inputs or outputs, such as `ball.x`. Where a sketch needs an enum or a status flag the README's game lacks, it names one and says so.
 
 ## Where a change goes
 
-The declarations are not a place to make hard RUNS text compile. When a pure shape does not compile to the original image, look for the change in this order:
+The declarations are not a place to make hard RUNS source compile. When a pure shape does not compile to the original image, look for the change in this order:
 
-1. **The RUNS text.** Hard text means its shape is wrong. Sketch at least two pure shapes and compile each.
+1. **The RUNS source.** Source that is hard to compile has the wrong shape. Sketch at least two pure shapes and compile each.
 2. **The compiler.** A general rule keyed on RUNS shape (see [Layout rules keyed on RUNS shape](#layout-rules-keyed-on-runs-shape)), backed by a second program on the same machine that uses the same idiom. The conversion's record of the change names the idiom and that program.
 3. **Neither works.** Stop, and report the shapes tried and the evidence.
 
@@ -26,7 +26,7 @@ A conversion counts the entries of its declarations: every scalar value and ever
 
 Each cut derives entries the compiler no longer needs: by a general rule backed by a second program, or by a default. RUNS-Spacewar's compiler takes the object table's Records from the fields its walks index, where a `[table]` list once named them, and a routine that names no convention is a block when every run of it is the last thing its caller does.
 
-In RUNS-Spacewar the check is `tools/check_declarations.py`, and the record is `pdp1/DECLARATIONS`. The user raised the count once, for one PDP-1 spelling entry, `[inverse_skip]`.
+In RUNS-Spacewar the check is `tools/check_declarations.py`, and the record is `pdp1/DECLARATIONS`. The user raised the count once, for one PDP-1 encoding entry, `[inverse_skip]`.
 
 ## Files and units
 
@@ -35,7 +35,7 @@ A machine's declarations are a set of TOML files in one directory.
 - **A unit file** declares one **unit**, a span of the image that the target's toolchain lays out as one piece. The original's source files, or its assembler's sections, usually decide the units. A unit file declares every routine and field that lies in its span.
 - **`devices.toml`** declares the events and the devices. It is the only file that names a control, a light, an I/O port, a start address, or an interrupt. Two kinds of declaration may instead lie in a unit file, because they are instructions of that unit's code: the device of a stream, in the unit that emits to it, and an event that is a jump of that unit, such as a main loop that starts again when it ends.
 
-Every routine and every field that the image holds is declared in at most one unit file. A field that lives only in a register, or only in another field's word, is declared where that register or word is declared. The compiler derives the rest from the RUNS text. A Record that no declaration gives a word lives in registers.
+Every routine and every field that the image holds is declared in at most one unit file. A field that lives only in a register, or only in another field's word, is declared where that register or word is declared. The compiler derives the rest from the RUNS source. A Record that no declaration gives a word lives in registers.
 
 In RUNS-Spacewar each unit file is named for the unit of the original's lift that it replaces (`pdp1/divide.toml` for `lift/divide.c`), and the compiler refuses a unit of the lift that no unit file replaces.
 
@@ -58,7 +58,7 @@ A unit's places lie in the order the unit file lists them. A place may state its
 
 The compiler refuses:
 
-- A place that names no routine, field, or collection of the RUNS text.
+- A place that names no routine, field, or collection of the RUNS source.
 - A routine or field placed twice, or not placed at all when the image holds it.
 - Two places that overlap, or a place outside the target's address space.
 - A data word whose RUNS initial value the target's type cannot hold.
@@ -118,11 +118,11 @@ A convention may say:
 - How the routine is entered: a call instruction, a jump, laid out in place at each run (inline), a block that other routines jump into, an instruction executed in place, or an interrupt handler's entry and return.
 - Where each parameter field arrives: a register, a word the call writes, a word after the call instruction, a stack slot.
 - Where each result field leaves: a register, a pair of registers, a word.
-- A skip or branch return: the routine returns to another place in its caller when a field holds a given enum member. The member is the RUNS text's; the convention says only which return place it selects.
+- A skip or branch return: the routine returns to another place in its caller when a field holds a given enum member. The member is the RUNS source's; the convention says only which return place it selects.
 
-A `run` in the RUNS text compiles to the routine's convention. The sets of the routine's parameter fields just before the run are its arguments. The result fields read just after the run come from where the convention leaves them.
+A `run` in the RUNS source compiles to the routine's convention. The sets of the routine's parameter fields just before the run are its arguments. The result fields read just after the run come from where the convention leaves them.
 
-A routine with inputs or outputs is one copy per distinct wiring: its text with each input or output replaced by the field the `run` wires to it, as the original's macros were expanded at each use. A declaration names the routine as the RUNS text writes it, and applies to every copy. A routine laid out at each run (inline) lays out each copy where it runs. A called subroutine is one piece of code, so every `run` of it must wire it the same way.
+A routine with inputs or outputs is one copy per distinct wiring: its body with each input or output replaced by the field the `run` wires to it, as the original's macros were expanded at each use. A declaration names the routine as the RUNS source writes it, and applies to every copy. A routine laid out at each run (inline) lays out each copy where it runs. A called subroutine is one piece of code, so every `run` of it must wire it the same way.
 
 The compiler refuses:
 
@@ -147,7 +147,7 @@ result = ["divide_call.result", "divide_call.high"]
 skips = ["divide_call.outcome", "fits"]
 ```
 
-`pdp1/tunables.toml` declares a tunable that the original executes with `xct` as an `XCT` routine. The compiler derives its parameter and result registers from the RUNS text: the register fields it reads before writing them, and the ones it writes.
+`pdp1/tunables.toml` declares a tunable that the original executes with `xct` as an `XCT` routine. The compiler derives its parameter and result registers from the RUNS source: the register fields it reads before writing them, and the ones it writes.
 
 ```toml
 [[place]]
@@ -155,7 +155,7 @@ routine = "torpedo_velocity"
 convention = "XCT"
 ```
 
-The `diff` macro is one routine with inputs and outputs in RUNS, `inertia`, wired once an axis (`velocity: objects.dx[slot]`, `position: objects.x[slot]`, and the y axis's). One `[[inline]]` entry names it and lays out both copies, where two entries named one routine an axis. RUNS-Spacewar's `tools/check_ports_scratch.py` builds the original image from that text. Declared as a `JSP` subroutine instead, it is refused, because its runs wire it two ways. Minskytron, the second PDP-1 program, keeps each count its pick chooses with one Processor, `keep` (`in value: word`, `out kept: word`), wired six ways (`kept: shifts.ya` to `kept: shifts.xc`). No declaration names it, and its image matches.
+The `diff` macro is one routine with inputs and outputs in RUNS, `inertia`, wired once an axis (`velocity: objects.dx[slot]`, `position: objects.x[slot]`, and the y axis's). One `[[inline]]` entry names it and lays out both copies, where two entries named one routine an axis. RUNS-Spacewar's `tools/check_ports_scratch.py` builds the original image from that source. Declared as a `JSP` subroutine instead, it is refused, because its runs wire it two ways. Minskytron, the second PDP-1 program, keeps each count its pick chooses with one Processor, `keep` (`in value: word`, `out kept: word`), wired six ways (`kept: shifts.ya` to `kept: shifts.xc`). No declaration names it, and its image matches.
 
 ```toml
 [[inline]]
@@ -195,7 +195,7 @@ Storage may say:
 The compiler refuses:
 
 - Storage that names no field or local of the routine.
-- Two fields in one register or word that the RUNS text needs at once. This is the shared-words check, under [Compiler checks on the declarations](#compiler-checks-on-the-declarations).
+- Two fields in one register or word that the RUNS source needs at once. This is the shared-words check, under [Compiler checks on the declarations](#compiler-checks-on-the-declarations).
 - A status-flag field that a later instruction of the compiled code would change before the field is read.
 - A field held in an instruction operand when the instruction is not the one that reads it.
 
@@ -229,7 +229,7 @@ pool = ["pacing.spare_time", "frame.restart_delay", "frame.objects_seen",
 "outline_compiler.table" = "pointer"
 ```
 
-**Sketch.** Suppose `reach_wall` computes `wall.past` with the machine description's `adc`, which returns the byte and the carry, and the RUNS text stores the carry in a field `wall.carry` that `bounce` reads. The original left that carry in the status register:
+**Sketch.** Suppose `reach_wall` computes `wall.past` with the machine description's `adc`, which returns the byte and the carry, and the RUNS source stores the carry in a field `wall.carry` that `bounce` reads. The original left that carry in the status register:
 
 ```toml
 # Sketch: declarations a conversion would design for the byte-addressed machine.
@@ -240,41 +240,39 @@ pool = ["pacing.spare_time", "frame.restart_delay", "frame.objects_seen",
 "speed.dx" = "zero_page"
 ```
 
-### Spelling
+### Encoding
 
-**Spelling** states the bit pattern of each enum member, and of each value whose encoding is the machine's own, such as an address or a pointer.
+**Encoding** states the bit pattern of each enum member, and of each value whose encoding is the machine's own, such as an address or a pointer.
 
-An enum member in RUNS is abstract. It compares only with `==` and `!=`. Its bits are a choice of the image, so the declarations spell them. A member may be spelled as a number, as a routine's address, or as an address with some bits added. An address is spelled by the machine description's address space: its unit and its byte order.
+An enum member in RUNS is abstract. It compares only with `==` and `!=`. Its bits are a choice of the image, so the declarations encode them. A member may be encoded as a number, as a routine's address, or as an address with some bits added. An address is encoded by the machine description's address space: its unit and its byte order.
 
 The compiler refuses:
 
-- An enum that an image word holds with no spelling, or a member with no spelling.
-- Two members of one enum spelled the same.
-- A spelling as a routine's address when the routine is not placed.
-- A spelling wider than the storage that holds it, such as a member other than 0 and 1 in a one-bit flag.
+- An enum that an image word holds with no encoding, or a member with no encoding.
+- Two members of one enum encoded the same.
+- An encoding as a routine's address when the routine is not placed.
+- An encoding wider than the storage that holds it, such as a member other than 0 and 1 in a one-bit flag.
 
-**PDP-1.** `pdp1/objects.toml` spells each calc routine member as the routine's address, with the sign bit for an object that does not collide. The torpedo's word is taken from a constant where the others are built by `law`. The two are the same word; which one the original wrote is an encoding:
+**PDP-1.** `pdp1/objects.toml` encodes each calc routine member as the routine's address, with the sign bit for an object that does not collide. The torpedo's word is taken from a constant where the others are built by `law`. The two are the same word; which one the original wrote is an encoding:
 
 ```toml
-[spell.calc_routine]
-none = 0
-explosion = { routine = "explosion", sign = true }
-in_hyperspace = { routine = "in_hyperspace", sign = true }
-breakout = { routine = "breakout" }
-torpedo = { routine = "torpedo", literal = true }
-first_spaceship = { routine = "first_spaceship" }
-second_spaceship = { routine = "second_spaceship" }
+[encoding.calc_routine]
+explosion = { sign = true }
+in_hyperspace = { sign = true }
+torpedo = { literal = true }
 ```
 
-**Sketch.** A ball whose state is an enum `ball_state` (this sketch adds it), spelled as the bytes the original wrote, and a member spelled as a routine's 16-bit address, little-endian by the description's address space:
+A member the declarations leave out takes its default: a member a `match` runs a routine for is that routine's address, and any other member is its index in the enum (`none` is 0). So the table states only what it adds to the default.
+
+**Sketch.** A ball whose state is an enum `ball_state` (this sketch adds it), encoded as the bytes the original wrote, and a member encoded as a routine's 16-bit address, little-endian by the description's address space:
 
 ```toml
 # Sketch: declarations a conversion would design for the byte-addressed machine.
-[spell.ball_state]
+[encoding.ball_state]
 rolling = 0x00
 stopped = 0x80
 
-[spell.handler]
+[encoding.handler]
 bounce = { routine = "bounce" }
 ```
 
@@ -290,7 +288,7 @@ Code layout may say:
 - Data words lie inside the routine's code, at a point control cannot reach.
 - A routine's body is a block other routines jump into.
 
-A code layout key names a routine, a Processor, a field, or a local. It never names an expression or a statement by its text. It changes the order of the code, not what runs.
+A code layout key names a routine, a Processor, a field, or a local. It never names an expression or a statement by its source. It changes the order of the code, not what runs.
 
 The compiler refuses:
 
@@ -417,7 +415,7 @@ screen = { write = 0xD400 }
 
 **Machine words** are words the target machine or its operator needs that no rule reads: interrupt vectors, sequence-break words, the assembler's constants pool and variables pool, patch space, and the header bytes a cartridge needs.
 
-A machine word is a kind of place the compiler knows for its target, the way it knows the call instruction. A machine word may hold an address or a jump that the events determine, such as a start vector. It never holds a number the game computes with. A constant of the image is a number of the RUNS text, and a pool word is a field.
+A machine word is a kind of place the compiler knows for its target, the way it knows the call instruction. A machine word may hold an address or a jump that the events determine, such as a start vector. It never holds a number the game computes with. A constant of the image is a number of the RUNS source, and a pool word is a field.
 
 The compiler refuses:
 
@@ -467,25 +465,25 @@ at = 0xFFFA
 
 ## What the declarations may not say
 
-The declarations hold no game logic. It has no expressions, no statements, and no number the game computes with. Every word of the image that the rules decide comes from the RUNS text. Every RUNS reference compiles as the field it names.
+The declarations hold no game logic. It has no expressions, no statements, and no number the game computes with. Every word of the image that the rules decide comes from the RUNS source. Every RUNS reference compiles as the field it names.
 
 A declaration's value is one of these:
 
-- A name of the RUNS text: a field, a local, a routine, a Record, an enum member.
-- A name the declarations give a word of the target's code that the RUNS text does not name, such as a cursor, a block, or an exit. Such a name never reaches the image.
+- A name of the RUNS source: a field, a local, a routine, a Record, an enum member.
+- A name the declarations give a word of the target's code that the RUNS source does not name, such as a cursor, a block, or an exit. Such a name never reaches the image.
 - A kind the compiler knows: a convention, a register, a device, a machine word kind, a layout.
 - A number that is an address, a count of reserved words, a register or flag number, a bit position, or an enum member's bits.
 
-A number the game computes with is not on that list. A tunable's value, a bound, a constant in an expression, and a field's initial value are all RUNS text. Where play reads the layout, the RUNS text states the layout (see the machine description's stated layout), and the declarations follow it.
+A number the game computes with is not on that list. A tunable's value, a bound, a constant in an expression, and a field's initial value are all RUNS source. Where play reads the layout, the RUNS source states the layout (see the machine description's stated layout), and the declarations follow it.
 
 ## Compiler checks on the declarations
 
 Every compiler checks these before it writes an image:
 
-1. **Only accepted RUNS.** It compiles only RUNS text that `runs.check` accepts: what each kind may say, the contracts, a static scope check of names, fields and runs, each routine's inputs and outputs and each wire to them (or, in the older form, each Processor's `reads:` and `writes:` against its text in both directions), the type of each expression, and no routine that fires itself. The older form falls short of the vision, where a Processor knows no Record and only the Network knows both sides of a wire (CONTEXT.md 166-169).
+1. **Only accepted RUNS.** It compiles only RUNS source that `runs.check` accepts: what each kind may say, the contracts, a static scope check of names, fields and runs, each routine's inputs and outputs and each wire to them (or, in the older form, each Processor's `reads:` and `writes:` against its body in both directions), the type of each expression, and no routine that fires itself. The older form falls short of the vision, where a Processor knows no Record and only the Network knows both sides of a wire (CONTEXT.md 166-169).
 2. **Unknown keys refused.** Every key of every declarations file is one the compiler knows, with a value of its kind. An unknown key is an error that names the file and the key.
-3. **Needed keys missing refused.** A choice the RUNS text needs and no declaration gives is an error that names what is missing, such as a routine with no convention or an enum with no spelling.
-4. **Names checked.** Every name the declarations give is a name of the RUNS text of the right kind. A member's name means the member of the enum of the field it is stored in or compared with, as in the evaluator. A name the declarations give a word of their own names nothing else: no other such word, no routine, Record or field, and no word of the target toolchain.
+3. **Needed keys missing refused.** A choice the RUNS source needs and no declaration gives is an error that names what is missing, such as a routine with no convention or an enum with no encoding.
+4. **Names checked.** Every name the declarations give is a name of the RUNS source of the right kind. A member's name means the member of the enum of the field it is stored in or compared with, as in the evaluator. A name the declarations give a word of their own names nothing else: no other such word, no routine, Record or field, and no word of the target toolchain.
 5. **The shared-words check.** Several RUNS names can live in one word or register: a shared word, a register that holds a field and a local, the halves of a pair, a call's result. The compiler follows, through every routine and across the runs between them, which name each such word holds: the last one written and those copied from it since. A top Network starts with none. A read of a name the word does not hold is refused. So is a routine that returns a result field whose word holds another name.
 
 Each refusal is an error that names the RUNS construct and the declaration's key. Refused declarations build no image.
@@ -494,7 +492,7 @@ In RUNS-Spacewar, `tools/runsc.py` is the compiler and raises `BindError`. Its s
 
 ## Layout rules keyed on RUNS shape
 
-Some choices of layout follow from the shape of the RUNS text alone, the same for every game on the target. They belong to the compiler for that target, not to any machine's declarations. A declaration decides a choice that differs between routines. A compiler rule decides a choice that one shape of RUNS always makes the same way on that machine, and each rule that replaces declarations lets the count fall.
+Some choices of layout follow from the shape of the RUNS source alone, the same for every game on the target. They belong to the compiler for that target, not to any machine's declarations. A declaration decides a choice that differs between routines. A compiler rule decides a choice that one shape of RUNS always makes the same way on that machine, and each rule that replaces declarations lets the count fall.
 
 The PDP-1 compiler's rules are this kind. Among them:
 
@@ -502,18 +500,18 @@ The PDP-1 compiler's rules are this kind. Among them:
 - `set x = x + 1` followed by a test of `x` against 0 is one index-and-skip (`isp`).
 - A counted loop from a local up to n that does not read its index is a jump into a run of n + 1 copies of its body (Duff's device).
 - An if-chain with no else whose guards test one value for `== n` over 0 to some n is a jump table.
-- A `match` whose arms each run the routine their member is spelled as is a jump through the field's word.
+- A `match` whose arms each run the routine their member is encoded as is a jump through the field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read today's text, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 344-347). How a loop with a data-dependent exit is expressed in the vision is open.
+These rules read today's source, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 344-347). How a loop with a data-dependent exit is expressed in the vision is open.
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 
 ## The mutation gate
 
-The **mutation gate** checks that the declarations hold no logic and that the image comes from the RUNS text. It mutates the RUNS text and the declarations one change at a time, rebuilds, and classifies each mutant. A conversion runs it over every routine and field the declarations compile.
+The **mutation gate** checks that the declarations hold no logic and that the image comes from the RUNS source. It mutates the RUNS source and the declarations one change at a time, rebuilds, and classifies each mutant. A conversion runs it over every routine and field the declarations compile.
 
-### Mutants of the RUNS text
+### Mutants of the RUNS source
 
 The gate makes each of these, one at a time:
 
@@ -532,7 +530,7 @@ The gate makes each of these, one at a time:
 - **Preconditions.** Each `requires:` deleted.
 - **Loop bounds.** Each loop's bound mutated as a number, a field, an operator, or a member.
 
-The contract entries and preconditions are today's text form. In the vision a Processor declares no Records (CONTEXT.md 166-169), and `requires:` names a top Network's inbound boundary Records (272-274), where a precondition is a DIGS boolean a Processor declares (372-384). The two senses of `requires:` are a gap.
+The contract entries and preconditions are today's written form. In the vision a Processor declares no Records (CONTEXT.md 166-169), and `requires:` names a top Network's inbound boundary Records (272-274), where a precondition is a DIGS boolean a Processor declares (372-384). The two senses of `requires:` are a gap.
 
 ### Mutants of the declarations
 
@@ -562,18 +560,18 @@ A mutant that builds the original image is **silent**. A silent mutant passes on
 
 The states are these:
 
-- **Seeded states.** At least 200 Record states, from a seed fixed per mutant. Each word field takes a value drawn over its type's full width. A quarter of the draws are the type's [edge words](./MACHINE_DESCRIPTION.md#edge-words). Each enum field takes a member drawn at random. Each argument is drawn from the arguments the RUNS text passes.
+- **Seeded states.** At least 200 Record states, from a seed fixed per mutant. Each word field takes a value drawn over its type's full width. A quarter of the draws are the type's [edge words](./MACHINE_DESCRIPTION.md#edge-words). Each enum field takes a member drawn at random. Each argument is drawn from the arguments the RUNS source passes.
 - **Played states.** Up to 60 Record states per routine as play leaves them just before its firings, kept from games the evaluator plays from power-on with random power-on words, random console or controller settings, and inputs drawn anew each frame. Random states seldom take a long routine clean to its end; played states do.
 
 At least a quarter of the seeded count must run clean, with no error, through the mutated routine. A mutant that only errors, or never reaches the mutated routine, is not shown the same.
 
-The routine fired is the mutated routine. When it alone differs, the gate fires each declared routine that compiles it, because what the image holds is that routine, and the mutant passes when one of them is the same game. A swap of two identical statements is the same text and passes.
+The routine fired is the mutated routine. When it alone differs, the gate fires each declared routine that compiles it, because what the image holds is that routine, and the mutant passes when one of them is the same game. A swap of two identical statements is the same source and passes.
 
 Three kinds have their own rule:
 
 - **An initial value.** The gate plays games from power-on before and after, on the same inputs (RUNS-Spacewar plays 60 games of 30 frames). The mutant passes when every firing puts out the same and every game ends with the same Records, the changed field aside.
 - **A deleted `requires:`.** A precondition is the conversion's check that a firing is one the game makes, not code. The mutant passes when every firing the precondition lets run is the same and the precondition stops some firing. A precondition that stops no firing says nothing, and the gate fails.
-- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which today's text allows and the vision's bounded fold does not (CONTEXT.md 344-347).
+- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which today's source allows and the vision's bounded fold does not (CONTEXT.md 344-347).
 
 The PDP-1 instance is `tools/check_compiled.py`.
 
@@ -589,7 +587,7 @@ Every host does these, and nothing else:
 4. **`stop` ends the game** as the original halts. No event fires after it.
 5. **After a firing, it takes each stream's contents** to the device the declarations name, in the order emitted.
 
-An error is not an event of the game. A loop past its bound, a failed `requires:`, a read of an unknown field, or a reached `unreachable` means the RUNS text is wrong. A failed `requires:` is a violated precondition, which lies outside the determinism contract, and catching it is a tooling concern (CONTEXT.md 378-384). The host reports each error and the game does not go on.
+An error is not an event of the game. A loop past its bound, a failed `requires:`, a read of an unknown field, or a reached `unreachable` means the RUNS source is wrong. A failed `requires:` is a violated precondition, which lies outside the determinism contract, and catching it is a tooling concern (CONTEXT.md 378-384). The host reports each error and the game does not go on.
 
 The host's choices belong to the Realization region. Two hosts that fire the same top Networks on the same events, with the same values coming in, give the same Records and the same streams.
 
@@ -614,7 +612,7 @@ Each general section maps to keys of RUNS-Spacewar's PDP-1 declarations. Its `pd
 | Places | `[[place]]` with `routine`, `fields`, `slots` and `range`, `reserve`, `table = true`; `[[inline]]`; `[addresses]` | `pdp1/outlines.toml` |
 | Conventions | `convention` (`JDA`, `JSP`, `XCT`, `BLOCK`), `entry`, `io_param`, `byname`, `inline`, `result`, `skips`, `block`, `block_takes_entry`, `[[code]]`, `pulse`, `exit`, `jsp_slot` | `pdp1/divide.toml` |
 | Storage | `io`, `cells`, `pool`, `spill`, `io_reads`, `registers`, `[share]`, `[flags]`, `flags`, `[homes]`, `homes`, `[into]`, `into`, `[walk]`, `held_as_code`, `shifts` | `pdp1/spaceship.toml` |
-| Spelling | `[spell.<enum>]` with numbers, `routine`, `sign`, `literal`; `[inverse_skip]` | `pdp1/objects.toml` |
+| Encoding | `[encoding.<enum>]` with numbers, `routine`, `sign`, `literal`; `[inverse_skip]` | `pdp1/objects.toml` |
 | Code layout | `loops = "exit first"`, `arms = "apart"`, `exit_after`, `data`, `args_done`, `block` | `pdp1/sincos.toml` |
 | Events and devices | `[console]`, `[lights]`, `[[start]]`, `[streams]`, `repeat` | `pdp1/devices.toml` |
 | Machine words | `machine = "sequence break"`, `"sequence break flush"`, `"start vectors"`, `"constants"`, `"variables"`, `"patch space"` | `pdp1/tunables.toml` |
@@ -625,11 +623,11 @@ Some PDP-1 keys serve two sections. `block` is a convention and a layout of code
 
 A conversion on a machine with no declarations vocabulary designs its own. It starts from the seven sections and grows the vocabulary one key at a time.
 
-1. **Start from the sections.** Each key belongs to one of them. A choice that fits none of them is either logic, which goes in the RUNS text, or a compiler rule keyed on RUNS shape.
-2. **Add a key only when the original's image needs it.** A key earns its place when the original's image makes a choice play cannot observe, and the compiler cannot derive that choice from the RUNS text's shape. If every routine of that shape makes the choice the same way, it is a compiler rule, not a key.
+1. **Start from the sections.** Each key belongs to one of them. A choice that fits none of them is either logic, which goes in the RUNS source, or a compiler rule keyed on RUNS shape.
+2. **Add a key only when the original's image needs it.** A key earns its place when the original's image makes a choice play cannot observe, and the compiler cannot derive that choice from the RUNS source's shape. If every routine of that shape makes the choice the same way, it is a compiler rule, not a key.
 3. **Give each key a refusal rule.** For each key the compiler states what it refuses: a name of the wrong kind, a value out of range, a choice the routine's shape does not allow, a storage the shared-words check rejects.
 4. **Cover each key with the mutation gate.** Delete it, delete each element, replace each value. Each mutant must change the image or be refused. A key whose mutants build the same image holds nothing, and the conversion removes it.
 5. **Keep devices in one file.** Every event and every device the original uses goes in `devices.toml`, but for the two kinds [Files and units](#files-and-units) lets a unit file hold. The Realization side of the declarations is then in one place.
 6. **Record the count.** Once the image matches, the count of entries only shrinks, as [The declarations only shrink](#the-declarations-only-shrink) states.
 
-When a pure RUNS shape will not compile to the original binary, change the RUNS text first, then add a general compiler rule, then stop and report, as [Where a change goes](#where-a-change-goes) states.
+When a pure RUNS shape will not compile to the original binary, change the RUNS source first, then add a general compiler rule, then stop and report, as [Where a change goes](#where-a-change-goes) states.

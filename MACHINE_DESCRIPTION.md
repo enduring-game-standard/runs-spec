@@ -1,25 +1,25 @@
 # RUNS machine description
 
-> Blocks tagged `runs-machine` on this page are machine-description text. `tools/check_examples.py` does not run them. RUNS-Spacewar's evaluator, `tools/runs.py`, holds [The PDP-1 description](#the-pdp-1-description) in code.
+> Blocks tagged `runs-machine` on this page are machine-description source. `tools/check_examples.py` does not run them. RUNS-Spacewar's evaluator, `tools/runs.py`, holds [The PDP-1 description](#the-pdp-1-description) in code.
 
-A **machine description** is a text file, `<machine>.runs-machine`, that states everything RUNS takes from the original machine. Every type a RUNS text uses that is not a count, a condition, or an enum comes from it. The evaluator reads it. Nothing about the machine lives in evaluator code.
+A **machine description** is a text file, `<machine>.runs-machine`, that states everything RUNS takes from the original machine. Every type RUNS source uses that is not a count, a condition, or an enum comes from it. The evaluator reads it. Nothing about the machine lives in evaluator code.
 
 A machine description is game-neutral. Every game on that machine shares it. A conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches.
 
-A machine description is how a RUNS text takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 40-49, 321-326). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. CONTEXT.md makes the contract opt-in, not required for compliance. This page's rule that every program names one machine is the rule of this format. Whether a RUNS text that takes up no arithmetic contract names a machine is open.
+A machine description is how RUNS source takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 40-49, 321-326). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. CONTEXT.md makes the contract opt-in, not required for compliance. This page's rule that every program names one machine is the rule of this format. Whether RUNS source that takes up no arithmetic contract names a machine is open.
 
 A machine description holds four things:
 
 - **Types.** Each type is a fixed-width bit vector, such as the PDP-1's 18-bit `word`.
-- **Literals.** How a number in RUNS text is written for this machine.
-- **Operators.** Every operation RUNS text performs on a value of a machine type, each with a body.
+- **Literals.** How a number in RUNS source is written for this machine.
+- **Operators.** Every operation RUNS source performs on a value of a machine type, each with a body.
 - **Address spaces.** The memories whose layout play reads, with their unit, address width, and byte order.
 
 It holds nothing else. Status flags, instructions, and the host are not part of it. [Status flags and registers](#status-flags-and-registers), [Instructions are not part of the description](#instructions-are-not-part-of-the-description), and [The host is not part of the description](#the-host-is-not-part-of-the-description) say where each belongs.
 
 Operator bodies are written in the **core**, a small machine-neutral language that every evaluator implements. An evaluator that implements the core runs any machine description.
 
-## A RUNS text names its machine
+## A RUNS source names its machine
 
 A `.runs` file names the program's machine with a `machine` line at the top level:
 
@@ -40,16 +40,16 @@ The loader reads a program in this order:
 
 1. It reads every `.runs` and `.runs-prim` file of the program and finds the `machine` line.
 2. It finds the description and reads it. It checks the description's grammar, each type's width, the literal forms, each address space, and each operator's signature and body. It computes the type of every expression in every body and refuses a mismatch. [What the loader rejects](#what-the-loader-rejects) lists each error.
-3. It reads every number in the RUNS text by the description's literal forms. Collection sizes, loop bounds, and layout addresses are numbers too.
-4. It takes the description's type names as the names a Record field or a stream field may have, besides the enums the text declares and `int`, the count.
-5. `runs.check` resolves each operator symbol and each operator call in the RUNS text to one operator of the description, by the operands' types. It checks each operand where the signature has a literal, and each `requires:` whose operands are all constants.
+3. It reads every number in the RUNS source by the description's literal forms. Collection sizes, loop bounds, and layout addresses are numbers too.
+4. It takes the description's type names as the names a Record field or a stream field may have, besides the enums the source declares and `int`, the count.
+5. `runs.check` resolves each operator symbol and each operator call in the RUNS source to one operator of the description, by the operands' types. It checks each operand where the signature has a literal, and each `requires:` whose operands are all constants.
 6. It checks each `layout` declaration against the description's address spaces.
 7. While a routine runs, the evaluator runs each operator's body in the core. A value of a machine type is a bit vector of the type's width.
 
 ### How RUNS uses the description's types
 
 - A field's type is an enum, `int` in a stream, or a type of the description.
-- An operator symbol in RUNS text, such as `a + b`, runs the operator the description gives that symbol for the operands' types. A call by name, such as `rcl(h, l, 2)`, runs the operator of that name.
+- An operator symbol in RUNS source, such as `a + b`, runs the operator the description gives that symbol for the operands' types. A call by name, such as `rcl(h, l, 2)`, runs the operator of that name.
 - A name that is not an operator of the description, a declared instruction, or a RUNS form is refused. A routine is run, not called.
 - An operator's result may be a tuple. RUNS takes it apart with `let (a, b) = ...` or `set (a, b) = ...`, one place per element. `_` takes an element that nothing reads.
 - **Counts meet machine types.** A count is RUNS's own integer, and RUNS computes on counts itself. If either operand of `+`, `-`, `==`, `!=`, `<`, `<=`, `>`, or `>=` is a count, the other converts to a count by its type's `as count` operator, and RUNS computes on the two integers. In every other place, a count where an operator's parameter is a machine type converts to that type by the type's `as literal` operator. A value of a machine type where RUNS needs a count, such as an index or a loop bound, converts by its type's `as count` operator.
@@ -102,7 +102,7 @@ The **edge words** of an integer type are the values where its operators change 
 
 ## Literals
 
-The `literals` block says how numbers are written in RUNS text for this machine, and which type a literal takes when its context gives none:
+The `literals` block says how numbers are written in RUNS source for this machine, and which type a literal takes when its context gives none:
 
 ```runs-machine
 literals
@@ -117,13 +117,13 @@ literals
 | `prefix P base B` | A literal of two or more characters that starts with `P` is read in base B, from the digits after `P`. B is 2, 8, 10, or 16. |
 | `default base B` | A literal that matches no prefix is read in base B. A lone `0` matches no prefix. |
 
-A prefix is `0`, or `0` and one letter, such as `0x`. A literal starts with a digit, so RUNS text has one token form for every machine. Where two prefixes match, the longer wins. A literal holds only digits of its base. On the PDP-1 `0355670` is octal and `9` is decimal, and `09` is refused with `09 is not an octal number`.
+A prefix is `0`, or `0` and one letter, such as `0x`. A literal starts with a digit, so RUNS source has one token form for every machine. Where two prefixes match, the longer wins. A literal holds only digits of its base. On the PDP-1 `0355670` is octal and `9` is decimal, and `09` is refused with `09 is not an octal number`.
 
 A literal is a whole number with no sign. `-04000` is the operator `unary -` applied to the literal `04000`. The type's `as literal` operator turns the number into a value of the type and refuses a number that does not fit.
 
 ## Operators
 
-An **operator** is a total, deterministic function from values to values that the description defines. Every operation RUNS text performs on a value of a machine type is an operator. An operator has a signature, an optional symbol, optional `requires:` lines, and a body:
+An **operator** is a total, deterministic function from values to values that the description defines. Every operation RUNS source performs on a value of a machine type is an operator. An operator has a signature, an optional symbol, optional `requires:` lines, and a body:
 
 ```runs-machine
 operator add(a: word, b: word) -> word as +
@@ -138,15 +138,15 @@ operator add(a: word, b: word) -> word as +
 ### Signatures
 
 - Each parameter is `name: T`, where T is a type of the description, `count`, or `cond`.
-- A parameter may be a literal in place of a name, such as `0` in `operator negative(a: word, 0) -> cond as <`. The operand in RUNS text must then be that literal. `runs.check` refuses any other operand before anything runs. This is how a description says which comparisons a type allows.
+- A parameter may be a literal in place of a name, such as `0` in `operator negative(a: word, 0) -> cond as <`. The operand in RUNS source must then be that literal. `runs.check` refuses any other operand before anything runs. This is how a description says which comparisons a type allows.
 - The result is one type, or a tuple of two or more in parentheses, such as `(word, word)` or `(byte, bit, bit)`.
 - `count` is a RUNS count, an integer with no bound. `cond` is a RUNS condition. In the core a `cond` is a 1-bit vector, where 1 is true.
 
 ### Symbols
 
-`as` gives an operator a symbol of RUNS text, or names it as one of a type's two conversions. An operator with no `as` is called by its name, as `rcl(h, l, 2)` is.
+`as` gives an operator a symbol of RUNS source, or names it as one of a type's two conversions. An operator with no `as` is called by its name, as `rcl(h, l, 2)` is.
 
-| Symbol | RUNS text | Signature |
+| Symbol | RUNS source | Signature |
 |---------|-----------|-----------|
 | `as +`, `as -`, `as &`, `as \|`, `as ^` | `a + b` and the others | Two operands, one result. |
 | `as <<`, `as >>` | `a << n`, `a >> n` | Two operands, one result. |
@@ -155,9 +155,9 @@ operator add(a: word, b: word) -> word as +
 | `as literal` | A literal, or a count where the type is wanted | One `count`, result the type. |
 | `as count` | A value of the type where a count is wanted | One operand of the type, result `count`. |
 
-Several operators may take one symbol if their operand types differ. RUNS text picks the one whose parameter types match the operands. Two operators that take one symbol on the same operand types are refused. An operator's name is unique in the description.
+Several operators may take one symbol if their operand types differ. RUNS source picks the one whose parameter types match the operands. Two operators that take one symbol on the same operand types are refused. An operator's name is unique in the description.
 
-A type allows exactly the operations the description defines for it. An 8-bit micro's description may give `byte` no `+` at all, because the machine adds only with carry. RUNS text then writes `adc`.
+A type allows exactly the operations the description defines for it. An 8-bit micro's description may give `byte` no `+` at all, because the machine adds only with carry. RUNS source then writes `adc`.
 
 ### Requires
 
@@ -172,7 +172,7 @@ operator word_of(n: count) -> word as literal
     not(vec(-n, 18))
 ```
 
-If the condition is false, the RUNS text is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS text.
+If the condition is false, the RUNS source is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS source.
 
 CONTEXT.md calls a condition of this kind a precondition (372-384) and uses `requires:` for a top Network's inbound boundary Records (272-274). The two senses of the keyword are a gap.
 
@@ -237,7 +237,7 @@ The core has no recursion, no unbounded loop, no floating point, no memory, no R
 
 A carry, an overflow, or a condition bit is not part of a type. A type is a bit vector, and an operator is a function of its operands. An operator that the machine runs with a flag takes the flag as an operand and returns the new flag in its result.
 
-A flag that one routine leaves and another reads is a value the original carried between rules. It is a field of the Record of the concern it belongs to, exactly as a value the original carried in AC or IO is. The operator returns it, and the RUNS text stores it. A flag that a routine sets and reads before it hands it on is a local.
+A flag that one routine leaves and another reads is a value the original carried between rules. It is a field of the Record of the concern it belongs to, exactly as a value the original carried in AC or IO is. The operator returns it, and the RUNS source stores it. A flag that a routine sets and reads before it hands it on is a local.
 
 A machine's add with carry shows the form. It returns the byte, the carry out, and the signed overflow:
 
@@ -269,7 +269,7 @@ processor add_high
   set score.high = high
 ```
 
-This example is in today's text form. Each Processor declares the Records it reads and writes, and both set fields of `score` in place. In the vision a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md 166-169). Each new value lands in a fresh place and never overwrites the old (90-92, 194-196). How the carry's chain of values is written in the vision's graph is open.
+This example is in today's written form. Each Processor declares the Records it reads and writes, and both set fields of `score` in place. In the vision a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md 166-169). Each new value lands in a fresh place and never overwrites the old (90-92, 194-196). How the carry's chain of values is written in the vision's graph is open.
 
 A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
@@ -342,11 +342,11 @@ space core
   address: 12
 ```
 
-A machine with several memories that play reads, such as a console's video memory or a cartridge's banks, has one space for each. A description needs a space only where some game's play reads layout. A space states no contents. Which Records lie where is the RUNS text's `layout`.
+A machine with several memories that play reads, such as a console's video memory or a cartridge's banks, has one space for each. A description needs a space only where some game's play reads layout. A space states no contents. Which Records lie where is the RUNS source's `layout`.
 
 ## Stated layout
 
-In a layout glitch, play reads past the last slot of a collection, or reads one kind of object as another. In that state the rule is whatever lies there in memory, so the layout is part of the game. The RUNS text states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
+In a layout glitch, play reads past the last slot of a collection, or reads one kind of object as another. In that state the rule is whatever lies there in memory, so the layout is part of the game. The RUNS source states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
 
 ```text
 layout ram
@@ -365,7 +365,7 @@ layout ram
 | `field R.f at A`, `field R.f after Q` | One field's slots lie together, for a Record whose fields do not. |
 | `fixed at A: v, ...` | Units whose contents play reads and the game never writes, such as the bytes of code a stray read reaches. One value per unit. |
 
-Only Records that play reads through layout are placed. A placed Record has no enum field: where play reads a value's bits through layout, the bits are the game's, so the field has a machine type and the RUNS text gives its values. Each field's type is a whole number of the space's units wide. Two placements that share a unit are refused, unless one is `over` the other.
+Only Records that play reads through layout are placed. A placed Record has no enum field: where play reads a value's bits through layout, the bits are the game's, so the field has a machine type and the RUNS source gives its values. Each field's type is a whole number of the space's units wide. Two placements that share a unit are refused, unless one is `over` the other.
 
 ### The read rule
 
@@ -383,13 +383,13 @@ The address wraps at the space's address width. i is any integer. A slot from 0 
 
 A write past the last slot splits the value into k units in the space's order and writes each unit into the field slot that holds it. It replaces that slice of the slot's value and leaves its other bits.
 
-Every unit a read or write reaches is placed. A read or write that reaches a unit no layout places, or a write that reaches a `fixed` unit, means the RUNS text is wrong. A unit the game writes is part of a Record, and the conversion places that Record.
+Every unit a read or write reaches is placed. A read or write that reaches a unit no layout places, or a write that reaches a `fixed` unit, means the RUNS source is wrong. A unit the game writes is part of a Record, and the conversion places that Record.
 
 The contract still holds. A Processor that reads through layout declares every Record whose units it reads, under `reads:` or `writes:`. A Processor that writes through layout declares every Record whose units it writes, under `writes:`. A field slot with no initial value is unknown until the game sets it or the world gives it, through layout as elsewhere. A read through layout that reaches it is the same error as any read of an unknown field. A write through layout that covers only part of an unknown slot is an error too.
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
 
-This contract is today's text form, and it falls short of the vision in two ways. In the vision a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md 166-169). A write here replaces part of a slot in place, where the vision writes each value once into a fresh place (90-92). How a read or write through layout is wired in the vision is open.
+This contract is today's written form, and it falls short of the vision in two ways. In the vision a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md 166-169). A write here replaces part of a slot in place, where the vision writes each value once into a fresh place (90-92). How a read or write through layout is wired in the vision is open.
 
 ### An example
 
@@ -406,13 +406,13 @@ game record lines
 
 `hits` takes units 0x0300 to 0x030f. `lines.count` lies at 0x0310, and `lines.first` at 0x0311 and 0x0312. A read of `hits.line[8]` reaches 0x0310 and 0x0311. Little-endian, the unit at 0x0310 is the low byte. So the read gives `cat(low byte of lines.first, lines.count)`, and the Processor declares `reads: lines`. A write of `hits.line[8]` sets `lines.count` to the value's low byte and the low byte of `lines.first` to its high byte.
 
-A reference the original kept as an address becomes an index into the collection it points into. The declarations spell the index as the machine's address. A stale reference is an index the game kept after its slot changed meaning. In range, it reads that slot as it is now. Past the end, it reads what the layout puts there.
+A reference the original kept as an address becomes an index into the collection it points into. The declarations encode the index as the machine's address. A stale reference is an index the game kept after its slot changed meaning. In range, it reads that slot as it is now. Past the end, it reads what the layout puts there.
 
 ## Instructions are not part of the description
 
-`type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own text. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
+`type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own source. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-A machine glitch runs data as code or jumps into the middle of a routine. Its rule is what the machine does with those bytes on that path, and the RUNS text states that rule in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler.
+A machine glitch runs data as code or jumps into the middle of a routine. Its rule is what the machine does with those bytes on that path, and the RUNS source states that rule in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
@@ -588,7 +588,7 @@ operator not_negative(a: word, 0) -> cond as >=
   not(a[17])
 ```
 
-| RUNS text | Operator | The PDP-1's |
+| RUNS source | Operator | The PDP-1's |
 |-----------|----------|-------------|
 | a literal | `word_of` | A word as the assembler writes it. |
 | `a + b` | `add` | `add` |
@@ -609,7 +609,7 @@ The PDP-1 word has no `*` or `/`. Spacewar multiplies and divides with subroutin
 
 The word's edge words are 0, -0 (`0777777`), 1, -1 (`0777776`), the extremes `0377777` and `0400000`, and `0777` and `0400777`.
 
-The PDP-1 description states `core` for a PDP-1 game whose play reads layout. Spacewar's play reads none, so its text has no `layout`.
+The PDP-1 description states `core` for a PDP-1 game whose play reads layout. Spacewar's play reads none, so its source has no `layout`.
 
 ## A second machine: an 8-bit byte with carry
 
@@ -679,13 +679,13 @@ operator byte_differs(a: byte, b: byte) -> cond as !=
   bits(a) != bits(b)
 ```
 
-What changed from the PDP-1 is only parameters and bodies. There are three types, not one. The default literal base is decimal, with `0x` and `0b` prefixes. The space has 8-bit units and an order. `byte` has no `+`, because the machine adds only with carry, so the RUNS text writes `adc` and stores the carry where a later routine reads it. `byte` has no ordering comparison. A game that branches on the carry or the sign stores that bit and compares it with `==`.
+What changed from the PDP-1 is only parameters and bodies. There are three types, not one. The default literal base is decimal, with `0x` and `0b` prefixes. The space has 8-bit units and an order. `byte` has no `+`, because the machine adds only with carry, so the RUNS source writes `adc` and stores the carry where a later routine reads it. `byte` has no ordering comparison. A game that branches on the carry or the sign stores that bit and compares it with `==`.
 
 The byte's edge words are `0x00`, `0x01`, `0xFF`, `0x7F`, `0x80`, `0x0F`, and `0x8F`. It has no -0.
 
 ## What the loader rejects
 
-Each error comes from one of four stages. The description stage finds an error as the loader reads the machine description. `runs.check` finds an error in the RUNS text against the description before anything runs. The layout stage finds an error in a `layout` declaration. Run time finds an error while a routine runs. An error at the description stage means the description is wrong. A failed `requires:` and a layout error at run time mean the RUNS text is wrong.
+Each error comes from one of four stages. The description stage finds an error as the loader reads the machine description. `runs.check` finds an error in the RUNS source against the description before anything runs. The layout stage finds an error in a `layout` declaration. Run time finds an error while a routine runs. An error at the description stage means the description is wrong. A failed `requires:` and a layout error at run time mean the RUNS source is wrong.
 
 | Error | Stage | When |
 |-------|-------|------|
@@ -720,9 +720,9 @@ Each error comes from one of four stages. The description stage finds an error a
 | `operators <X> and <Y> both take <b> on (<types>)` | Description | Two operators take one symbol on the same operand types. |
 | `operator <X>: cites no operation <text>` | Description | A citation names a format, operation, rounding, or NaN rule the tables above do not list. |
 | `<t> is not an octal number` (or `binary`, `decimal`, `hexadecimal`) | Parser | A literal holds a digit outside its base. |
-| `<X> is not an operator of the machine; a routine is run, not called` | Parser | RUNS text calls a name that is not an operator of the description or a declared instruction. |
+| `<X> is not an operator of the machine; a routine is run, not called` | Parser | RUNS source calls a name that is not an operator of the description or a declared instruction. |
 | `no type <T>` | `runs.check` | A field's type is not an enum, `int` in a stream, or a type of the description. |
-| `no operator <b> on (<types>)` | `runs.check` | RUNS text uses a symbol on operand types no operator takes. |
+| `no operator <b> on (<types>)` | `runs.check` | RUNS source uses a symbol on operand types no operator takes. |
 | `<X> takes <n> values, not <m>` | `runs.check` | A call passes the wrong number of operands. |
 | `<X> takes a <T>, not a <U>` | `runs.check` | An operand has another type than its parameter, and no conversion makes it one. |
 | `<T> has no literals` | `runs.check` | A literal stands where a type with no `as literal` operator is wanted. |
