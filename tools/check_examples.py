@@ -1,10 +1,12 @@
 """Check every RUNS example in the runs-spec docs against RUNS-Spacewar's tools/runs.py.
 
-Fenced blocks tagged `runs` or `runs-prim` are accepted examples. Each must load
-alone. All accepted blocks of one document then load together as one program,
-pass runs.check, and every top Network in it runs six passes. Before each top
-Network runs, the world gives every field of its `reads:` Records that has no
-initial value: the word 0, or the enum's first member.
+Fenced blocks tagged `runs` or `runs-prim` are accepted examples. Each must parse
+alone: its runs may wire routines that another block declares, so a block alone
+is read without wiring them. All accepted blocks of one document then load
+together as one program, pass runs.check, and every top Network in it runs six
+passes. Before each top Network runs, the world gives every field of its
+`reads:` Records that has no initial value: the word 0, or the enum's first
+member.
 Blocks tagged `runs-rejected` or `runs-prim-rejected` must start with
 `# rejected: <text>`; loading and running them must raise a RunsError whose
 message contains <text>.
@@ -44,6 +46,16 @@ def give_inputs(m, prog, network):
             for k in range(len(slots or [])):
                 if slots[k] is runs.UNKNOWN:
                     slots[k] = value
+
+
+def parse(f: Path):
+    """Read a block alone, every declaration of it, without wiring its runs."""
+    wire = runs.expand_ports
+    runs.expand_ports = lambda prog: None
+    try:
+        runs.load([f])
+    finally:
+        runs.expand_ports = wire
 
 
 def exercise(root: Path):
@@ -90,9 +102,9 @@ for doc in sorted(spec.glob("*.md")):
                     failures += 1
                     continue
                 try:
-                    runs.load([f])
+                    parse(f)
                 except runs.RunsError as e:
-                    print(f"FAIL {doc.name} #{n} does not load: {e}")
+                    print(f"FAIL {doc.name} #{n} does not parse: {e}")
                     failures += 1
                     continue
             (Path(whole) / f"{n:02}.{ext}").write_text(body)

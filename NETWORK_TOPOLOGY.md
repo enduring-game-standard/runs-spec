@@ -8,16 +8,18 @@ A `.runs` file declares the game's state and its structure. It holds types, enum
 
 The RUNS text is the game's Petri net. Records are the places. Processors are the transitions. A Network says which transitions fire, in what order, and under what conditions. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
 
-- No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record.
+- No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record field that the Network names.
+- A Processor names no Record. It declares **Ports**, and its Ports are its whole contract. Two Processors with the same Ports can be swapped.
+- Only a top Network names Records. Every other Network is a **bundle**: it declares Ports the same way, and wires them on to the routines it runs.
 - RUNS has no functions. A Processor cannot call a Processor, and an expression cannot call a routine. The only calls are the machine description's operators and the instruction constructors of `type insn`.
-- A Network writes nothing. It fires Processors and other Networks, chooses with guards, and repeats with bounded loops.
-- Firing is sequential. A Network fires its statements in the order written, and each Processor sees every write made before it. A compiler may derive concurrency from the declared reads and writes. Concurrency is not part of the model.
+- A Network writes nothing. It fires Processors and other Networks, wires each Port of each one to a field, chooses with guards, and repeats with bounded loops.
+- Firing is sequential. A Network fires its statements in the order written, and each Processor sees every write made before it. A compiler may derive concurrency from the wires. Concurrency is not part of the model.
 
 The order is part of the game. [The order is in the text](./README.md#the-order-is-in-the-text) says why the text states it.
 
 ## A running example
 
-The examples on this page together form one program, a reduced version of Spacewar's object loop. Each object slot holds a calc routine. A torpedo counts down its life and then explodes. An explosion plots a cloud of dots and then frees its slot. A switch on the console comes in from outside the game. While the operator holds it on, no new torpedo launches, and the frame waits.
+The examples on this page together form one program, a reduced version of Spacewar's object loop. Each object slot holds a calc routine. A torpedo counts down its life, drifting on each axis, and then explodes. An explosion plots a cloud of dots and then frees its slot. A switch on the console comes in from outside the game. While the operator holds it on, no new torpedo launches, and the frame waits.
 
 ## Declarations
 
@@ -29,7 +31,7 @@ A program's machine types come from its [machine description](./MACHINE_DESCRIPT
 machine pdp1
 ```
 
-For the PDP-1, that is `word`, the 18-bit ones' complement word. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) states its operators, and the [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) summarizes them.
+For Spacewar, that is `word`, the game's number. That a word is 18 bits in ones' complement is a rule of Spacewar, and the RUNS text states it exactly: [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) gives each operator a body, and the [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) summarizes them.
 
 `type insn` is a word of code, and a field of type `insn` is impure. The language parses it only for a text that keeps code in a Record, as Spacewar's outline does. `instructions:` lists the original machine's instructions that the text builds. The evaluator knows the rules of `lac`, `lio`, `dac`, `dio`, `add`, `sub`, `jmp`, `stf`, `clf`, `szf`, `rcl`, `cma`, `ioh`, and `dpy`, and refuses any other. `display:` names the stream that `dpy` plots on. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) says why the loader counts each use as an impurity, and [Instructions are not part of the description](./MACHINE_DESCRIPTION.md#instructions-are-not-part-of-the-description) says where instruction encodings belong.
 
@@ -66,18 +68,17 @@ interface record objects[4]
   x: word = 0
   counter: word = 0         # frames left, counting up toward 0
   dx: word = 0
+  y: word = 0
+  dy: word = 1
 
 game record random
   number: word = 0
 
-game record motion
-  acceleration: word = 0    # added to an object's velocity; AC into the inertia macro
-
-game record cloud
-  particles: word = 0       # dots left to plot, counting up
-
 interface record particle
   x: word = 0               # where the explosion puts its next dot
+
+interface record sight
+  x: word = 0               # where the torpedo is drawn
 
 interface record console
   hold: switch              # no initial value: the operator sets it
@@ -102,7 +103,7 @@ game record spreads[4]
 - A field with no initial value is unknown until the game sets it or the world gives it. Reading it while it is unknown is an error. That is how the text says what comes in from outside the game, such as the console's switches and the words core held at power-on.
 - Global data is a Record like any other. RUNS has no separate kind for it.
 
-Records are organized by meaning, not by where the original kept a value. A value the original carried in a register, such as the acceleration above, is a field of the Record of the concern it belongs to. [Map each routine to Processors and Networks](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) states the rule.
+Records are organized by meaning, not by where the original kept a value. A value the original carried in a register from one rule to the next is a field the Network names: a field of the Record of the concern it belongs to when it is read outside the Network, or the Network's own scratch when only that Network touches it, as the acceleration of `drift` below. [Map each routine to Processors and Networks](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) states the rule.
 
 ### Streams
 
@@ -181,7 +182,7 @@ processor plot_particle
 A game rule may not depend on the presentation's state through a guard either:
 
 ```runs-rejected
-# rejected: network frame: a guard reads the presentation's budget, and the game's advance runs under it
+# rejected: network frame: a guard reads the presentation's budget, and the game's advance
 presentation record budget
   left: word = 0
 
@@ -190,23 +191,25 @@ game record clock
 
 network frame
   run spend
+    left: budget.left
   if budget.left >= 0:
     run advance
+      ticks: clock.ticks
 
 processor spend
-  writes: budget
-  set budget.left = budget.left + 1
+  inout left: word
+  set left = left + 1
 
 processor advance
-  writes: clock
-  set clock.ticks = clock.ticks + 1
+  inout ticks: word
+  set ticks = ticks + 1
 ```
 
 The loader refuses a program that breaks these rules, and a Record with no kind breaks them. A conversion in progress reads its text with the purity report, which lists every impurity rather than stopping at the first. RUNS-Spacewar's report is `tools/check_purity.py`. [Give each Record a kind](./CONVERSION_PROCESS.md#5-give-each-record-a-kind-and-split-each-processor-by-it) says how a conversion splits its Processors and checks the split.
 
 ## Networks
 
-A Network has a name, optional parameters, optional headers, and a body.
+A Network has a name, optional Ports, optional headers, and a body. The top Network, `frame`, walks the object slots and names the Records. Every Network below it is a bundle, which names only its Ports:
 
 ```runs
 network frame
@@ -215,37 +218,110 @@ network frame
   if objects.routine[0] == none:
     if console.hold == off:
       run launch
+        routine: objects.routine[0]
+        counter: objects.counter[0]
+        dx: objects.dx[0]
+        busy: lights.busy
     else:
       wait
   for slot in 0 .. 3:
     if objects.routine[slot] != none:
-      run calc(slot)
+      run calc
+        routine: objects.routine[slot]
+        counter: objects.counter[slot]
+        x: objects.x[slot]
+        dx: objects.dx[slot]
+        y: objects.y[slot]
+        dy: objects.dy[slot]
+        shift: spreads.shift[slot]
+        number: random.number
+        dot: particle.x
+        shown: sight.x
 
-network calc(slot)
-  match objects.routine[slot]:
+network calc
+  inout routine: calc_routine
+  inout counter: word
+  inout x: word
+  inout dx: word
+  inout y: word
+  inout dy: word
+  in shift: word
+  inout number: word
+  out dot: word
+  out shown: word
+  match routine:
     none: unreachable
-    torpedo: run torpedo(slot)
-    explosion: run explosion(slot)
+    torpedo: run torpedo
+    explosion: run explosion
 
-network torpedo(slot)
-  run count_down(slot)
-  if objects.counter[slot] >= 0:
-    run explode(slot)
+network torpedo
+  inout routine: calc_routine
+  inout counter: word
+  inout x: word
+  inout dx: word
+  inout y: word
+  inout dy: word
+  out shown: word
+  run count_down
+  if counter >= 0:
+    run explode
   else:
-    run coast
-    run inertia(slot)
-    run plot(slot)
+    run drift
+      velocity: dx
+      position: x
+    run drift
+      velocity: dy
+      position: y
+    run show
+      value: x
+    run plot
+
+network drift
+  inout velocity: word
+  inout position: word
+  owns acceleration: word                                   # AC into the inertia macro: cla
+  run coast
+    value: acceleration
+  run inertia
 ```
+
+### Ports
+
+A Port is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`.
+
+| Direction | Meaning |
+|-----------|---------|
+| `in name: kind` | The routine reads the field wired here and never sets it. |
+| `out name: kind` | The routine sets the field wired here. |
+| `inout name: kind` | The routine reads the field wired here and sets it. |
+
+A Port is one field, never a whole Record. Its kind says how much of the field: a type of the machine description or an enum, such as `word` or `calc_routine`, takes one word or one slot (`objects.x[slot]`); `type[N]`, such as `word[4]`, takes a whole field of a collection of N, and the routine indexes it itself, with the index as another Port. A routine with Ports names no Record, takes no parameters, and has no `reads:` or `writes:`. Its body names only its Ports, its locals, and, on a Network, its scratch.
+
+### Wires
+
+A `run` wires each Port of the routine it fires, one Port per indented line, `port: field`. The field is a field of a Record, a slot of one, a Port of the Network that runs it, or that Network's scratch. Each Port is wired exactly once. A wire to a field of the same name may be left out: `run inertia` in `drift` wires `velocity` to `drift`'s Port `velocity`, `position` to its `position`, and `acceleration` to its scratch `acceleration`. `run torpedo` in `calc` leaves out every wire.
+
+A bundle collapsed is `run name` and its wires. Expanded, it is its own lines. A bundle's Port wired to an outer Port resolves through to the field the top Network wires: the first `run drift` in `torpedo` moves `objects.dx[slot]` and `objects.x[slot]`, and the second moves `objects.dy[slot]` and `objects.y[slot]`. Any bundle, from one Processor up to the whole game, can be read and published alone, because its Ports are its whole contract.
+
+Values between Processors stay Records that the Network names. A `let` stays local to one Processor, and no local outlives the firing.
+
+Each distinct wiring of a routine is one copy of it: its text with each Port replaced by the field wired to it, by reference, the way the original's macros were expanded at each use (Spacewar's `diff` once an axis). The evaluator runs the copies, and a compiler emits one copy a wiring, or one shared subroutine where the target's declarations call it, as [Declarations](./DECLARATIONS.md#conventions) states. The loader names each copy after its routine and a number, as in `inertia_1`.
+
+### Scratch
+
+`owns name: kind` declares a value only that Network touches. It is one field of a type or an enum, never a collection. Each firing writes it before it reads it, so it is scratch, never memory. The Network has one shared copy, as the original kept such a value in one register: every copy of the Network uses the same field. Anything read outside the Network is a Port, not scratch. `drift`'s acceleration is scratch: `coast` writes it, `inertia` reads it, and nothing outside `drift` sees it. Nothing outside the Network can name its scratch.
+
+The evaluator holds scratch in a field of its own. RUNS-Spacewar's PDP-1 compiler does not compile scratch yet, and refuses it with `owned scratch not compiled yet`.
 
 ### Headers
 
 | Header | Meaning |
 |--------|---------|
-| `reads: a, b` | Records the Network's contract says come in from outside it. |
-| `writes: a, b` | Records and streams the Network's contract says leave it. |
+| `reads: a, b` | Records the top Network's contract says come in from outside it. |
+| `writes: a, b` | Records and streams the top Network's contract says leave it. |
 | `requires: condition` | A precondition. If it is false when the Network fires, the RUNS text is wrong. |
 
-[Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
+A bundle's contract is its Ports. [Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
 
 ### Statements
 
@@ -253,7 +329,8 @@ A Network body may hold only these statements.
 
 | Statement | Meaning |
 |-----------|---------|
-| `run name` or `run name(a, b)` | Fire a Processor or a Network. Each argument is an expression, evaluated before the routine fires. |
+| `run name`, then one `port: field` a line | Fire a Processor or a Network, with each of its Ports wired to a field. |
+| `run name` or `run name(slot)` | Fire a routine with no Ports. The form with a slot is the form a conversion starts from, and the loader still reads it. |
 | `if g:` ... `elif g:` ... `else:` | Fire the first arm whose guard is true. |
 | `for i in a .. b:` | Fire the body once for each count from `a` to `b`, both included, in ascending order. If `b` is less than `a`, the body does not fire. The bounds may use an outer index. |
 | `match e:` | Fire the arm named by the enum value `e`. Each arm is `member: statement` on one line, or `member:` followed by an indented block. |
@@ -263,7 +340,9 @@ A Network body may hold only these statements.
 | `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
 
-A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. A `run` passes only which slot the routine works on: each parameter is used only to choose a slot of a collection. The loader reports a guard that computes and a `run` that passes a value, and refuses them. The README's [The order is in the text](./README.md#the-order-is-in-the-text) says why the order is written and how each line is a place.
+A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its Ports and its scratch, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. The README's [The order is in the text](./README.md#the-order-is-in-the-text) says why the order is written and how each line is a place.
+
+A `run` passes only wires. `slot` stays in the one Network that walks the slots, `frame` above, and a bundle gets `objects.x[slot]` already chosen. A slot that the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it. A `run` that passes a value instead of a wire, in the form a conversion starts from, is an impurity. The loader reports a guard that computes and a `run` that passes a value, and refuses them.
 
 A guard that computes is refused:
 
@@ -274,12 +353,13 @@ game record clock
 
 network frame
   run advance
+    ticks: clock.ticks
   if clock.ticks - 010 >= 0:
     stop
 
 processor advance
-  writes: clock
-  set clock.ticks = clock.ticks + 1
+  inout ticks: word
+  set ticks = ticks + 1
 ```
 
 So is a `run` that hands a value to the routine it fires:
@@ -297,29 +377,110 @@ processor grow(step)
   set clock.ticks = clock.ticks + step
 ```
 
+A Port that no wire reaches is refused, when the Network that runs it has no Port or scratch of its name:
+
+```runs-rejected
+# rejected: its Port velocity is not wired
+game record body
+  x: word = 0
+  dx: word = 1
+
+network frame
+  run inertia
+    position: body.x
+
+processor inertia
+  inout velocity: word
+  inout position: word
+  set position = (velocity >> 3) + position
+```
+
+A wire's field must be of the Port's kind. A whole field of a collection is not one word:
+
+```runs-rejected
+# rejected: position is word, wired to body.x, word[2]
+game record body[2]
+  x: word = 0
+  dx: word = 1
+
+network frame
+  for slot in 0 .. 1:
+    run inertia
+      velocity: body.dx[slot]
+      position: body.x
+
+processor inertia
+  in velocity: word
+  inout position: word
+  set position = (velocity >> 3) + position
+```
+
+A routine never sets its `in` Port:
+
+```runs-rejected
+# rejected: inertia sets velocity, an in Port
+game record body
+  x: word = 0
+  dx: word = 1
+
+network frame
+  run inertia
+    velocity: body.dx
+    position: body.x
+
+processor inertia
+  in velocity: word
+  inout position: word
+  set velocity = velocity + 1
+  set position = (velocity >> 3) + position
+```
+
+A routine with Ports names no Record:
+
+```runs-rejected
+# rejected: a routine with Ports touches only its Ports
+game record body
+  x: word = 0
+  dx: word = 1
+
+network frame
+  run inertia
+    position: body.x
+
+processor inertia
+  inout position: word
+  set position = (body.dx >> 3) + position
+```
+
 A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
 
-A Network fires the game's Processors and the presentation's in one order. `plot` above is the presentation's, and `torpedo` runs it between the game's steps. With the presentation removed, `torpedo` is `count_down`, `explode`, `coast` and `inertia` in the same order.
+A Network fires the game's Processors and the presentation's in one order. `plot` above is the presentation's, and `torpedo` runs it between the game's steps. With the presentation removed, `torpedo` is `count_down`, `explode`, `drift` twice and `show` in the same order.
 
 A halt or a hang that the original reaches is a rule of the game, written as `stop`, or as an `emit` of what the halt shows and then `wait`. [Exact over every input](./README.md#exact-over-every-input-glitches-included) gives Spacewar's two halts.
 
 ### The Network loop
 
-A loop in a Network must hold, among its own statements, an `if` with an arm that ends in `break`. That `if` is the loop's exit. The arm may fire things before it breaks. By convention, the exit's guard reads Records that the Processors in the body write. The loader does not check this. A Processor that the original ran inside a loop, such as a macro, becomes a Network loop that fires it. The explosion's dot loop is the model:
+A loop in a Network must hold, among its own statements, an `if` with an arm that ends in `break`. That `if` is the loop's exit. The arm may fire things before it breaks. By convention, the exit's guard reads fields that the Processors in the body write. The loader does not check this. A Processor that the original ran inside a loop, such as a macro, becomes a Network loop that fires it. The explosion's dot loop is the model. The dots left to plot are its scratch:
 
 ```runs
-network explosion(slot)
-  writes: objects, display
+network explosion
+  inout routine: calc_routine
+  inout counter: word
+  in x: word
+  in shift: word
+  inout number: word
+  out dot: word
+  owns particles: word                                      # dots left to plot, counting up
   run size_cloud
   loop at most 0400001:
     run next_random
-    run scatter(slot)
+    run scatter
     run plot_particle
-    if cloud.particles >= 0:
+    if particles >= 0:
       break
-  run count_down(slot)
-  if objects.counter[slot] >= 0:
-    run free_slot(slot)
+  run count_down
+  if counter >= 0:
+    run free_slot
 ```
 
 Totality comes from the bound on each loop, not from forbidding `break`.
@@ -330,67 +491,82 @@ These Processors complete the running example. [DIGS expression language](./DIGS
 
 ```runs-prim
 processor launch
-  writes: objects, lights
-  set objects.routine[0] = torpedo
-  set objects.counter[0] = -2
-  set objects.dx[0] = 5
-  set lights.busy = on
+  out routine: calc_routine
+  out counter: word
+  out dx: word
+  out busy: light
+  set routine = torpedo
+  set counter = -2
+  set dx = 040
+  set busy = on
 
-processor count_down(slot)
-  writes: objects
-  set objects.counter[slot] = objects.counter[slot] + 1
+processor count_down
+  inout counter: word
+  set counter = counter + 1
 
-processor explode(slot)
-  writes: objects
-  set objects.routine[slot] = explosion
-  set objects.counter[slot] = -2
+processor explode
+  out routine: calc_routine
+  out counter: word
+  set routine = explosion
+  set counter = -2
 
 processor coast
-  writes: motion
-  set motion.acceleration = 0
+  out value: word
+  set value = 0
 
-processor inertia(slot)
-  reads: motion
-  writes: objects
-  set objects.dx[slot] = motion.acceleration + objects.dx[slot]
-  set objects.x[slot] = (objects.dx[slot] >> 3) + objects.x[slot]
+processor inertia
+  in acceleration: word
+  inout velocity: word
+  inout position: word
+  set velocity = acceleration + velocity
+  set position = (velocity >> 3) + position
 
-processor plot(slot)
-  reads: objects
+processor show
+  in value: word
+  out shown: word
+  set shown = value
+
+processor plot
+  reads: sight
   writes: display
-  emit display: objects.x[slot], 1
+  emit display: sight.x, 1
 
 processor size_cloud
-  writes: cloud
-  set cloud.particles = -3
+  out particles: word
+  set particles = -3
 
 processor next_random
-  writes: random
-  set random.number = (rar(random.number, 1) ^ 0355670) + 0355670
+  inout number: word
+  set number = (rar(number, 1) ^ 0355670) + 0355670
 
-processor scatter(slot)
-  reads: random, objects, spreads
-  writes: cloud, particle
-  set particle.x = (random.number >> spreads.shift[slot]) + objects.x[slot]
-  set cloud.particles = cloud.particles + 1
+processor scatter
+  in number: word
+  in shift: word
+  in x: word
+  inout particles: word
+  out dot: word
+  set dot = (number >> shift) + x
+  set particles = particles + 1
 
 processor plot_particle
   reads: particle
   writes: display
   emit display: particle.x, 3
 
-processor free_slot(slot)
-  writes: objects
-  set objects.routine[slot] = none
+processor free_slot
+  out routine: calc_routine
+  set routine = none
 ```
+
+`plot` and `plot_particle` keep `reads:` and `writes:`, because they emit to a stream, and a stream is not a field a Port can carry. `show` copies the torpedo's x into `sight` for `plot`, as `scatter` leaves the dot in `particle`. How a stream crosses a Port is an [open question](./README.md#open-questions).
 
 ## Network contracts
 
-A Network can state a contract the way a Processor does. The Records it declares cross its boundary. Every other Record its Processors touch belongs to it.
+A bundle's contract is its Ports. A top Network names Records, so its contract is the Records it declares under `reads:` and `writes:`: they cross its boundary, and every other Record the routines inside it touch belongs to it.
 
-The loader checks the contract of every Network that has a `reads:` or `writes:` header, and of every top Network. A **top Network** is one that nothing fires. A game may have several. Spacewar has three. The host fires one of its two start Networks once, when the operator starts the machine, and then fires the frame once each frame. Together the top Networks are one game, so a Record they share does not cross the boundary. Their contracts are what crosses between the program and the world: what comes in, and what the presentation sends out.
+The loader checks the contract of every Network that has a `reads:` or `writes:` header, and of every top Network. A Network in the form a conversion starts from, with no Ports, may declare one too. A **top Network** is one that nothing fires. A game may have several. Spacewar has three. The host fires one of its two start Networks once, when the operator starts the machine, and then fires the frame once each frame. Together the top Networks are one game, so a Record they share does not cross the boundary. Their contracts are what crosses between the program and the world: what comes in, and what the presentation sends out.
 
-For a checked Network, "inside" means the Network and every routine it fires, directly or through sub-Networks. A Processor that nothing fires does not count as outside. The loader enforces six rules:
+For a checked Network, "inside" means the Network and every routine it fires, directly or through sub-Networks, each copy with its Ports replaced by the fields wired to them. A Processor that nothing fires does not count as outside. The loader enforces six rules:
 
 1. A Record that a Processor inside writes must be in `writes:` if a Processor outside also touches it, or if it is a stream.
 2. A Record that is read inside, but not written inside, must be in `reads:` or `writes:` if a Processor outside touches it. Reads by guards count.
@@ -399,7 +575,7 @@ For a checked Network, "inside" means the Network and every routine it fires, di
 5. A top Network must declare under `reads:` each Record with a field that has no initial value, if a routine inside reads that Record.
 6. A top Network must declare under `writes:` each Record that a Processor inside writes and nothing in the game reads. Such a Record only leaves the game, as Spacewar's console lights do.
 
-In the example, `explosion` declares `writes: objects, display`. Processors outside it, such as `launch`, also touch `objects`, and `display` is a stream. `random` and `cloud` are touched only inside `explosion`, so they belong to it and stay out of its contract. `frame` is the top Network. Every Processor is inside it, so only the stream leaves it, and `lights`, which nothing reads. `console` has a field with no initial value, and the frame's guard reads it, so `console` comes in.
+In the example, `frame` is the top Network. Every Processor is inside it, so only the stream leaves it, and `lights`, which nothing reads. `console` has a field with no initial value, and the frame's guard reads it, so `console` comes in. `explosion` and `drift` are bundles: their Ports are their contracts, and their scratch is touched by nothing outside them.
 
 A top Network that writes a stream must declare it. Without `writes: display`, the Spacewar frame does not load:
 
@@ -444,7 +620,7 @@ Which device holds each field that comes in or goes out is not part of RUNS. Eac
 
 ## What the loader and the evaluator reject
 
-Before anything runs, `runs.check` checks the shape of each kind, the names each routine uses, and the contracts. While a routine runs, the evaluator checks each Processor's Record accesses, every read of an unknown field, and every bound.
+As it loads the text, the loader checks each routine's Ports and each `run`'s wires, and makes one copy of a routine for each distinct wiring. Before anything runs, `runs.check` checks the shape of each kind, the names each copy and each other routine uses, and the contracts. While a routine runs, the evaluator checks each Processor's Record accesses, every read of an unknown field, and every bound.
 
 | Error | When |
 |-------|------|
@@ -453,7 +629,29 @@ Before anything runs, `runs.check` checks the shape of each kind, the names each
 | `break outside a loop` | A Network uses `break` outside a `loop`. |
 | `run belongs to a network`, `match belongs to a network`, `stop belongs to a network`, `wait belongs to a network` | A Processor uses `run`, `match`, `stop`, or `wait`. |
 | `... defined twice` | Two routines share a name. |
-| `... is no routine`, `... takes N arguments` | A `run` names a routine that does not exist, or passes the wrong number of arguments. |
+| ``a Port is `direction name: kind`, the kind a type or type[N]`` | A Port's header line is not `direction name: kind`. |
+| `... names ... twice` | A routine declares two Ports, or a Port and its scratch, of one name. |
+| `...: no kind ...` | A Port's kind is not a type or an enum. |
+| `its ... has a Record's name` | A Port or scratch has the name of a Record. |
+| `only a Network owns scratch` | A Processor declares `owns`. |
+| `scratch is one field, not ...` | An `owns` line names a collection's kind, `type[N]`. |
+| `its Ports are its contract; it declares no reads: or writes:` | A routine with Ports declares `reads:` or `writes:`. |
+| `a routine with Ports takes no slot; its wires choose the field` | A routine with Ports takes parameters. |
+| `names the Record ...; a routine with Ports touches only its Ports` | A routine with Ports names a Record or a stream. |
+| `... is a Port of ..., not a local` | A `let` or a `for` binds a Port's name. |
+| `... sets ..., an in Port` | A routine sets its own `in` Port. |
+| `a run passes wires, one a line, and nothing after its routine's name`, `a wire is port: field` | A `run` with wires also passes a slot, or a wire line is not `port: field`. |
+| `...'s ... is wired twice` | A `run` wires one Port twice. |
+| `... has no Ports to wire` | A `run` wires a routine with no Ports. |
+| `... has Ports: a run wires them and passes no slot` | A `run` passes a slot to a routine with Ports. |
+| `... has no Port ...` | A wire names a Port the routine lacks. |
+| `its Port ... is not wired, and ... has no Port or scratch ...` | A Port has no wire, and the Network that runs it has no Port or scratch of its name. |
+| `... is out, wired to ...'s in Port ...`, the same for `inout` | A Network wires its own `in` Port to a Port the routine it runs may set. |
+| `... is wired to ..., which is no field` | A wire names something that is not a field, or a slot of one. |
+| `... is word, wired to ..., word[N]` and the other kinds | A wire's field is not of the Port's kind. |
+| `its wires name ..., which ... names itself` | A wire's slot uses a name that the routine it wires uses for a local of its own. |
+| `... fires itself` | A routine fires itself, through its copies too. A recursion is written as a stack Record and a bounded Network loop. |
+| `... is no routine`, `... takes N arguments` | A `run` names a routine that does not exist, or passes the wrong number of slots to a routine with no Ports. |
 | `a match's arms are members of one enum` | A `match` has arms from no enum or from several. |
 | `nothing in the game reads ..., so it leaves the game; declare writes: ...` | A top Network does not declare a Record that only leaves the game (rule 6). |
 | `... leaves it; declare writes: ...` and the other contract errors | A contract breaks one of the rules in [Network contracts](#network-contracts). |
@@ -503,19 +701,24 @@ record      = kind "record" NAME [ "[" NUMBER "]" ] { indented field }
 stream      = kind "stream" NAME { indented field }
 kind        = "game" | "interface" | "presentation"
 field       = NAME ":" TYPE [ "=" ( expression | { indented expression } ) ]
-network     = "network" NAME [ "(" NAME { "," NAME } ")" ] { indented ( header | net_stmt ) }
+network     = "network" NAME [ "(" NAME { "," NAME } ")" ] { indented ( header | port | owns | net_stmt ) }
 header      = "reads" ":" NAME { "," NAME }
             | "writes" ":" NAME { "," NAME }
             | "requires" ":" expression
+port        = ( "in" | "out" | "inout" ) NAME ":" TYPE [ "[" NUMBER "]" ]
+owns        = "owns" NAME ":" TYPE
 net_stmt    = "run" NAME [ "(" [ expression { "," expression } ] ")" ]
+            | "run" NAME wire { wire }
             | "if" expression ":" block { "elif" expression ":" block } [ "else" ":" block ]
             | "for" NAME "in" expression ".." expression ":" block
             | "match" expression ":" { indented NAME ":" ( net_stmt | block ) }
             | "loop" "at" "most" expression ":" block
             | "break" | "stop" | "wait" | "unreachable"
 block       = { indented net_stmt }
+wire        = indented NAME ":" place
+place       = NAME [ "." NAME [ "[" expression "]" ] ]
 ```
 
-`machine_line` and `layout` are in the [machine description's grammar](./MACHINE_DESCRIPTION.md#grammar). A field whose line ends in `=` takes one indented expression a slot. Names have no namespace prefix. `processor` is described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md#grammar).
+`machine_line` and `layout` are in the [machine description's grammar](./MACHINE_DESCRIPTION.md#grammar). A field whose line ends in `=` takes one indented expression a slot. A routine has Ports or a parameter list, not both. A `wire`'s `place` is a field, a slot of one, or a Port or scratch of the Network the `run` stands in. Names have no namespace prefix. `processor` is described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md#grammar).
 
 *MIT License. Open for implementation, extension, and critique.*
