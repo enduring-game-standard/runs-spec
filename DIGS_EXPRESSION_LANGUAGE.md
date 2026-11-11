@@ -4,7 +4,11 @@
 
 DIGS is the language of Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
-A Processor is one rule of the game, and it is stateless. It names no Record. It declares Ports, and the Network that runs it wires each Port to one field. It takes values from its `in` and `inout` Ports and gives values to its `out` and `inout` Ports. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its Ports, and its only effects are on the fields wired to the Ports it sets. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
+A Processor is one rule of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
+
+In the vision, a body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 112-115). Today's evaluator runs a body as statements in order, and its loops can exit early (see [Statements](#statements)).
+
+DIGS is the language of Rules Processor bodies. A Realization Processor's body is not DIGS, and the standard specifies no language for it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 150-157). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
 
 ## A running example
 
@@ -51,7 +55,7 @@ network demo
 
 ## Processor declarations
 
-A Processor has a name, Ports, optional headers, and a body:
+A Processor has a name, inputs and outputs, optional headers, and a body:
 
 ```runs-prim
 # The `random` macro: the generator's next value.
@@ -67,14 +71,16 @@ processor take_entry
 
 | Header | Meaning |
 |--------|---------|
-| `in name: kind` | A Port the body reads and never sets. |
-| `out name: kind` | A Port the body sets. |
-| `inout name: kind` | A Port the body reads and sets. |
+| `in name: kind` | An input the body reads and never sets. |
+| `out name: kind` | An output the body sets. |
+| `inout name: kind` | An input and output the body reads and sets. |
 | `requires: condition` | A precondition. If it is false when the Processor fires, the RUNS text is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
 
-A Port's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole field of a collection of N, which the body indexes itself. The body uses a Port's name as it would use the field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#ports) states how a Network wires Ports, and the checks on each wire.
+An input's or output's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole field of a collection of N, which the body indexes itself. The body uses its name as it would use the field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#inputs-and-outputs) states how a Network wires them, and the checks on each wire.
 
-A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A Processor that emits to a stream keeps this form, because a Port does not carry a stream yet.
+In the vision, a precondition is a DIGS boolean a Processor declares, and the guards that route to the Processor discharge it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 372-384). The vision also names a top Network's inbound boundary Records `requires:` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 272-275). Today's text uses `requires:` for the precondition, so the keyword disagrees with the vision's.
+
+A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A Processor that emits to a stream keeps this form, because an output does not carry a stream yet. The older form falls short of the vision, where a Processor knows nothing of a Record and only the Network knows both sides ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 166-169).
 
 `runs.check` checks each Processor's text before anything runs, and the evaluator checks each Record access again when it happens. A Processor in the older form that reads a Record in neither `reads:` nor `writes:` is an error, and so is one that writes a Record not in `writes:`:
 
@@ -94,7 +100,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network. The vision allows a body to call a sub-Processor: a pure call whose intermediates are locals of the body, which the Network sees as one transition ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 172-186). Today's DIGS has no such call:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called
@@ -103,7 +109,7 @@ processor half_root
   set square_root_call.root = square_root(square_root_call.entry) >> 1
 ```
 
-A routine the original called, such as the square root subroutine, becomes a Processor whose Ports are the values it hands through. The caller becomes a Network that wires them: it fires a Processor that sets the input field, fires the routine with its Ports wired to that field and to the result fields, and then fires a Processor that uses the output.
+A routine the original called, such as the square root subroutine, becomes a Processor whose inputs and outputs are the values it hands through. The caller becomes a Network that wires them: it fires a Processor that sets the input field, fires the routine with its inputs and outputs wired to that field and to the result fields, and then fires a Processor that uses the output.
 
 ## Statements
 
@@ -111,7 +117,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 |-----------|---------|
 | `let name = e` | Declare a new local. |
 | `let (a, b) = e` | Declare one local for each element of a tuple, such as the pair `scr` gives. `_` takes an element that nothing reads. |
-| `set target = e` | Update a local bound by `let`, an `out` or `inout` Port, or, in the older form, a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
+| `set target = e` | Update a local bound by `let`, an output (`out` or `inout`), or, in the older form, a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
 | `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS text is wrong. |
 | `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, by the original machine's rules. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
@@ -121,6 +127,8 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `return` | End the Processor. It takes no value. |
 | `emit stream: a, b, c` | Append one entry to a declared stream, one value per field in order. A Processor that emits keeps the older form, with the stream under `writes:`. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
+
+In the vision, a loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 112-115, 344-347). Today's `loop`, `break`, `continue`, and `return` fall short of that. How a body states a loop whose exit depends on data, such as the square root below, is open.
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
 
@@ -157,7 +165,7 @@ processor square_root                                       # sqt
     set root = root + 1
 ```
 
-`passes_left` and `root` are Ports, not locals, because they are the routine's own words in the original, `sq1` and `sq2`. The Network wires them to fields of `square_root_call`. A value that a Processor sets before it reads it, and never hands on, is a local.
+`passes_left` and `root` are outputs, not locals, because they are the routine's own words in the original, `sq1` and `sq2`. The Network wires them to fields of `square_root_call`. A value that a Processor sets before it reads it, and never hands on, is a local.
 
 ## Expressions
 
@@ -336,14 +344,14 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `... is not an octal number` | Parser | A literal with a leading `0` holds an 8 or a 9. |
 | `... is not an operator of the word; a routine is run, not called` | Parser | An expression calls anything but a word operator or a declared instruction. |
 | `jump <word of code> at most N` | Parser | A `jump` bound is more than one number or name. |
-| `... sets ..., an in Port`, `... names the Record ...; a routine with Ports touches only its Ports`, and the other Port and wire errors | Parser | A Processor's Ports, or a Network's wires to them, break a rule. [What the loader and the evaluator reject](./NETWORK_TOPOLOGY.md#what-the-loader-and-the-evaluator-reject) lists each. The loader checks them as it reads the text and makes each copy. |
+| `... sets ..., an in Port`, `... names the Record ...; a routine with Ports touches only its Ports`, and the other input, output, and wire errors | Parser | A Processor's inputs and outputs, or a Network's wires to them, break a rule. [What the loader and the evaluator reject](./NETWORK_TOPOLOGY.md#what-the-loader-and-the-evaluator-reject) lists each. The loader checks them as it reads the text and makes each copy. |
 | `run belongs to a network`, `match belongs to a network`, `stop belongs to a network`, `wait belongs to a network` | `runs.check` | A Processor uses `run`, `match`, `stop`, or `wait`. |
 | `... does not declare reads: ...` or `... writes: ...` | `runs.check`, run time | A Processor touches a Record it did not declare. The evaluator checks this again at run time, for every word that `jump` touches too. |
 | `... declares ... under reads: and writes:` | `runs.check` | A Processor lists a Record under both. `writes:` lets it read the Record too. |
 | `... writes ...; declare writes: ...`, `... reads ...; declare reads: ...` | `runs.check` | The text touches a Record its headers do not declare. |
 | `... declares reads: ..., but nothing in it reads ...`, the same for `writes:` | `runs.check` | A header declares a Record the text never touches. |
 | `... holds ..., not ...`, `... is passed ...` | `runs.check` | A value of one type goes where another is wanted: a member into a word field, an instruction where a word goes, or a parameter passed different types by different runs. |
-| `... fires itself` | `runs.check` | A routine fires itself. A recursion is written as a stack Record and a bounded Network loop. |
+| `... fires itself` | `runs.check` | A routine fires itself. Today a recursion is written as a stack Record and a bounded Network loop. |
 | `... compares a word with 0 only, or a slot or count with a number` | `runs.check` | An ordering compare has a word on the left and anything but 0 on the right. |
 | `... of two constants is constant` | `runs.check` | A comparison or operator has a constant on both sides. |
 | `... does not fit a word` (in `runs.check`) | `runs.check` | A literal is wider than 18 bits. |
@@ -444,6 +452,6 @@ postfix     = primary { "." NAME | "[" expression "]" | "(" [ expression { "," e
 primary     = NUMBER | "true" | "false" | NAME | "(" expression { "," expression } ")"
 ```
 
-A call in `postfix` is valid only on the name of an operator of the machine description or of an instruction that `type insn` declares. A Processor has Ports, or the older form's parameters and `reads:` and `writes:`, not both.
+A call in `postfix` is valid only on the name of an operator of the machine description or of an instruction that `type insn` declares. A Processor has inputs and outputs, or the older form's parameters and `reads:` and `writes:`, not both.
 
 *MIT License. Open for implementation, extension, and critique.*

@@ -6,6 +6,8 @@ A **machine description** is a text file, `<machine>.runs-machine`, that states 
 
 A machine description is game-neutral. Every game on that machine shares it. A conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches.
 
+A machine description is how a RUNS text takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 40-49, 321-326). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. CONTEXT.md makes the contract opt-in, not required for compliance. This page's rule that every program names one machine is the rule of this format. Whether a RUNS text that takes up no arithmetic contract names a machine is open.
+
 A machine description holds four things:
 
 - **Types.** Each type is a fixed-width bit vector, such as the PDP-1's 18-bit `word`.
@@ -172,6 +174,8 @@ operator word_of(n: count) -> word as literal
 
 If the condition is false, the RUNS text is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS text.
 
+CONTEXT.md calls a condition of this kind a precondition (372-384) and uses `requires:` for a top Network's inbound boundary Records (272-274). The two senses of the keyword are a gap.
+
 ### Bodies
 
 A body is written in [the core](#the-core). It computes the result from the parameters and nothing else. It reads no Record, writes nothing, and keeps nothing between calls. A body may call an operator that the description defines above it, so the operators form no cycle.
@@ -264,6 +268,8 @@ processor add_high
   let (high, _, _) = adc(score.high, 0, score.carry)
   set score.high = high
 ```
+
+This example is in today's text form. Each Processor declares the Records it reads and writes, and both set fields of `score` in place. In the vision a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md 166-169). Each new value lands in a fresh place and never overwrites the old (90-92, 194-196). How the carry's chain of values is written in the vision's graph is open.
 
 A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
@@ -382,6 +388,8 @@ Every unit a read or write reaches is placed. A read or write that reaches a uni
 The contract still holds. A Processor that reads through layout declares every Record whose units it reads, under `reads:` or `writes:`. A Processor that writes through layout declares every Record whose units it writes, under `writes:`. A field slot with no initial value is unknown until the game sets it or the world gives it, through layout as elsewhere. A read through layout that reaches it is the same error as any read of an unknown field. A write through layout that covers only part of an unknown slot is an error too.
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
+
+This contract is today's text form, and it falls short of the vision in two ways. In the vision a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md 166-169). A write here replaces part of a slot in place, where the vision writes each value once into a fresh place (90-92). How a read or write through layout is wired in the vision is open.
 
 ### An example
 

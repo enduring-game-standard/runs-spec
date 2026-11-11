@@ -2,9 +2,11 @@
 
 This guide converts an existing program on any machine to RUNS. Its worked example is `RUNS-Spacewar`, which converts Spacewar! 3.1 on the PDP-1. Each rule is stated for any machine first, then shown on Spacewar.
 
-A **conversion** is not a port. It reorganizes the **original** program, from its source, from code lifted from it, or from its machine code, into RUNS. Every sequence of inputs from power-on gives the same game, glitches included. The game does not change to fit RUNS. Where RUNS cannot say what the game does, RUNS grows, and that growth is a change to this spec. Every decision about the language that a conversion makes lands in this spec in the same step, with an example the conversion's tools run. A decision the spec does not state leaves the spec stale.
+A **conversion** is not a re-vibe or a rewrite. It reorganizes the **original** program, from its source, from code lifted from it, or from its machine code, into RUNS. Every sequence of inputs from power-on gives the same game, glitches included. The game does not change to fit RUNS. Where RUNS cannot say what the game does, RUNS grows, and that growth is a change to this spec. Every decision about the language that a conversion makes lands in this spec in the same step, with an example the conversion's tools run. A decision the spec does not state leaves the spec stale.
 
 At every step, the RUNS text plus the original machine's declarations rebuilds the original binary. The binary checks the behavior. Purity is the structure, and the structure is what the conversion changes.
+
+Two rules this guide holds a conversion to are conventions, not RUNS compliance. The split of a game into a Rules region and a Realization region is the enduring-games pattern, not a base-protocol primitive ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 131-135, 158-160). Decomposing a routine into Processors is convention too: a monolith that passes every test vector is the game ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 117-129). A conversion that follows this guide chooses both, and its tools enforce them as its own rules.
 
 Three documents hold what this guide points to:
 
@@ -163,9 +165,9 @@ A routine word that names which code runs an object is a state. Make it an enum.
 
 ## 3. Map each routine to Processors and Networks
 
-The original passes values between routines in registers, in flags, on a stack, and in shared memory. RUNS passes every value through a Record field that a Network names. A Processor names no Record: it declares Ports, its whole contract, and the Network that runs it wires each Port to one field. Only a top Network names Records. Every other Network is a bundle with Ports of its own, which it wires on to the routines it runs. [Network topology](./NETWORK_TOPOLOGY.md#ports) states the syntax.
+The original passes values between routines in registers, in flags, on a stack, and in shared memory. RUNS passes every value through a Record field that a Network names. A Processor names no Record: it declares its inputs and outputs, its whole contract, and the Network that runs it wires each one to one field. Records and Processors know nothing of each other, and the Network is the only thing that knows both sides ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 166-169). Only a top Network names Records. Every other Network is a bundle with inputs and outputs of its own, which it wires on to the routines it runs. [Network topology](./NETWORK_TOPOLOGY.md#inputs-and-outputs) states the syntax.
 
-A conversion may start from an older form, which the loader still reads: Processors that name the Records they touch under `reads:` and `writes:`, and Networks that pass a slot with `run name(slot)`. Convert each to Ports and wires, one interaction at a time. `slot` stays only in the Network that walks the slots. A bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it, with a Port of kind `word[N]`.
+A conversion may start from an older form, which the loader still reads: Processors that name the Records they touch under `reads:` and `writes:`, and Networks that pass a slot with `run name(slot)`. Convert each to inputs, outputs, and wires, one interaction at a time. `slot` stays only in the Network that walks the slots. A bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it, to an input or output of kind `word[N]`.
 
 Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment names the register and the instruction. Do not collect register carries into one Record named for the register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it.
 
@@ -173,22 +175,22 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 
 | In the original | In RUNS | In Spacewar |
 |-----------------|---------|-------------|
-| A subroutine that takes and returns values in registers | A Processor whose Ports are the routine's own values. The Network wires them to the fields of one Record, sets the parameter fields before the run, and reads the result fields after it. | `jda sqt`, which takes AC into `square_root_call.entry`. |
-| A subroutine that calls another | A Network. A Processor sets the callee's parameter fields, the callee runs with its Ports wired to its fields, and a Processor reads the callee's results. | `imp` calls `mpy`. |
+| A subroutine that takes and returns values in registers | A Processor whose inputs and outputs are the routine's own values. The Network wires them to the fields of one Record, sets the parameter fields before the run, and reads the result fields after it. | `jda sqt`, which takes AC into `square_root_call.entry`. |
+| A subroutine that calls another | A Network. A Processor sets the callee's parameter fields, the callee runs with its inputs and outputs wired to its fields, and a Processor reads the callee's results. | `imp` calls `mpy`. |
 | A parameter placed after the call, which the callee reads through its return address | A field the caller sets before the run, if no caller names a value the callee writes. | `jda mpy / lac b`, where the callee executes the word after the call each time it reads it. That held for every call in Spacewar. |
 | Two entries into one body | A Network that runs the first Processor, then the shared routine. The declarations lay out the jump past the entry. | `idv` shifts its dividend, then jumps into `dvd`. |
-| A macro with arguments | A Processor or a Network with Ports, wired at each use to the fields its arguments name. Each distinct wiring is one copy, as each expansion was one. A constant argument is a slot of a Record of constants. | `dislis J, Q, B`. `diff \mdx, mx1, (sar 3s`. |
-| A macro with no arguments | A Processor. A macro that works on one axis at a time is one Processor with Ports, wired once an axis. | `random`. `diff`, as `inertia` wired to each axis's velocity and position. |
+| A macro with arguments | A Processor or a Network with inputs and outputs, wired at each use to the fields its arguments name. Each distinct wiring is one copy, as each expansion was one. A constant argument is a slot of a Record of constants. | `dislis J, Q, B`. `diff \mdx, mx1, (sar 3s`. |
+| A macro with no arguments | A Processor. A macro that works on one axis at a time is one Processor with inputs and outputs, wired once an axis. | `random`. `diff`, as `inertia` wired to each axis's velocity and position. |
 | A computed jump into unrolled code, past as many copies as a number says | A counted `for` from a local. The compiler lays it out as the jump. | |
 | A store into part of a word, such as an instruction's address field | A `set` that keeps the rest of the word. | `dap`, as in `set f = f & 0770000 \| 020`. |
 | A return that reports its outcome by where it returns, or by a status flag | An enum field whose members are the outcomes. The declarations say which member skips, branches, or sets which flag. | `dvd` returns one word further when the quotient fits. |
 | Status flags that a later routine branches on | The operator that sets them returns them. The RUNS text stores each in a field of the Record of the concern it belongs to, and a guard tests the field. | |
 | A conditional skip or branch | A Network guard that tests what the skip or branch tests. | `sma`, `sza`, `spa`. |
-| A tunable executed in place | A Processor of its own. What it takes from and leaves in the registers are its Ports, wired to fields of the Records of the concerns they belong to. | `xct the`, the space warpage. |
-| A loop that runs a macro or a tunable | A Network `loop at most N:` that fires the Processor and exits on a guard. | |
-| A routine that runs macros or tunables | A Network that fires Processors in the original's order. | |
+| A tunable executed in place | A Processor of its own. What it takes from and leaves in the registers are its inputs and outputs, wired to fields of the Records of the concerns they belong to. | `xct the`, the space warpage. |
+| A loop that runs a macro or a tunable | Today, a Network `loop at most N:` that fires the Processor and exits on a guard. See **Loops** below. | |
+| A routine that runs macros or tunables | A Network of the Processors. Today's text fires them in the original's order (see [4. Keep the order](#4-keep-the-order)). | |
 | A label that several places jump to | A Network of its own. Each jump is a `run` of it as the last thing a branch does. | |
-| The main loop | A top Network, in the original's order. The host fires it on the frame event the declarations name. | `network frame`, from `ml0`. |
+| The main loop | A top Network. Today's text states it in the original's order (see [4. Keep the order](#4-keep-the-order)). The host fires it on the frame event the declarations name. | `network frame`, from `ml0`. |
 | A vertical-blank wait, or a busy-wait on a hardware register that paces the frame | Nothing in the game. The frame event the declarations name fires the top Network. Where the wait's count reaches game state, the count is a value that comes in. | The spare-time loop burns the rest of the frame's instruction budget. Nothing in the game reads the budget after, so `spare_time` is presentation. |
 | A start address, a reset vector, or a power-on entry | A top Network that the host fires once, on the event the declarations name for that entry. | `start_with_test_word` at 5 and `start_with_control_boxes` at 4. |
 | An interrupt handler | A top Network that the host fires on that event. Where the handler lands mid-routine and play observes it, that is timing (see below). | The PDP-1 sequence break words at 0 to 3 are machine words in the declarations. Play raises no sequence break, so no top Network handles one. |
@@ -196,7 +198,7 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 | An idle loop that only waits for interrupts | The end of the start Network. The host fires the handler's Network on each event. | |
 | Registers an interrupt handler saves and restores | Nothing in the RUNS text. The interrupt convention in the declarations saves and restores them. | |
 | A jump through a word that names a routine | A `match` on the enum. | `match objects.routine[slot]`, the calc routine. |
-| A jump table indexed by a number | An `if` chain over the values, or a `match` when the number is an enum. | |
+| A jump table indexed by a number | An `if` chain over the values that ends in `else`, or a `match` when the number is an enum. See **Guards** below. | |
 | A halt that the operator continues past, or a wait for a key | An `emit` of what the halt shows, then `wait`. | The halt between games shows the scores. |
 | A halt that halts again when continued, or a hang | `stop`. | A ship fires when the object table is full. |
 | Code the program writes, then runs (self-modifying code) | Processors that state what the code computes. The compiler reproduces the code's words. A Record of `insn` values run with `jump` is impure. | The outline compiler writes each ship's outline as instructions. |
@@ -207,7 +209,7 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 | A DMA transfer to a device | Presentation. The Records it copies are interface Records or a stream, and the device the declarations name carries them out. Where play observes the transfer's timing, that is timing. | |
 | A DMA transfer from memory to memory | A Processor that states the copy. | |
 | A stack used for calls | The return addresses belong to the conventions in the declarations. A value pushed to pass to a callee is a field of the callee's Record. | |
-| Recursion | A stack Record (a collection with a depth field) and a bounded Network loop that pushes and pops it. A stack that overflows into other data is layout. | |
+| Recursion | Today, a stack Record (a collection with a depth field) and a bounded Network loop that pushes and pops it. See **Loops** below. A stack that overflows into other data is layout. | |
 | A heap allocator | The game's own allocator, converted like any routine, over a Record that holds the pool. A stale reference does what the stated layout says. | |
 | A memory-mapped device read | A field with no initial value in an interface Record that comes in. The devices in the declarations say which register carries it. | `console.test_word`, read by `lat`. |
 | A memory-mapped device write | An interface Record or a stream that the presentation writes. The devices in the declarations say which register carries it. | `lights`, program flags 1 and 2. The `display` stream. |
@@ -217,7 +219,9 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 Rules that cover more than one row:
 
 - **Interrupts.** An interrupt handler is a top Network that the host fires on that event. [The host](./DECLARATIONS.md#the-host) fires it between two firings of other top Networks. Where the interrupt lands inside a routine and play observes where it landed, the landing point is timing, the fourth way the game touches the machine (see [Three kinds of Record](./README.md#three-kinds-of-record)). It becomes a rule the RUNS text states, or a value that comes in.
-- **Recursion.** A recursive routine becomes a stack Record and a bounded Network loop. The bound is the deepest the original's stack can go before it overflows. A stack that overflows is layout, and the stated layout says what the overflow reads and writes.
+- **Guards.** In the vision, the guards of one branch form a complete partition: exactly one is true. A discriminant that is not an enum needs an explicit `else` arc. A guard reads a fact a Processor computed into a Record, and never computes one ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 351-358). Today's Network grammar makes `else` optional ([Grammar](./NETWORK_TOPOLOGY.md#grammar)), and `tools/runs.py` does not check that guards partition.
+- **Loops.** In the vision, one tick of the Rules region is a DAG. The only unbounded loop is the tick feedback through `state:` Records, in the wiring. A Dispatch is a bounded fold whose count is fixed before the loop, with no `break`, `continue`, or early return ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 204-206, 344-347). Today's Network loops exit early on a guard. How a conversion expresses a loop whose exit depends on data is open.
+- **Recursion.** Today, a recursive routine becomes a stack Record and a bounded Network loop. The bound is the deepest the original's stack can go before it overflows. A stack that overflows is layout, and the stated layout says what the overflow reads and writes.
 - **Allocation.** The game's own allocator is converted. RUNS has no allocator of its own. A stale reference does what the stated layout says.
 - **Versions.** Each version of a game is its own game, with its own RUNS text. Two versions share Processors only by copying them.
 - **Code with no source.** It is converted from its machine code, through a disassembly. Each routine's symbol names come from the disassembly.
@@ -266,22 +270,26 @@ processor inertia                                           # diff
   set position = (velocity >> 3) + position
 ```
 
+The example shows today's text form. `inout` updates a field in place, where the vision writes each value once and a change is a fresh value in a fresh place ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-92).
+
 `inertia` names no axis. The y axis is the same Processor, wired to `objects.dy[slot]` and `objects.y[slot]`, as the original expanded `diff` once an axis.
 
 An operator can still patch `torpedo_space_warpage`, the rule and not only the number, as the original's authors could patch `the`.
 
 On a machine with status flags, the same rule moves each flag into a Record. [Status flags and registers](./MACHINE_DESCRIPTION.md#status-flags-and-registers) shows the shape, a carry that one routine leaves and the next reads.
 
-Structured text cannot enter a loop in two places. If the original does, state the loop once and repeat the statement that the second entry skips. Spacewar's sine enters its reduction loop in two places, so the RUNS states the reduction step before the loop and again at the end of its body. The declarations lay the two out as one.
+Today's text is structured code, and it cannot enter a loop in two places. If the original does, state the loop once and repeat the statement that the second entry skips. Spacewar's sine enters its reduction loop in two places, so the RUNS states the reduction step before the loop and again at the end of its body. The declarations lay the two out as one.
 
 **Done when** every routine of the original is a Processor or a Network of the RUNS text, every value it passes goes through a field a Network names, `runs.check` accepts the text, and the step's compile passes.
 
 ## 4. Keep the order
 
-The order in which the original runs its rules is part of the game. Firing in RUNS is sequential, and each Processor sees every write before it.
+The order in which the original runs its rules is part of the game. In the vision, a Network is a colored Petri net, and execution order is derived from its wiring, never authored. Each Record is written once, a shared resource is a threaded chain of distinct values, and any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-92, 188-199).
+
+Today's RUNS text falls short of that. Its Records are updated in place, and two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table, so their reads and writes give no order between them. The text states the order instead: firing is sequential, in the order of the Network's lines, and each Processor sees every write before it. How a conversion turns such a shared Record into a threaded chain is open. Until then:
 
 - Fire Processors in the order the original runs them, even when the order looks like an accident.
-- Do not split a loop into phases. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. [The order is in the text](./README.md#the-order-is-in-the-text) says what a split changes.
+- Do not split a loop into phases. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. [Where the order comes from](./README.md#where-the-order-comes-from) says what a split changes.
 - Keep dead tests and odd ranges. Spacewar's explosion tests a size that can never pass, and its last object slot is never tested for collisions. Both stay.
 - Keep the order of events. Where the original handles two events in a fixed order (a reset before a frame, an interrupt before the main loop resumes), the host fires their top Networks in that order, as [The host](./DECLARATIONS.md#the-host) states.
 
@@ -289,17 +297,19 @@ The order in which the original runs its rules is part of the game. Firing in RU
 
 ## 5. Give each Record a kind, and split each Processor by it
 
-Each Record is the game's, the interface's, or the presentation's. [Three kinds of Record](./NETWORK_TOPOLOGY.md#three-kinds-of-record) states the rules the loader enforces. The presentation then comes out and is replaced whole, with no change to a rule.
+Each Record is the game's, the interface's, or the presentation's. `game` marks a Record of the Rules region, `presentation` one of the Realization region, and `interface` a boundary Record between them. The split is the enduring-games convention ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 131-135, 158-160), and RUNS-Spacewar's loader enforces it as that project's own rule. [Three kinds of Record](./NETWORK_TOPOLOGY.md#three-kinds-of-record) states the rules the loader enforces. The presentation then comes out and is replaced whole, with no change to a rule.
 
 1. Decide each Record's kind by what its values reach, not by what the code was written for. A value is the game's if any rule can observe it. Spacewar's central star draws two random numbers each frame from the generator that hyperspace also uses, so the draws are the game's. The line the star draws from them is presentation.
 2. Put in the interface each Record that both sides need: what the game writes for the presentation to show, such as each object's position, and what comes in from the world, such as the controls.
-3. Split each Processor that touches both a game Record and a presentation Record. The original often does both in one routine. Spacewar's exhaust burns a unit of fuel and plots a dot in each pass of one loop. The game's half becomes one Processor and the presentation's half another, and the Network fires them in the original's order. A loop that holds both moves up into the Network, as a loop that runs a macro does.
+3. Split each Processor that touches both a game Record and a presentation Record. The original often does both in one routine. Spacewar's exhaust burns a unit of fuel and plots a dot in each pass of one loop. The game's half becomes one Processor and the presentation's half another, and today's Network fires them in the original's order (see [4. Keep the order](#4-keep-the-order)). In today's text a loop that holds both moves up into the Network, as a loop that runs a macro does. The vision has no loop inside a tick but a bounded fold whose count is fixed before it starts (CONTEXT.md 204-206, 344-347); how such a loop is written is open.
 4. Where a game value reaches the presentation through a shared word, give the value its own interface field. Spacewar computed a torpedo's start from the pen that draws the ship. The game now computes the ship's nose and the torpedo from it, and the outline starts its pen at the nose. The declarations keep both names in the original's words, so the image does not change.
 5. Make every stream presentation. Every stream leaves to a device, so a stream of another kind does not load. A Processor that emits to a stream is presentation, so split from it any work that touches a game Record.
 6. Check the split by observation. Run the game with every presentation Processor removed against the original. Every game Record must match. RUNS-Spacewar does this with `tools/check_frame.py` in its `alone` mode.
 7. Declare in the top Networks' contracts what crosses between the program and the world.
    - Every stream the presentation writes, and every Record that leaves, goes in `writes:`. Spacewar's frame declares `writes: display, scoreboard, lights`.
    - Every Record with a field that has no initial value, and that a routine inside reads, goes in `reads:`. Spacewar's frame declares `reads: console, score, controls, outline_code`. The loader refuses a top Network that misses one.
+
+   These Records are the boundary Records. The vision names inbound ones `requires:`, written by the runtime before a tick, and outbound ones `produces:`, read after it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 272-275). It makes a precondition a DIGS boolean a Processor declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 372-384). Today's text uses `reads:` and `writes:` for the boundary and `requires:` for the precondition, so its keywords disagree with the vision's.
 8. Leave the devices out of RUNS. Which switch, joypad port, device register, light, or start address carries each field belongs to the declarations, and each machine's declarations state it in their events and devices (see [DECLARATIONS.md](./DECLARATIONS.md)). RUNS-Spacewar states all of them in `pdp1/devices.toml`.
 
 Timing, pacing, and the machine underneath are presentation unless a game value depends on them. A frame budget, a wait for vertical blank, and a delay loop are presentation. A rule that reads how many instructions ran, or which line the beam was on, reads timing, and timing becomes a rule or a value that comes in.
