@@ -146,7 +146,7 @@ A conversion on a machine that already has a description uses it. It adds an ope
 A Record field is any value of the original that carries meaning from one routine to another or from one frame to the next. On most machines such a value lives in a memory word. It can also live in a register, a status flag, a device register the program reads back, an instruction's operand, or a stack slot.
 
 1. Name each field for what it means, not for its symbol. Put the original symbol in a comment, as in `particles: word = 0  # mxc`.
-2. Make a value that a routine sets before it reads it, and never hands on, a local of the Processor instead.
+2. Make a value that a routine sets before it reads it, and never hands on, a local of the Processor instead. Make a value that the routines of one Network hand between them, set before it is read in every firing and touched by nothing outside that Network, the Network's scratch (`owns`), as the original kept such a value in one register. Anything read outside the Network is a field.
 3. Keep a value that the game counts and never reads, such as Spacewar's `objects_seen`. It becomes a field that no Processor reads, and the graph shows it is dead.
 4. Drop values that only the machine uses and play never observes, such as a cursor kept in an instruction's address field, a return address on a call stack, or a saved register an interrupt handler restores. They belong to the declarations.
 5. Keep global data in Records like any other state. Data in the image, such as Spacewar's star catalog and ship outlines, is a Record whose field takes one initial value a slot.
@@ -161,7 +161,9 @@ A routine word that names which code runs an object is a state. Make it an enum.
 
 ## 3. Map each routine to Processors and Networks
 
-The original passes values between routines in registers, in flags, on a stack, and in shared memory. RUNS passes every value through a Record.
+The original passes values between routines in registers, in flags, on a stack, and in shared memory. RUNS passes every value through a Record field that a Network names. A Processor names no Record: it declares Ports, its whole contract, and the Network that runs it wires each Port to one field. Only a top Network names Records. Every other Network is a bundle with Ports of its own, which it wires on to the routines it runs. [Network topology](./NETWORK_TOPOLOGY.md#ports) states the syntax.
+
+A conversion may start from an older form, which the loader still reads: Processors that name the Records they touch under `reads:` and `writes:`, and Networks that pass a slot with `run name(slot)`. Convert each to Ports and wires, one interaction at a time. `slot` stays only in the Network that walks the slots. A bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it, with a Port of kind `word[N]`.
 
 Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment names the register and the instruction. Do not collect register carries into one Record named for the register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it.
 
@@ -169,18 +171,18 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 
 | In the original | In RUNS | In Spacewar |
 |-----------------|---------|-------------|
-| A subroutine that takes and returns values in registers | A Processor over the routine's own values, which form one Record. The caller sets its parameter fields, and reads its result fields. | `jda sqt`, which takes AC into `square_root_call.entry`. |
-| A subroutine that calls another | A Network. A Processor sets the callee's Record, the callee runs, and a Processor reads the callee's results. | `imp` calls `mpy`. |
+| A subroutine that takes and returns values in registers | A Processor whose Ports are the routine's own values. The Network wires them to the fields of one Record, sets the parameter fields before the run, and reads the result fields after it. | `jda sqt`, which takes AC into `square_root_call.entry`. |
+| A subroutine that calls another | A Network. A Processor sets the callee's parameter fields, the callee runs with its Ports wired to its fields, and a Processor reads the callee's results. | `imp` calls `mpy`. |
 | A parameter placed after the call, which the callee reads through its return address | A field the caller sets before the run, if no caller names a value the callee writes. | `jda mpy / lac b`, where the callee executes the word after the call each time it reads it. That held for every call in Spacewar. |
 | Two entries into one body | A Network that runs the first Processor, then the shared routine. The declarations lay out the jump past the entry. | `idv` shifts its dividend, then jumps into `dvd`. |
-| A macro with arguments | A Processor or a Network with parameters, run with constants. | `dislis J, Q, B`. |
-| A macro with no arguments | A Processor. A macro that works on one axis at a time becomes one Processor per axis. | `random`, `diff`. |
+| A macro with arguments | A Processor or a Network with Ports, wired at each use to the fields its arguments name. Each distinct wiring is one copy, as each expansion was one. A constant argument is a slot of a Record of constants. | `dislis J, Q, B`. `diff \mdx, mx1, (sar 3s`. |
+| A macro with no arguments | A Processor. A macro that works on one axis at a time is one Processor with Ports, wired once an axis. | `random`. `diff`, as `inertia` wired to each axis's velocity and position. |
 | A computed jump into unrolled code, past as many copies as a number says | A counted `for` from a local. The compiler lays it out as the jump. | |
 | A store into part of a word, such as an instruction's address field | A `set` that keeps the rest of the word. | `dap`, as in `set f = f & 0770000 \| 020`. |
 | A return that reports its outcome by where it returns, or by a status flag | An enum field whose members are the outcomes. The declarations say which member skips, branches, or sets which flag. | `dvd` returns one word further when the quotient fits. |
 | Status flags that a later routine branches on | The operator that sets them returns them. The RUNS text stores each in a field of the Record of the concern it belongs to, and a guard tests the field. | |
 | A conditional skip or branch | A Network guard that tests what the skip or branch tests. | `sma`, `sza`, `spa`. |
-| A tunable executed in place | A Processor of its own. What it takes from and leaves in the registers are fields of the Records of the concerns they belong to. | `xct the`, the space warpage. |
+| A tunable executed in place | A Processor of its own. What it takes from and leaves in the registers are its Ports, wired to fields of the Records of the concerns they belong to. | `xct the`, the space warpage. |
 | A loop that runs a macro or a tunable | A Network `loop at most N:` that fires the Processor and exits on a guard. | |
 | A routine that runs macros or tunables | A Network that fires Processors in the original's order. | |
 | A label that several places jump to | A Network of its own. Each jump is a `run` of it as the last thing a branch does. | |
@@ -198,7 +200,7 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 | Code the program writes, then runs (self-modifying code) | Processors that state what the code computes. The compiler reproduces the code's words. A Record of `insn` values run with `jump` is impure. | The outline compiler writes each ship's outline as instructions. |
 | A word the routine rewrites, then copies into the code | A field that holds what the word means. The compiler reproduces the instruction around it. | |
 | An instruction built at run time and executed | The rule it computes. | The explosion builds a shift from a random number, and the conversion writes a shift by `popcount` places. |
-| A value carried in a register between two rules | A field of the Record of the concern it belongs to, named for what it means. | The space warpage's AC, as in the example below. |
+| A value carried in a register between two rules | A field the Network names, of the Record of the concern it belongs to, named for what it means. When only one Network touches it, and every firing sets it before reading it, it is that Network's scratch. | The space warpage's AC, as in the example below. |
 | A bank switch | Layout. The declarations place each routine and Record in its bank, and the compiler emits the switch. Where play reads through a bank the game did not mean to map, the stated layout places those Records. | |
 | A DMA transfer to a device | Presentation. The Records it copies are interface Records or a stream, and the device the declarations name carries them out. Where play observes the transfer's timing, that is timing. | |
 | A DMA transfer from memory to memory | A Processor that states the copy. | |
@@ -231,27 +233,38 @@ game record warpage
 
 network torpedo_flight
   for slot in 0 .. 1:
-    run warp_from_x(slot)                                   # tc1
+    run warp_from                                           # tc1
+      position: objects.x[slot]
+      coordinate: warpage.coordinate
     run torpedo_space_warpage
-    run inertia_x(slot)
+      coordinate: warpage.coordinate
+      acceleration: warpage.acceleration
+    run inertia                                             # diff \mdx, mx1, (sar 3s
+      acceleration: warpage.acceleration
+      velocity: objects.dx[slot]
+      position: objects.x[slot]
 ```
 
 ```runs-prim
-processor warp_from_x(slot)                                 # lac i mx1; sar 9s
-  reads: objects
-  writes: warpage
-  set warpage.coordinate = objects.x[slot] >> 9
+processor warp_from                                         # lac i mx1; sar 9s
+  in position: word
+  out coordinate: word
+  set coordinate = position >> 9
 
 processor torpedo_space_warpage                             # the
-  writes: warpage
-  set warpage.acceleration = warpage.coordinate >> 9
+  in coordinate: word
+  out acceleration: word
+  set acceleration = coordinate >> 9
 
-processor inertia_x(slot)                                   # diff \mdx, mx1, (sar 3s
-  reads: warpage
-  writes: objects
-  set objects.dx[slot] = warpage.acceleration + objects.dx[slot]
-  set objects.x[slot] = (objects.dx[slot] >> 3) + objects.x[slot]
+processor inertia                                           # diff
+  in acceleration: word
+  inout velocity: word
+  inout position: word
+  set velocity = acceleration + velocity
+  set position = (velocity >> 3) + position
 ```
+
+`inertia` names no axis. The y axis is the same Processor, wired to `objects.dy[slot]` and `objects.y[slot]`, as the original expanded `diff` once an axis.
 
 An operator can still patch `torpedo_space_warpage`, the rule and not only the number, as the original's authors could patch `the`.
 
@@ -259,7 +272,7 @@ On a machine with status flags, the same rule moves each flag into a Record. [St
 
 Structured text cannot enter a loop in two places. If the original does, state the loop once and repeat the statement that the second entry skips. Spacewar's sine enters its reduction loop in two places, so the RUNS states the reduction step before the loop and again at the end of its body. The declarations lay the two out as one.
 
-**Done when** every routine of the original is a Processor or a Network of the RUNS text, every value it passes goes through a Record, `runs.check` accepts the text, and the step's compile passes.
+**Done when** every routine of the original is a Processor or a Network of the RUNS text, every value it passes goes through a field a Network names, `runs.check` accepts the text, and the step's compile passes.
 
 ## 4. Keep the order
 

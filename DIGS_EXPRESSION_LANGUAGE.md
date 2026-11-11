@@ -4,7 +4,7 @@
 
 DIGS is the language of Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
-A Processor is one rule of the game, and it is stateless. It declares the Records it reads and the Records it writes. It takes values from the Records it declares and gives values to the Records it declares. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on the Records and parameters it declares, and its only effects are on the Records it declares as written. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
+A Processor is one rule of the game, and it is stateless. It names no Record. It declares Ports, and the Network that runs it wires each Port to one field. It takes values from its `in` and `inout` Ports and gives values to its `out` and `inout` Ports. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its Ports, and its only effects are on the fields wired to the Ports it sets. A Record is data and nothing else, so a Processor's logic lives in its own text and never in a Record.
 
 ## A running example
 
@@ -35,37 +35,48 @@ presentation stream display
 network demo
   writes: display
   run next_random
+    number: random.number
   run take_entry
+    number: random.number
+    entry: square_root_call.entry
   run square_root
+    entry: square_root_call.entry
+    passes_left: square_root_call.passes_left
+    root: square_root_call.root
   run scatter_particle
+    number: random.number
+    scatter: cloud.scatter
   run plot_particle
 ```
 
 ## Processor declarations
 
-A Processor has a name, optional parameters, headers, and a body:
+A Processor has a name, Ports, optional headers, and a body:
 
 ```runs-prim
 # The `random` macro: the generator's next value.
 processor next_random
-  writes: random
-  set random.number = (rar(random.number, 1) ^ 0355670) + 0355670
+  inout number: word
+  set number = (rar(number, 1) ^ 0355670) + 0355670
 
 processor take_entry
-  reads: random
-  writes: square_root_call
-  set square_root_call.entry = random.number & 0377777
+  in number: word
+  out entry: word
+  set entry = number & 0377777
 ```
 
 | Header | Meaning |
 |--------|---------|
-| `reads: a, b` | Records the body may read. |
-| `writes: a, b` | Records and streams the body may write. A Processor may also read what it writes. |
+| `in name: kind` | A Port the body reads and never sets. |
+| `out name: kind` | A Port the body sets. |
+| `inout name: kind` | A Port the body reads and sets. |
 | `requires: condition` | A precondition. If it is false when the Processor fires, the RUNS text is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
 
-Parameters are the values a Network passes with `run`, such as the slot index in `run count_down(slot)`. They have no declared type. A parameter only chooses a slot of a collection, so a Network passes a count.
+A Port's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole field of a collection of N, which the body indexes itself. The body uses a Port's name as it would use the field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#ports) states how a Network wires Ports, and the checks on each wire.
 
-`runs.check` checks each Processor's text before anything runs, and the evaluator checks each Record access again when it happens. A read of a Record in neither `reads:` nor `writes:` is an error, and so is a write to a Record not in `writes:`:
+A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A Processor that emits to a stream keeps this form, because a Port does not carry a stream yet.
+
+`runs.check` checks each Processor's text before anything runs, and the evaluator checks each Record access again when it happens. A Processor in the older form that reads a Record in neither `reads:` nor `writes:` is an error, and so is one that writes a Record not in `writes:`:
 
 ```runs-prim-rejected
 # rejected: peek does not declare reads: random
@@ -92,7 +103,7 @@ processor half_root
   set square_root_call.root = square_root(square_root_call.entry) >> 1
 ```
 
-A routine the original called, such as the square root subroutine, becomes a Processor over the Records it hands values through. The caller becomes a Network that sets the input, fires the Processor, and then fires a Processor that uses the output.
+A routine the original called, such as the square root subroutine, becomes a Processor whose Ports are the values it hands through. The caller becomes a Network that wires them: it fires a Processor that sets the input field, fires the routine with its Ports wired to that field and to the result fields, and then fires a Processor that uses the output.
 
 ## Statements
 
@@ -100,7 +111,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 |-----------|---------|
 | `let name = e` | Declare a new local. |
 | `let (a, b) = e` | Declare one local for each element of a tuple, such as the pair `scr` gives. `_` takes an element that nothing reads. |
-| `set target = e` | Update a local bound by `let`, or a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
+| `set target = e` | Update a local bound by `let`, an `out` or `inout` Port, or, in the older form, a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
 | `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS text is wrong. |
 | `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, by the original machine's rules. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
@@ -108,7 +119,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `break` | Leave the innermost `loop`. |
 | `continue` | Start the next pass of the innermost `loop`. |
 | `return` | End the Processor. It takes no value. |
-| `emit stream: a, b, c` | Append one entry to a declared stream, one value per field in order. |
+| `emit stream: a, b, c` | Append one entry to a declared stream, one value per field in order. A Processor that emits keeps the older form, with the stream under `writes:`. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
@@ -120,37 +131,39 @@ Here is the Spacewar square root, a loop with `continue` and `return`:
 # bit 17 in square_root_call.entry, between bits 8 and 9 in .root. Two bits
 # of input per pass, 18 passes.
 processor square_root                                       # sqt
-  writes: square_root_call
-  set square_root_call.passes_left = -023
-  set square_root_call.root = 0
-  let input_bits = square_root_call.entry
-  set square_root_call.entry = 0
+  inout entry: word
+  out passes_left: word
+  out root: word
+  set passes_left = -023
+  set root = 0
+  let input_bits = entry
+  set entry = 0
   loop at most 023:
-    set square_root_call.passes_left = square_root_call.passes_left + 1
-    if square_root_call.passes_left >= 0:
+    set passes_left = passes_left + 1
+    if passes_left >= 0:
       return
-    set square_root_call.root = square_root_call.root << 1
-    let next = square_root_call.entry
+    set root = root << 1
+    let next = entry
     set (next, input_bits) = rcl(next, input_bits, 2)
     if next == 0:
       continue
-    set square_root_call.entry = next
-    set next = (square_root_call.root << 1) + 1 - square_root_call.entry
+    set entry = next
+    set next = (root << 1) + 1 - entry
     if next > 0:
       continue
     if next < 0:
       set next = -next
-    set square_root_call.entry = next
-    set square_root_call.root = square_root_call.root + 1
+    set entry = next
+    set root = root + 1
 ```
 
-`sq1` and `sq2` are fields of `square_root_call`, not locals, because they are the routine's own words in the original. A value that a Processor sets before it reads it, and never hands on, is a local.
+`passes_left` and `root` are Ports, not locals, because they are the routine's own words in the original, `sq1` and `sq2`. The Network wires them to fields of `square_root_call`. A value that a Processor sets before it reads it, and never hands on, is a local.
 
 ## Expressions
 
 An expression produces one of six kinds of value:
 
-- A value of a **machine type**, such as the PDP-1's 18-bit `word`. The [machine description](./MACHINE_DESCRIPTION.md#how-runs-uses-the-descriptions-types) gives each literal its type. On the PDP-1 every number literal is a word.
+- A value of a **machine type**, such as Spacewar's `word`. The [machine description](./MACHINE_DESCRIPTION.md#how-runs-uses-the-descriptions-types) gives each literal its type. On the PDP-1 every number literal is a word.
 - A **count** is an integer used as an index or a bound. A `for` index, a parameter that a Network passed as a count, and the result of `popcount` are counts.
 - A **condition** is `true` or `false`, the result of a comparison, `and`, `or`, or `not`.
 - An **enum member**, written by its name.
@@ -208,7 +221,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 
 ## The word
 
-Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The examples on this page use the PDP-1's, where `word` is the 18-bit ones' complement word. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
+Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The `word` is the game's number. That it is 18 bits in ones' complement is a rule of Spacewar, which the RUNS text states exactly: the examples on this page use the PDP-1 description, where Spacewar's word is defined. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
 
 | Operation | What it does |
 |-----------|--------------|
@@ -237,9 +250,9 @@ The explosion's dot shows the pair operators. The original builds an `scl` instr
 # The original builds an scl from the random number's low 9 bits; it
 # shifts one place per bit set.
 processor scatter_particle
-  reads: random
-  writes: cloud
-  set cloud.scatter = popcount(random.number & 0777)
+  in number: word
+  out scatter: word
+  set scatter = popcount(number & 0777)
 
 # The dot is presentation. The random number it reads is in the interface:
 # the draw is the game's, because hyperspace draws from the same generator.
@@ -323,6 +336,7 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `... is not an octal number` | Parser | A literal with a leading `0` holds an 8 or a 9. |
 | `... is not an operator of the word; a routine is run, not called` | Parser | An expression calls anything but a word operator or a declared instruction. |
 | `jump <word of code> at most N` | Parser | A `jump` bound is more than one number or name. |
+| `... sets ..., an in Port`, `... names the Record ...; a routine with Ports touches only its Ports`, and the other Port and wire errors | Parser | A Processor's Ports, or a Network's wires to them, break a rule. [What the loader and the evaluator reject](./NETWORK_TOPOLOGY.md#what-the-loader-and-the-evaluator-reject) lists each. The loader checks them as it reads the text and makes each copy. |
 | `run belongs to a network`, `match belongs to a network`, `stop belongs to a network`, `wait belongs to a network` | `runs.check` | A Processor uses `run`, `match`, `stop`, or `wait`. |
 | `... does not declare reads: ...` or `... writes: ...` | `runs.check`, run time | A Processor touches a Record it did not declare. The evaluator checks this again at run time, for every word that `jump` touches too. |
 | `... declares ... under reads: and writes:` | `runs.check` | A Processor lists a Record under both. `writes:` lets it read the Record too. |
@@ -400,7 +414,8 @@ The loop bound, `jump` bound, `requires:`, and `unreachable` errors never descri
 This grammar describes a Processor. Indentation is two spaces a level. A comment runs from `#` to the end of the line.
 
 ```text
-processor   = "processor" NAME [ "(" NAME { "," NAME } ")" ] { indented ( header | statement ) }
+processor   = "processor" NAME [ "(" NAME { "," NAME } ")" ] { indented ( port | header | statement ) }
+port        = ( "in" | "out" | "inout" ) NAME ":" TYPE [ "[" NUMBER "]" ]
 header      = "reads" ":" NAME { "," NAME }
             | "writes" ":" NAME { "," NAME }
             | "requires" ":" expression
@@ -429,6 +444,6 @@ postfix     = primary { "." NAME | "[" expression "]" | "(" [ expression { "," e
 primary     = NUMBER | "true" | "false" | NAME | "(" expression { "," expression } ")"
 ```
 
-A call in `postfix` is valid only on the name of an operator of the machine description or of an instruction that `type insn` declares.
+A call in `postfix` is valid only on the name of an operator of the machine description or of an instruction that `type insn` declares. A Processor has Ports, or the older form's parameters and `reads:` and `writes:`, not both.
 
 *MIT License. Open for implementation, extension, and critique.*

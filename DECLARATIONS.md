@@ -8,7 +8,7 @@ Three texts build an image. The RUNS text is the game. The [machine description]
 
 This document specifies the declarations in general terms, then shows each part on RUNS-Spacewar's PDP-1 declarations, `pdp1/` in [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar). Its `pdp1/README.md` defines the full PDP-1 vocabulary. Each section also carries a sketch of declarations that a conversion would design for the byte-addressed machine of [A second machine](./MACHINE_DESCRIPTION.md#a-second-machine-an-8-bit-byte-with-carry), `micro8`, with registers `A`, `X` and `Y`, a status register `P`, and a vertical-blank interrupt. The sketches illustrate the form. They are not a vocabulary any compiler reads.
 
-The sketches declare the ball game of the [README](./README.md#records-processors-and-networks): the Records `speed`, `wall`, `ball` and `pad`, the stream `screen`, the Processors `move_ball`, `reach_wall`, `bounce` and `draw_ball`, and the top Network `tick`. Where a sketch needs an enum or a status flag the README's game lacks, it names one and says so.
+The sketches declare the ball game of the [README](./README.md#records-processors-and-networks): the Records `speed`, `wall`, `ball` and `pad`, the stream `screen`, the Processors `move_ball`, `reach_wall`, `bounce` and `draw_ball`, and the top Network `tick`. A sketch names a Processor as the text writes it, and a field the `tick` wires to one of its Ports, such as `ball.x`. Where a sketch needs an enum or a status flag the README's game lacks, it names one and says so.
 
 ## Where a change goes
 
@@ -122,9 +122,12 @@ A convention may say:
 
 A `run` in the RUNS text compiles to the routine's convention. The sets of the routine's parameter fields just before the run are its arguments. The result fields read just after the run come from where the convention leaves them.
 
+A routine with Ports is one copy a distinct wiring: its text with each Port replaced by the field the `run` wires to it, as the original's macros were expanded at each use. A declaration names the routine as the RUNS text writes it, and applies to every copy. A routine laid out at each run (inline) lays out each copy where it runs. A called subroutine is one piece of code, so every `run` of it must wire it the same way.
+
 The compiler refuses:
 
 - A convention it does not know.
+- A called subroutine with Ports whose runs wire it more than one way. The error names each wiring.
 - A parameter or result that names a field the routine does not read or write.
 - A block convention on a routine whose `run` is not the last thing its branch does, since a jump does not come back.
 - A skip return whose field is not set on every path, or is not set last to the skip member.
@@ -150,6 +153,14 @@ skips = ["divide_call.outcome", "fits"]
 [[place]]
 routine = "torpedo_velocity"
 convention = "XCT"
+```
+
+The `diff` macro is one routine with Ports in RUNS, `inertia`, wired once an axis (`velocity: objects.dx[slot]`, `position: objects.x[slot]`, and the y axis's). One `[[inline]]` entry names it and lays out both copies, where two entries named one routine an axis. RUNS-Spacewar's `tools/check_ports_scratch.py` builds the original image from that text. Declared as a `JSP` subroutine instead, it is refused, because its runs wire it two ways. Minskytron, the second PDP-1 program, keeps each count its pick chooses with one Processor, `keep` (`in value: word`, `out kept: word`), wired six ways (`kept: shifts.ya` to `kept: shifts.xc`). No declaration names it, and its image matches.
+
+```toml
+[[inline]]
+routine = "inertia"
+shifts = "xct"
 ```
 
 **Sketch.** `move_ball` is a subroutine entered by a call instruction and left by a return, with `ball.x` arriving and leaving in `A`. `tick` is the handler of the vertical-blank interrupt:
@@ -471,7 +482,7 @@ A number the game computes with is not on that list. A tunable's value, a bound,
 
 Every compiler checks these before it writes an image:
 
-1. **Only accepted RUNS.** It compiles only RUNS text that `runs.check` accepts: what each kind may say, the contracts, a static scope check of names, fields and runs, each Processor's `reads:` and `writes:` against its text in both directions, the type of each expression, and no routine that fires itself.
+1. **Only accepted RUNS.** It compiles only RUNS text that `runs.check` accepts: what each kind may say, the contracts, a static scope check of names, fields and runs, each routine's Ports and each wire to them (or, in the older form, each Processor's `reads:` and `writes:` against its text in both directions), the type of each expression, and no routine that fires itself.
 2. **Unknown keys refused.** Every key of every declarations file is one the compiler knows, with a value of its kind. An unknown key is an error that names the file and the key.
 3. **Needed keys missing refused.** A choice the RUNS text needs and no declaration gives is an error that names what is missing, such as a routine with no convention or an enum with no spelling.
 4. **Names checked.** Every name the declarations give is a name of the RUNS text of the right kind. A member's name means the member of the enum of the field it is stored in or compared with, as in the evaluator. A name the declarations give a word of their own names nothing else: no other such word, no routine, Record or field, and no word of the target toolchain.

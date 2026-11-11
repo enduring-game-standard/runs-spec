@@ -24,7 +24,7 @@ A port rewrites a game for another machine. A conversion reorganizes an existing
 
 1. **The game is exact, glitches included.** Every sequence of inputs from power-on gives the same game as the original. A glitch that play can reach is part of the game. A re-release of Super Mario 64 without the backwards long jump would not be Super Mario 64. A conversion does not change the game to fit RUNS. Where RUNS cannot say what a game does, RUNS grows.
 2. **The text is the game.** RUNS is deterministic and total, so every faithful runtime produces the same game. Nothing about the game lives only in a binary.
-3. **Every rule can be swapped.** A rule is replaceable only if its whole contract is visible. A Processor's contract is the Records it reads and writes, and nothing else. A register left set, a shared scratch word, or a patched instruction would be a hidden channel. That is why all data flows through Records.
+3. **Every rule can be swapped.** A rule is replaceable only if its whole contract is visible. A Processor's contract is its Ports, and nothing else. It names no Record, and the Network wires each Port to one field. Two Processors with the same Ports can be swapped, down to the smallest one. A register left set, a scratch word no text names, or a patched instruction would be a hidden channel. That is why all data flows through fields the Network names.
 4. **The text reads as the net.** The RUNS text is the game's Petri net, with Records as places and Processors as transitions. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code. The order in which rules fire, and the conditions under which they fire, are rules too, and the text states them.
 5. **Variation is native.** A house rule is an edit to one Processor or one Network line, not a fork of a program.
 6. **The text is pure.** Every interaction is a Record or a stateless Processor. Nothing else holds logic or values.
@@ -35,16 +35,16 @@ A port rewrites a game for another machine. A conversion reorganizes an existing
 RUNS has three parts.
 
 - **A Record** is anything the game remembers, such as the object table, the random number, the frame's time budget, or the tunables. It is data and nothing else, a set of named fields with values. Global data is a Record like any other. A Record holds one set of fields, or a fixed number of each field. A field with no initial value is unknown until the game sets it or the world gives it. A **stream** is a Record that collects ordered output for a device, such as the points the display plots.
-- **A Processor** is one rule, and it is stateless. It declares the Records it reads and the Records it writes, and takes and gives values only through them. Its body, written in DIGS (Deterministic Inspectable Game Syntax), computes with locals, and no local outlives the firing. What a Processor does depends only on what it declares.
-- **A Network** fires Processors and other Networks in order, chooses with guards, and repeats with bounded loops. A Network writes nothing and computes nothing. A guard only tests values that Records hold, and a `run` passes only which slot a routine works on. [The order is in the text](#the-order-is-in-the-text) says why.
+- **A Processor** is one rule, and it is stateless. It names no Record. It declares **Ports**, each `in`, `out` or `inout`, with the kind of value it carries, and takes and gives values only through them. Its body, written in DIGS (Deterministic Inspectable Game Syntax), computes with locals, and no local outlives the firing. What a Processor does depends only on its Ports.
+- **A Network** fires Processors and other Networks in order, wires each Port of each to one field, chooses with guards, and repeats with bounded loops. A Network writes nothing and computes nothing. Only a top Network, one that nothing fires, names Records. Every other Network is a **bundle**: it declares Ports the same way and wires them on, so it is collapsed as `run name` and expanded as its own lines. A Network may own scratch, a field only it touches, written before it is read in every firing. A guard only tests values that fields hold, and a `run` passes only wires. [The order is in the text](#the-order-is-in-the-text) says why.
 
 Every Record is one of three kinds: a **game** Record, an **interface** Record, or a **presentation** Record. [Three kinds of Record](#three-kinds-of-record) states the rules.
 
-The topology is a Petri net. Records are the places and Processors are the transitions. No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record. RUNS has no functions, because a call carries a value from one rule to another with no place in between. The only calls are the operators of the [machine description](./MACHINE_DESCRIPTION.md), such as the PDP-1's `rcl`, `scr`, and `popcount`, and the constructors of the original machine's instructions.
+The topology is a Petri net. Records are the places and Processors are the transitions. No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record field that the Network names. RUNS has no functions, because a call carries a value from one rule to another with no place in between. The only calls are the operators of the [machine description](./MACHINE_DESCRIPTION.md), such as the PDP-1's `rcl`, `scr`, and `popcount`, and the constructors of the original machine's instructions.
 
 Records are organized by meaning, not by where the original kept a value. [Conversion process](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) maps each routine, macro, and register of an original program to Records, Processors, and Networks.
 
-Firing is sequential. A Network runs its Processors in the order it states them, and each Processor sees everything earlier ones wrote. A compiler may find concurrency from the declared reads and writes, but concurrency is not part of the model. Assuming it would change Spacewar.
+Firing is sequential. A Network runs its Processors in the order it states them, and each Processor sees everything earlier ones wrote. A compiler may find concurrency from the wires, but concurrency is not part of the model. Assuming it would change Spacewar.
 
 Here is a complete RUNS program. A `.runs` file declares Records and Networks:
 
@@ -68,9 +68,15 @@ network tick
   reads: pad
   writes: screen
   run move_ball
+    held: pad.held
+    x: ball.x
+    dx: speed.dx
   run reach_wall
+    x: ball.x
+    past: wall.past
   if wall.past >= 0:
     run bounce
+      dx: speed.dx
   run draw_ball
 ```
 
@@ -78,19 +84,20 @@ A `.runs-prim` file declares Processors:
 
 ```runs-prim
 processor move_ball
-  reads: pad, speed
-  writes: ball
-  if pad.held == 0:
-    set ball.x = ball.x + speed.dx
+  in held: word
+  inout x: word
+  in dx: word
+  if held == 0:
+    set x = x + dx
 
 processor reach_wall
-  reads: ball
-  writes: wall
-  set wall.past = ball.x - 0100
+  in x: word
+  out past: word
+  set past = x - 0100
 
 processor bounce
-  writes: speed
-  set speed.dx = -speed.dx
+  inout dx: word
+  set dx = -dx
 
 processor draw_ball
   reads: ball
@@ -98,7 +105,7 @@ processor draw_ball
   emit screen: ball.x
 ```
 
-`tick` is a top Network, because nothing fires it, so it is a whole game. The button comes in through `reads: pad`, and the points leave through `writes: screen`. The ball's speed, and how far past the wall it is, are the game's own. `reach_wall` computes the distance into a Record, and the guard only tests it. Its position is in the interface, because the game moves it and the presentation shows it. `draw_ball` is the presentation. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else. To show the ball on another screen, replace `draw_ball` and `screen` and change nothing in the game.
+`tick` is a top Network, because nothing fires it, so it is a whole game, and it is the one routine that names Records. Each Processor names only its Ports, and `tick` wires each Port to one field, one wire a line. The button comes in through `reads: pad`, and the points leave through `writes: screen`. `draw_ball` emits to a stream, which a Port does not carry yet, so it keeps `reads:` and `writes:`, the form a conversion starts from. The ball's speed, and how far past the wall it is, are the game's own. `reach_wall` computes the distance into a Record, and the guard only tests it. Its position is in the interface, because the game moves it and the presentation shows it. `draw_ball` is the presentation. To make a house rule where the ball stops instead of bouncing, replace `bounce` and change nothing else. To show the ball on another screen, replace `draw_ball` and `screen` and change nothing in the game.
 
 ## The order is in the text
 
@@ -107,7 +114,7 @@ The Network is derived from the game's logic, not authored. In a conversion that
 - **A line after a line is a place.** `run a` followed by `run b` means `a` puts a turn marker in a place, and `b` fires only when the marker is there. The place holds no data, only the turn. The text writes it as one line under another, and a drawing of the Network draws it as a place between the two transitions.
 - **A loop is a marker that goes around**, back to the loop's first line until the exit's guard sends it on.
 - **A guard only tests.** It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. It computes nothing on a value. A condition that needs arithmetic is a Processor that computes it into a Record, and the guard tests that Record. Spacewar's breakout test, `(random.number | 0400000) + ships.uncertainty[slot] >= 0`, is the Processor `weigh_breakout`, which writes `breakout_check.margin`, and the guard `breakout_check.margin >= 0`. The image is unchanged. The compiler keeps the margin in AC, where the original kept it, because no declaration gives `breakout_check` a word.
-- **A `run` passes only which slot.** `run explosion(slot)` says whose marker goes through the explosion. A routine uses such a parameter only to choose a slot of a collection. A value a routine needs comes from a Record. Arithmetic on the slot, such as `slot + 1`, chooses a slot too.
+- **A `run` passes only wires.** Each wire names the one field a Port of the routine takes. `slot` stays in the one Network that walks the slots: a bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it. The form a conversion starts from, `run explosion(slot)`, still loads, with the slot used only to choose a slot of a collection.
 
 The loader reports a guard that computes and a `run` that passes a value as impurities and refuses them.
 
@@ -119,7 +126,7 @@ A glitch is one of three kinds, by what it reads.
 2. **A layout glitch** reads past an array, through a stale pointer, or reads one kind of object as another, such as DOOM's `spechit` overflow. In those states the rule is whatever lies next in memory, so the layout is part of the game. Where play reads the layout, the RUNS text states it.
 3. **A machine glitch** runs data as code or jumps into the middle of a routine. On that path the rule is what the machine does with those bytes. The RUNS text states that rule in a Processor, as it states any other. A general compiler for the machine reproduces the bytes in the binary. RUNS itself never keeps instructions in a Record to run them.
 
-All three kinds share one piece, the [machine description](./MACHINE_DESCRIPTION.md). It supplies RUNS's types and every operator on them. For Spacewar, that is the `word`, the PDP-1's 18-bit ones' complement word. Where play reads the layout, its address spaces carry the layout the RUNS text states. The rest of the game is RUNS.
+All three kinds share one piece, the [machine description](./MACHINE_DESCRIPTION.md). It supplies RUNS's types and every operator on them. For Spacewar, that is the `word`, the game's number. That a word is 18 bits in ones' complement is a rule of Spacewar, and the text states it exactly, in the description's operator bodies that [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#the-word) summarizes. Where play reads the layout, its address spaces carry the layout the RUNS text states. The rest of the game is RUNS.
 
 A halt or a hang that the original reaches is a rule, not an error. Spacewar halts when a ship fires and the object table is full, and the conversion writes `stop`. Spacewar also halts between games to show the scores, and the conversion writes an `emit` of the scores, then `wait`. In contrast, when a loop runs past its bound, a `requires:` fails, or the evaluator reaches `unreachable`, the RUNS text is wrong.
 
@@ -202,6 +209,8 @@ The command exits with status 0 when every example passes.
 ## Open questions
 
 - **The kind of each Record.** A conversion decides each kind by hand, from what the Record's values reach. A tool could trace each value through the original in SIMH instead.
+- **A stream through a Port.** A Processor that emits names its stream, so it keeps `reads:` and `writes:`. How a stream crosses a Port, so that an emitting Processor names no Record either, is not settled.
+- **Recursion.** A routine that keeps values across a call to itself needs a copy of them per depth. One field, a Port's or scratch, cannot hold them. Spacewar does not recurse.
 - **Naming and distribution.** How RUNS text is named, published, and shared, and what a shared library of Records and Processors holds.
 
 **MIT License.** Open for implementation, extension, and critique.
