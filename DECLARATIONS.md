@@ -144,14 +144,12 @@ result = ["divide_call.result", "divide_call.high"]
 skips = ["divide_call.outcome", "fits"]
 ```
 
-`pdp1/tunables.toml` declares a tunable that the original executes with `xct` as an `XCT` routine, with its parameter in AC:
+`pdp1/tunables.toml` declares a tunable that the original executes with `xct` as an `XCT` routine. The compiler derives its parameter and result registers from the RUNS text: the register fields it reads before writing them, and the ones it writes.
 
 ```toml
 [[place]]
 routine = "torpedo_velocity"
 convention = "XCT"
-ac_param = "handoff.torpedo_direction"
-result = ["handoff.torpedo_velocity"]
 ```
 
 **Sketch.** `move_ball` is a subroutine entered by a call instruction and left by a return, with `ball.x` arriving and leaving in `A`. `tick` is the handler of the vertical-blank interrupt:
@@ -190,25 +188,26 @@ The compiler refuses:
 - A status-flag field that a later instruction of the compiled code would change before the field is read.
 - A field held in an instruction operand when the instruction is not the one that reads it.
 
-**PDP-1.** `pdp1/spaceship.toml` keeps the ship's nose in the pen's words, because the pen starts at the nose, and keeps the rocket bit in program flag 6:
+**PDP-1.** `pdp1/spaceship.toml` keeps the ship's nose in the pen's words, because the pen starts at the nose, and keeps the rocket bit in program flag 6 and the pen's side in flag 5:
 
 ```toml
 [share]
-"pen.x" = "spaceship.nose_x"
-"pen.y" = "spaceship.nose_y"
+"pen.x" = "ship_nose.x"
+"pen.y" = "ship_nose.y"
 "pen.down_x" = "spaceship.nose_step_x"
 "pen.down_y" = "spaceship.nose_step_y"
 "spaceship.star_wait" = "spaceship.nose_step_x"
 
 [flags]
 "spaceship.rocket" = 6
+"pen.side" = 5
 ```
 
-`pdp1/main_loop.toml` names the Records that live in AC or IO between routines, and the fields that live in the assembler's pool words:
+`pdp1/main_loop.toml` names a Record that lives in AC or IO between routines though one of its fields has a place, and the fields that live in the assembler's pool words. A Record none of whose fields has a place lives in registers with no declaration:
 
 ```toml
-registers = ["handoff", "outline_call", "breakout_check"]
-pool = ["frame.spare_time", "frame.restart_delay", "frame.objects_seen",
+registers = ["outline_call"]
+pool = ["pacing.spare_time", "frame.restart_delay", "frame.objects_seen",
         "score.first", "score.second", "score.games_left", "controls.source"]
 ```
 
@@ -596,8 +595,8 @@ Each general section maps to keys of RUNS-Spacewar's PDP-1 declarations. Its `pd
 | Section | PDP-1 keys | Example file |
 | --- | --- | --- |
 | Places | `[[place]]` with `routine`, `fields`, `slots` and `range`, `reserve`, `table = true`; `[[inline]]`; `[addresses]` | `pdp1/outlines.toml` |
-| Conventions | `convention` (`JDA`, `JSP`, `XCT`, `BLOCK`), `entry`, `ac_param`, `io_param`, `byname`, `inline`, `result`, `skips`, `block`, `block_takes_entry`, `[[code]]`, `pulse`, `exit`, `jsp_slot` | `pdp1/divide.toml` |
-| Storage | `io`, `cells`, `pool`, `spill`, `io_reads`, `registers`, `moves`, `[share]`, `[flags]`, `flags`, `[homes]`, `homes`, `[into]`, `into`, `[walk]`, `pointers`, `shifts` | `pdp1/spaceship.toml` |
+| Conventions | `convention` (`JDA`, `JSP`, `XCT`, `BLOCK`), `entry`, `io_param`, `byname`, `inline`, `result`, `skips`, `block`, `block_takes_entry`, `[[code]]`, `pulse`, `exit`, `jsp_slot` | `pdp1/divide.toml` |
+| Storage | `io`, `cells`, `pool`, `spill`, `io_reads`, `registers`, `[share]`, `[flags]`, `flags`, `[homes]`, `homes`, `[into]`, `into`, `[walk]`, `held_as_code`, `shifts` | `pdp1/spaceship.toml` |
 | Spelling | `[spell.<enum>]` with numbers, `routine`, `sign`, `literal`; `[inverse_skip]` | `pdp1/objects.toml` |
 | Code layout | `loops = "exit first"`, `arms = "apart"`, `exit_after`, `data`, `args_done`, `block` | `pdp1/sincos.toml` |
 | Events and devices | `[console]`, `[lights]`, `[[start]]`, `[streams]`, `repeat` | `pdp1/devices.toml` |
