@@ -311,7 +311,7 @@ Each distinct wiring of a routine is one copy of it: its text with each Port rep
 
 `owns name: kind` declares a value only that Network touches. It is one field of a type or an enum, never a collection. Each firing writes it before it reads it, so it is scratch, never memory. The Network has one shared copy, as the original kept such a value in one register: every copy of the Network uses the same field. Anything read outside the Network is a Port, not scratch. `drift`'s acceleration is scratch: `coast` writes it, `inertia` reads it, and nothing outside `drift` sees it. Nothing outside the Network can name its scratch.
 
-The evaluator holds scratch in a field of its own. RUNS-Spacewar's PDP-1 compiler does not compile scratch yet, and refuses it with `owned scratch not compiled yet`.
+The evaluator holds scratch in a field of its own. A compiler keeps it where the target keeps a value between two steps. RUNS-Spacewar's PDP-1 compiler makes it a local of the routine it compiles the Network into, declared once, so it lands in AC or IO where the original kept it. A declaration names it as it names a `let` (`io = ["input_bits"]`). BBN's multiply, divide and square root, split into one-statement Processors with their handed values as scratch, build the original image.
 
 ### Headers
 
@@ -336,6 +336,7 @@ A Network body may hold only these statements.
 | `match e:` | Fire the arm named by the enum value `e`. Each arm is `member: statement` on one line, or `member:` followed by an indented block. |
 | `loop at most N:` | Fire the body again and again until a guard breaks out. Running more than N passes means the RUNS text is wrong. |
 | `break` | Leave the innermost `loop`. Valid only inside a `loop`. |
+| `continue` | Fire the innermost `loop`'s body again from its top. Valid only inside a `loop`. The original's jump back to a loop's head mid-body, as in BBN's square root (`sza i` / `jmp sq3`). |
 | `stop` | The machine halts, and halts again each time the operator continues it. Nothing after it fires. |
 | `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS text is wrong. |
@@ -624,9 +625,9 @@ As it loads the text, the loader checks each routine's Ports and each `run`'s wi
 
 | Error | When |
 |-------|------|
-| `a network only fires and chooses (set)` | A Network uses `let`, `set`, `emit`, `return`, `continue`, or `jump`. |
+| `a network only fires and chooses (set)` | A Network uses `let`, `set`, `emit`, `return`, or `jump`. |
 | `a network loop needs an exit: an if with an arm that ends in break` | A Network `loop` has no `if` with an arm that ends in `break`. |
-| `break outside a loop` | A Network uses `break` outside a `loop`. |
+| `break outside a loop` | A Network uses `break` or `continue` outside a `loop`. |
 | `run belongs to a network`, `match belongs to a network`, `stop belongs to a network`, `wait belongs to a network` | A Processor uses `run`, `match`, `stop`, or `wait`. |
 | `... defined twice` | Two routines share a name. |
 | ``a Port is `direction name: kind`, the kind a type or type[N]`` | A Port's header line is not `direction name: kind`. |
@@ -713,7 +714,7 @@ net_stmt    = "run" NAME [ "(" [ expression { "," expression } ] ")" ]
             | "for" NAME "in" expression ".." expression ":" block
             | "match" expression ":" { indented NAME ":" ( net_stmt | block ) }
             | "loop" "at" "most" expression ":" block
-            | "break" | "stop" | "wait" | "unreachable"
+            | "break" | "continue" | "stop" | "wait" | "unreachable"
 block       = { indented net_stmt }
 wire        = indented NAME ":" place
 place       = NAME [ "." NAME [ "[" expression "]" ] ]
