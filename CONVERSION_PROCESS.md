@@ -90,7 +90,7 @@ The **compiler** turns the RUNS source plus a machine's declarations into an ima
 - **Takes.** The RUNS source, the machine description, the declarations, and the machine's own toolchain, if the route uses one.
 - **Gives.** An image, and whether its hash is the original's.
 - **Checks about itself.** It compiles only RUNS that `runs.check` accepts. It refuses what [DECLARATIONS.md](./DECLARATIONS.md) lists under its compiler checks.
-- **Spacewar.** `tools/runsc.py`, with the declarations in `pdp1/`. It prints `MATCH` when the image's hash is the original's.
+- **Spacewar.** `tools/runsc.py`, with the declarations in `pdp1/`. It prints `identical to the original` when the image's hash is the original's.
 
 ### The mutation gate
 
@@ -382,7 +382,7 @@ A new machine needs a declarations vocabulary of its own. [Designing a vocabular
 
 A step is done when all of these pass:
 
-1. The compiler reports that the image matches the original. Spacewar's `runsc` prints `MATCH`.
+1. The compiler reports that the image matches the original. Spacewar's `runsc` prints `identical to the original`.
 2. The mutation gate passes. Spacewar's is `check_compiled`.
 3. Each RUNS routine the step changed matches the original in the emulator, over every input or over a seeded sample with the edge words.
 4. The checks of earlier steps still pass. In RUNS-Spacewar, `tools/check_all.sh` runs them.

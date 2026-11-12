@@ -182,7 +182,7 @@ In RUNS-Spacewar, `tools/runsc.py` compiles the RUNS source and the PDP-1 declar
 RUNS-Spacewar checks the conversion three ways:
 
 - **The evaluator against SIMH.** Each routine and Network runs in the evaluator and in SIMH from the same state, and the checks compare Records and points.
-- **The image against the original.** `runsc` builds the image from RUNS and prints `MATCH` when its hash is the original's.
+- **The image against the original.** `runsc` builds the image from RUNS and prints `identical to the original` when its hash is the original's.
 - **The mutation gate.** `tools/check_compiled.py` mutates the RUNS source and the declarations, as [The mutation gate](./DECLARATIONS.md#the-mutation-gate) states.
 
 `tools/check_all.sh` runs all three.
