@@ -270,7 +270,7 @@ processor inertia                                           # diff
   set position = (velocity >> 3) + position
 ```
 
-The example shows today's written form. `inout` updates a field in place, where the vision writes each value once and a change is a fresh value in a fresh place ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-92).
+The example shows today's written form. `inout` takes a field's value and gives the result back to the same field. The vision allows that. Only a Processor changes a Record, and it may put its result back where it took the value from ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93).
 
 `inertia` names no axis. The y axis is the same Processor, wired to `objects.dy[slot]` and `objects.y[slot]`, as the original expanded `diff` once an axis.
 
@@ -284,9 +284,9 @@ Today's source is structured code, and it cannot enter a loop in two places. If 
 
 ## 4. Keep the order
 
-The order in which the original runs its rules is part of the game. In the vision, a Network is a colored Petri net, and execution order is derived from its wiring, never authored. Each Record is written once, a shared resource is a threaded chain of distinct values, and any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-92, 188-199).
+The order in which the original runs its rules is part of the game. In the vision, a Network is a colored Petri net, and execution order is derived from its wiring, never authored. Only a Processor changes a Record, and the wires and guards order any two Processors that touch one place. So any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93, 188-199).
 
-Today's RUNS source falls short of that. Its Records are updated in place, and two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table, so their reads and writes give no order between them. The source states the order instead: firing is sequential, in the order of the Network's lines, and each Processor sees every write before it. How a conversion turns such a shared Record into a threaded chain is open. Until then:
+Today's RUNS source falls short of that. Two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table, and the wiring must order them. The source states the order instead: firing is sequential, in the order of the Network's lines, and each Processor sees every write before it. Until the wiring states every order:
 
 - Fire Processors in the order the original runs them, even when the order looks like an accident.
 - Do not split a loop into phases. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. [Where the order comes from](./README.md#where-the-order-comes-from) says what a split changes.

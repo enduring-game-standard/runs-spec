@@ -269,7 +269,7 @@ processor add_high
   set score.high = high
 ```
 
-This example is in today's written form. Each Processor declares the Records it reads and writes, and both set fields of `score` in place. In the vision a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md 166-169). Each new value lands in a fresh place and never overwrites the old (90-92, 194-196). How the carry's chain of values is written in the vision's graph is open.
+This example is in today's written form. Each Processor declares the Records it reads and writes, and both set fields of `score`. In the vision a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md 166-169). A Processor that sets a field it read meets the vision's rule for Records. Only a Processor changes a Record, and it may put its result back where it took the value from (90-93).
 
 A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
@@ -389,7 +389,7 @@ The contract still holds. A Processor that reads through layout declares every R
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
 
-This contract is today's written form, and it falls short of the vision in two ways. In the vision a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md 166-169). A write here replaces part of a slot in place, where the vision writes each value once into a fresh place (90-92). How a read or write through layout is wired in the vision is open.
+This contract is today's written form, and it falls short of the vision in one way. In the vision a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md 166-169). A write here replaces part of a slot. The vision allows that, because a Processor makes the change (90-93). How a read or write through layout is wired in the vision is open.
 
 ### An example
 
