@@ -286,7 +286,7 @@ A loop bundle has one way in. If the original enters a loop in two places, state
 
 The order in which the original runs its rules is part of the game. In the vision, a Network is a colored Petri net, and execution order is derived from its wiring, never authored. Only a Processor changes a Record, and the wires and guards order any two Processors that touch one place. So any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93, 188-199).
 
-Today's RUNS source falls short of that. Two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table. The wiring orders them: the collisions give the table to a place, and the calc routine takes it from there. The loader refuses two writers of one place that the wiring leaves unordered. To keep the original's order:
+Two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table. The wiring orders them: the collisions give the table to a place, and the calc routine takes it from there. The loader refuses two writers of one place that the wiring leaves unordered. To keep the original's order:
 
 - Wire Processors so that the wiring orders them as the original runs them, even when the order looks like an accident.
 - Do not split a loop into phases. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. [Where the order comes from](./README.md#where-the-order-comes-from) says what a split changes.
