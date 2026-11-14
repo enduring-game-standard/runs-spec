@@ -503,7 +503,7 @@ The PDP-1 compiler's rules are this kind. Among them:
 - A `match` whose arms each run the routine their member is encoded as is a jump through the field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read today's source, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 344-347). How a loop with a data-dependent exit is expressed in the vision is open.
+These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 344-347). A network file writes a loop with a data-dependent exit as a loop bundle that a guard stops (CONTEXT.md 204-206).
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 

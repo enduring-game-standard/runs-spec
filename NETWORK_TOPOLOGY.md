@@ -1,21 +1,21 @@
 # RUNS Network topology
 
-> Every accepted example on this page loads in RUNS-Spacewar's evaluator, `tools/runs.py`, passes `runs.check`, and runs. Every rejected example fails with the error its first line quotes. [Check the examples](./README.md#check-the-examples) says how.
+> Every accepted example on this page loads in RUNS-Spacewar's evaluator, `tools/runs.py`, passes `runs.check`, and runs. Every rejected example fails with the error its first line quotes. [Check the examples](./README.md#check-the-examples) says how. Blocks tagged `net` are network files, copied from RUNS-Spacewar's `runs/`. `tools/check_examples.py` does not run them. RUNS-Spacewar's own checks load and run them.
 
-A `.runs` file declares the game's state and its structure. It holds types, enums, Records, streams, and Networks. Processors live in `.runs-prim` files and are described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md). The loader reads every declaration kind from either kind of file, so the split between the two is a convention.
+A `.runs` file declares the game's state and its structure. It holds types, enums, Records, streams, and Networks in the inline form. A `.net` file holds one Network as a graph, as [Network files](#network-files) describes. Processors live in `.runs-prim` files and are described in [DIGS expression language](./DIGS_EXPRESSION_LANGUAGE.md). The loader reads every declaration kind from either kind of file, so the split between the two is a convention.
 
 ## The net
 
-A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 188-189). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and execution order is derived from that wiring, never authored (CONTEXT.md 162-170, 197-199). The Network as written today falls short of the graph: it says which transitions fire, in what order, and under what conditions, as structured code. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
+A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 188-189). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and execution order is derived from that wiring, never authored (CONTEXT.md 162-170, 197-199). A network file writes that graph down. It lists places, transitions, and arcs, and states no order. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
 
 - No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record field that the Network names.
 - A Processor names no Record. It declares inputs and outputs, and they are its whole contract. Records and Processors are mutually opaque, and only the Network knows both sides (CONTEXT.md 166-169). Two Processors with the same inputs and outputs can be swapped.
-- Only a top Network names Records. Every other Network is a **bundle**: it declares inputs and outputs the same way, and wires them on to the routines it runs. Seen from outside, a bundle is a Sub-Network, a Network used as a Processor (CONTEXT.md 229-231).
+- A Network that another uses as a transition is a **bundle**. It declares inputs and outputs the same way, and wires them on to the routines it runs. In the inline form only a top Network names Records. A network file may list Record fields among its places. Seen from outside, a bundle is a Sub-Network, a Network used as a Processor (CONTEXT.md 229-231).
 - Today's RUNS has no functions. A Processor cannot call a Processor, and an expression cannot call a routine. The only calls are the machine description's operators and the instruction constructors of `type insn`. The vision allows a DIGS sub-Processor call inside a body, which is not a Network edge: its result is a body-local, never a Record (CONTEXT.md 172-186).
-- A Network writes nothing. Today it fires Processors and other Networks, wires each input and output of each one to a field, chooses with guards, and repeats with bounded loops.
-- In the vision, one tick of the Rules region is a DAG, and any topological order of it yields identical results, so a runtime may run it in parallel (CONTEXT.md 193-199). Today firing is sequential: a Network fires its statements in the order written, and each Processor sees every write made before it.
+- A Network writes nothing. It wires each input and output of each transition to a place, chooses with guards, and repeats in loop bundles.
+- In the vision, one tick of the Rules region is a DAG, and any topological order of it yields identical results, so a runtime may run it in parallel (CONTEXT.md 193-199). Today firing is sequential. The loader derives an order from each network file's wiring and lowers the file to an inline Network in that order. Each Processor sees every write made before it.
 
-The original's order is part of the game. [Where the order comes from](./README.md#where-the-order-comes-from) says how today's source states it and how the vision derives it.
+The original's order is part of the game. [Where the order comes from](./README.md#where-the-order-comes-from) says how the wiring carries it.
 
 ## A running example
 
@@ -209,9 +209,141 @@ processor advance
 
 The loader refuses a program that breaks these rules, and a Record with no kind breaks them. A conversion in progress reads its source with the purity report, which lists every impurity rather than stopping at the first. RUNS-Spacewar's report is `tools/check_purity.py`. [Give each Record a kind](./CONVERSION_PROCESS.md#5-give-each-record-a-kind-and-split-each-processor-by-it) says how a conversion splits its Processors and checks the split.
 
+## Network files
+
+A network file, `name.net`, states one Network as a graph. It lists the Network's places, its transitions, and the arcs between them. It states no order. RUNS-Spacewar writes every Network as a network file, every Processor in a `.runs-prim` file of its own, and its Records in `.runs` files. Its loader, `tools/graph.py`, reads each network file, checks it, and lowers it to the inline form that [Networks](#networks) describes. The evaluator runs the lowered Network.
+
+### An example
+
+Spacewar's cosine adds a quarter turn to the angle and takes the sine, as the original's `cos` does. This is `runs/arithmetic/cosine.net`, without its comment:
+
+```net
+network cosine
+  in angle: word
+  out result: word
+
+places
+  cosine_work.shifted
+
+transitions
+  shift: add_half_pi
+  sine: sine
+
+arcs
+  angle -> shift.angle
+  shift.shifted -> cosine_work.shifted
+  cosine_work.shifted -> sine.angle
+  sine.result -> result
+```
+
+`shift` is the Processor `add_half_pi`, and `sine` is a bundle with its own network file. `shift` gives `cosine_work.shifted` and `sine` takes it, so `shift` fires first. The file would mean the same with its transitions or its arcs in another order.
+
+### Parts of a network file
+
+A network file has a header and three sections. The header is the `network` line and the indented lines under it. Each section starts with its name on a line of its own, `places`, `transitions`, or `arcs`, and holds one entry an indented line. A comment runs from `#` to the end of the line.
+
+| Header line | Meaning |
+|-------------|---------|
+| `network name` | The Network's name. Another network file uses it as a transition by this name. |
+| `network name(slot)` | A Network that takes a slot from the transition that runs it. Its arcs use the slot to name one entry of a collection, as in `table[slot].routine`. |
+| `in name: kind`, `out name: kind`, `inout name: kind` | An input or output, as on a Processor. Its kind is a type, an enum, `type[N]`, or the name of a Record or stream, which the input or output then holds whole. |
+| `counter name: type` | The counter of a loop bundle. [Loop bundles](#loop-bundles) describes its forms. |
+| `requires: a, b` and `produces: a, b` | On a top Network, the Records the host writes before it fires and reads after (CONTEXT.md 272-274). They lower to `reads:` and `writes:`. |
+| `requires: condition` | A precondition, as in [Headers](#headers). |
+| `assumes: place != member` | A precondition that a tested place never holds the member, so the test needs no side for it. |
+
+| Section | Entry | Meaning |
+|---------|-------|---------|
+| `places` | `record.field`, `record.field[slot]` | A field of a Record, or one slot of it, that an arc names. |
+| `places` | `name: kind` | A place of the Network's own that holds a whole Record, a whole field of a collection, or a stream. |
+| `transitions` | `label: Processor` | A Processor that fires under this label. One Processor may fire under several labels. |
+| `transitions` | `label: network` | Another network file, used as one transition. This is how bundles nest. |
+| `transitions` | `label: name(slot)` | A Processor or network that takes a slot, with the slot or a number passed to it. |
+| `arcs` | `place -> label.input` | The place's value goes to the input. |
+| `arcs` | `label.output -> place` | The output's value goes to the place. |
+| `arcs` | `place -> label` | The transition touches the place but has no input or output for it. The arc orders the transition as a wire would, and passes no value. A routine that touches the place by name, such as one that still declares its Records, needs it. |
+| `arcs` | `place -> label when test` | A guard. The transition fires only on that side of the test. |
+
+An input or output of the Network is a place too, named by itself (`angle`). An arc may name one entry of a place that holds a whole Record (`table[slot].dy`). A place that only arcs name needs no `places` line when it is an input or output of the Network, an entry of one, or an entry of one of the Network's own places.
+
+### Each input and output wired once
+
+Each input and output of each transition is wired exactly once, to a place of its kind. A `copy` may take and give a whole Record. An `inout` takes one place and gives one, the same place or another. An input of the Network is never written inside it. Each output of the Network is given by some arc. A place listed under `places` and wired to nothing is an error.
+
+### Guards
+
+The guards on one place form a partition. Exactly one side is true (CONTEXT.md 353-358). The sides are one of these:
+
+- A test and its else: `when < 0` and `when else`.
+- An n-way dispatch: `when == m` for distinct members or numbers, then `when else`.
+- On an enum, `when == m` for every member, with no else. A member that an `assumes:` line rules out needs no side.
+
+A value of a type that is not an enum always needs its `when else`. A side `when != m` beside a side `when == m` is every side but `m`, not a second test. A test may compare its place with another place: `tally.first -> show when != tally.second`.
+
+A guard only tests. A condition that needs arithmetic is a Processor that computes it into a place, and the guard tests that place. Only the first transition on a side needs a guard arc. A transition with no guard arc fires on the side whose transitions give its inputs.
+
+### Order
+
+Order comes only from the wires and the guards, never from names or the order of lines. A transition fires after the transitions that give the places it reads, and after the transition that gives the place its guard tests. Several transitions may give one place. The wiring orders each two of them by a path from one to the other, or puts them on two sides of one test. The loader refuses two that it leaves unordered. A reader reads the value of the latest writer before it. A transition that takes a place and gives its result back to the same place fires after the place's earlier writers.
+
+A transition may be `stop` in place of a Processor. It halts the machine, as Spacewar does when its object table has no free slot.
+
+### Loop bundles
+
+A loop bundle repeats its transitions. It declares one counter, `counter name: type`, an input set before the loop starts. A `count_down` transition takes the counter and gives it back one nearer its end, and no other transition writes it. Each pass fires every transition once and takes one token. The loop ends when the counter reaches 0, or after a pass in which a guard keeps the `count_down` from firing. Each `inout` of the bundle holds one value a pass, and the bundle's user sees the final values. The bundle's user sees one transition, never the cycle (CONTEXT.md 204-206). A place that a parent wires to a counter is the loop bundle's alone: no other transition of the parent reads it.
+
+This is Spacewar's wait for a ship in the star, `runs/spaceship/wait_in_star.net`, without its comment. It takes one token a pass and does nothing else:
+
+```net
+network wait_in_star
+  counter wait: word
+
+transitions
+  take: count_down                                          # count \ssn, .
+
+arcs
+  wait -> take.counter
+  take.counter -> wait
+```
+
+Spacewar's counters hold minus the passes left, so its `count_down` adds 1. A counter has these forms:
+
+| Form | Meaning |
+|------|---------|
+| `counter name: type` | The user sets the count. |
+| `counter name: type = -count` | The bundle states the most passes it makes, and no user sets it. It needs a guard on its `count_down`, which stops the loop before the count runs out. |
+| `counter name: type to end` | The counter counts up to an end, such as the slots of a collection. The passes may read it, and the user sees where it stopped. |
+| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a dispatch over a collection (CONTEXT.md 342-345). Each pass's transitions take it as their slot, and no user sets it. |
+
+### Grammar of a network file
+
+```text
+net_file    = "network" NAME [ "(" NAME { "," NAME } ")" ] { indented net_header }
+              [ "places" { indented net_place } ]
+              [ "transitions" { indented transition } ]
+              [ "arcs" { indented arc } ]
+net_header  = ( "in" | "out" | "inout" ) NAME ":" KIND
+            | "counter" NAME ":" TYPE [ "=" NUMBER | "to" VALUE ]
+            | "counter" NAME ":" expression ".." expression
+            | ( "requires" | "produces" ) ":" NAME { "," NAME }
+            | "requires" ":" expression
+            | "assumes" ":" end "!=" NAME
+net_place   = end | NAME ":" KIND
+transition  = NAME ":" NAME [ "(" VALUE { "," VALUE } ")" ]
+arc         = end "->" NAME [ "." NAME ]
+            | NAME "." NAME "->" end
+            | end "->" NAME "when" test
+test        = "else" | OPERATOR ( VALUE | end )
+end         = NAME [ "[" VALUE "]" ] [ "." NAME [ "[" VALUE "]" ] ]
+```
+
+`KIND` is a type, an enum, `type[N]`, or the name of a Record or stream. `OPERATOR` is a comparison of the [DIGS expressions](./DIGS_EXPRESSION_LANGUAGE.md#expressions). An arc's end is a transition when its first name is a label under `transitions`, so a label never has the name of a Record.
+
 ## Networks
 
-A Network has a name, optional inputs and outputs, optional headers, and a body. This is the form of today's source, which states the order line by line and falls short of the vision's graph, as [The net](#the-net) says. The top Network, `frame`, walks the object slots and names the Records. Every Network below it is a bundle, which names only its inputs and outputs:
+This section describes the inline form of a Network, written in a `.runs` file. It states its order line by line. The loader lowers each network file to this form, and the evaluator runs it. The examples on this page use it, because `tools/check_examples.py` runs only `runs` and `runs-prim` blocks.
+
+A Network has a name, optional inputs and outputs, optional headers, and a body. The top Network, `frame`, walks the object slots and names the Records. Every Network below it is a bundle, which names only its inputs and outputs:
 
 ```runs
 network frame
@@ -303,7 +435,7 @@ An input or output is one field, never a whole Record. Its kind says how much of
 
 A `run` wires each input and output of the routine it fires, one per indented line, `port: field`. The field is a field of a Record, a slot of one, an input or output of the Network that runs it, or that Network's scratch. Each input and output is wired exactly once. A wire to a field of the same name may be left out: `run inertia` in `drift` wires `velocity` to `drift`'s input `velocity`, `position` to its `position`, and `acceleration` to its scratch `acceleration`. `run torpedo` in `calc` leaves out every wire.
 
-In the vision a bundle is a Sub-Network: a Network used as a Processor from outside, with typed inputs and outputs at its boundary, whose content references its parts by ID. There is no privileged sub-network entity, only regions of one graph at different zoom levels (CONTEXT.md 218-236). In today's source a bundle collapsed is `run name` and its wires. Expanded, it is its own lines. A bundle's input or output wired to an outer one resolves through to the field the top Network wires: the first `run drift` in `torpedo` moves `objects.dx[slot]` and `objects.x[slot]`, and the second moves `objects.dy[slot]` and `objects.y[slot]`. Any bundle, from one Processor up to the whole game, can be read and published alone, because its inputs and outputs are its whole contract.
+In the vision a bundle is a Sub-Network: a Network used as a Processor from outside, with typed inputs and outputs at its boundary, whose content references its parts by ID. There is no privileged sub-network entity, only regions of one graph at different zoom levels (CONTEXT.md 218-236). In the inline form a bundle collapsed is `run name` and its wires. Expanded, it is its own lines. In a network file it is one transition, and expanded it is its own file. A bundle's input or output wired to an outer one resolves through to the field the top Network wires: the first `run drift` in `torpedo` moves `objects.dx[slot]` and `objects.x[slot]`, and the second moves `objects.dy[slot]` and `objects.y[slot]`. Any bundle, from one Processor up to the whole game, can be read and published alone, because its inputs and outputs are its whole contract.
 
 Values between Processors stay Records that the Network names. A `let` stays local to one Processor, and no local outlives the firing.
 
@@ -346,7 +478,7 @@ A Network body may hold only these statements.
 
 This is today's statement set, and parts of it fall short of the vision. `for` has the shape of the vision's Dispatch, a bounded fold whose count is fixed before it starts (CONTEXT.md 343-350). `loop at most N:` with `break` does not: a Dispatch has no `break`, `continue`, or early return, and one tick of the Rules region is a DAG (CONTEXT.md 197-199, 345-346). The vision's guards on a branch partition, exactly one true, and an open-typed discriminant needs an explicit `else` arc (CONTEXT.md 351-356). Today's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum.
 
-A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs, its outputs and its scratch, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. The README's [Where the order comes from](./README.md#where-the-order-comes-from) says how today's source writes the order, how each line is a place, and how the vision derives the order instead.
+A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs, its outputs and its scratch, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. The README's [Where the order comes from](./README.md#where-the-order-comes-from) says how a network file's wiring carries the order.
 
 A `run` passes only wires. `slot` stays in the one Network that walks the slots, `frame` above, and a bundle gets `objects.x[slot]` already chosen. A slot that the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it. A `run` that passes a value instead of a wire, in the form a conversion starts from, is an impurity. The loader reports a guard that computes and a `run` that passes a value, and refuses them.
 
@@ -466,7 +598,7 @@ A halt or a hang that the original reaches is a rule of the game, written as `st
 
 ### The Network loop
 
-The vision has no loop inside a tick. One tick of the Rules region is a DAG, the only unbounded loop is the tick feedback through `state:` Records, and a Dispatch is a bounded fold with no `break` (CONTEXT.md 197-199, 204-206, 343-347). Today's source has a Network loop, and this section describes it. How a loop whose exit depends on data is expressed in the vision is open.
+In the vision, one tick of the Rules region is a DAG outside its loop bundles, and the only unbounded loop is the tick feedback through `state:` Records (CONTEXT.md 197-206). A network file writes a loop as a loop bundle, as [Loop bundles](#loop-bundles) describes. The inline form has a Network loop, and this section describes it.
 
 A loop in a Network must hold, among its own statements, an `if` with an arm that ends in `break`. That `if` is the loop's exit. The arm may fire things before it breaks. By convention, the exit's guard reads fields that the Processors in the body write. The loader does not check this. A Processor that the original ran inside a loop, such as a macro, becomes a Network loop that fires it. The explosion's dot loop is the model. The dots left to plot are its scratch:
 
