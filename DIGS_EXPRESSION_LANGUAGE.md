@@ -106,7 +106,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network. CONTEXT.md describes a body that calls a sub-Processor: a pure call whose intermediates are locals of the body, which the Network sees as one transition ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). Whether RUNS allows it is open. RUNS-Spacewar's DIGS has no such call:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network. A Processor never calls another Processor. Processors connect only through the Network, by way of Records, and composition is bundling ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). A body computes with its own locals. RUNS-Spacewar's DIGS has no Processor call:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called
