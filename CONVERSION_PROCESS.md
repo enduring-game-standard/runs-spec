@@ -293,7 +293,7 @@ A loop bundle has one way in. If the original enters a loop in two places, state
 
 ## 4. Keep the order
 
-The order in which the original runs its rules is part of the game. In the vision, a Network is a colored Petri net, and execution order is derived from its wiring, never authored. Only a Processor changes a Record, and the wires and guards order any two Processors that touch one place. So any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93, 188-199).
+The order in which the original runs its rules is part of the game. A Network is a colored Petri net, and its wires and guards state the order of execution. Only a Processor changes a Record, and the wires and guards order any two Processors that touch one place. So any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93, 188-199).
 
 Two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table. The wiring orders them: the collisions give the table to a place, and the calc routine takes it from there. The loader refuses two writers of one place that the wiring leaves unordered. To keep the original's order:
 

@@ -6,7 +6,7 @@ A `.runs` file declares the game's state and its structure. It holds types, enum
 
 ## The net
 
-A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 188-189). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and execution order is derived from that wiring, never authored (CONTEXT.md 162-170, 197-199). A network file writes that graph down. It lists places, transitions, and arcs, and states no order. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
+A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 188-189). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and its wires and guards state the order of execution (CONTEXT.md 162-170, 197-199). A network file writes that graph down. It lists places, transitions, and arcs, with no separate list of steps. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
 
 - No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record field that the Network names.
 - A Processor names no Record. It declares inputs and outputs, and they are its whole contract. Records and Processors are mutually opaque, and only the Network knows both sides (CONTEXT.md 166-169). Two Processors with the same inputs and outputs can be swapped.
@@ -211,7 +211,7 @@ The loader refuses a program that breaks these rules, and a Record with no kind 
 
 ## Network files
 
-A network file, `name.net`, states one Network as a graph. It lists the Network's places, its transitions, and the arcs between them. It states no order. RUNS-Spacewar writes every Network as a network file, every Processor in a `.runs-prim` file of its own, and its Records in `.runs` files. Its loader, `tools/graph.py`, reads each network file, checks it, and lowers it to the inline form that [Networks](#networks) describes. The evaluator runs the lowered Network.
+A network file, `name.net`, states one Network as a graph. It lists the Network's places, its transitions, and the arcs between them, with no separate list of steps: the wires and guards state the order. RUNS-Spacewar writes every Network as a network file, every Processor in a `.runs-prim` file of its own, and its Records in `.runs` files. Its loader, `tools/graph.py`, reads each network file, checks it, and lowers it to the inline form that [Networks](#networks) describes. The evaluator runs the lowered Network.
 
 ### An example
 
