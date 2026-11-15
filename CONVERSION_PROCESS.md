@@ -109,6 +109,15 @@ The conversion has one script that runs every check above in order and fails on 
 - **Gives.** One line per check, and a nonzero exit on the first failure.
 - **Spacewar.** `tools/check_all.sh` runs the compile, the mutation gate on a sample of 8000 mutants, the comparison checks, and this spec's examples against the conversion's evaluator (`tools/check_examples.py`). The full gate, the reach oracle, the purity report, and `tools/mutate.sh` run by hand.
 
+## Rule or machine: the one test
+
+Every detail of the original program is sorted by one question: **does changing it change anything that happens in the game?**
+
+- **Yes: it is a rule, and it goes in the RUNS source, declared.** The arithmetic is a rule. Spacewar's 18-bit ones' complement is its six-sided die, and DOOM with floats instead of its fixed point desyncs its demos and is a different game. Limits are rules, such as how many objects can exist. The order of two steps is a rule wherever swapping them changes a result. A glitch play can reach is a rule.
+- **No: it is the machine, and it goes in the machine's declarations or its compiler, never in the RUNS source.** Which register holds a value, the address of a field, a scratch word, a return address, the order of two steps that swapping changes nothing, and the instructions that move a word between memory and a register are all the machine.
+
+The test can be run, not only argued. Change the detail and check whether the game can come out differently: the mutation gate does this for each declaration and each piece of the source (see [The mutation gate](#the-mutation-gate)), and the case-by-case rules below apply it to values (step 2), layout (step 6) and kinds (step 5). Machine detail found in the RUNS source is a defect, however it got there. In RUNS-Spacewar, the Processors that only copy a word from one place to another and the scratch fields that stand in for the PDP-1's accumulator are machine detail that leaked into the rules, and the conversion removes them. The compiler, not the source, is where the original machine's choices are recovered to rebuild the original binary.
+
 ## Move in small steps that each compile
 
 A conversion moves in small steps. Each step rebuilds the original binary from the RUNS source and the declarations, and passes the checks in [8. Compile with the declarations](#8-compile-with-the-declarations), before the next step begins.
