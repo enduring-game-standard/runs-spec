@@ -4,7 +4,7 @@ A machine's **declarations** are the half of its package that never runs. They r
 
 _Avoid_: binding. The name is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps it. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
 
-Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. With the original machine's declarations, the image is the original binary, byte for byte. With another machine's declarations, the image is the same game on that machine. In CONTEXT.md's words (294-311), the compiler's work is baking and the image is a Build: one Rules region, one Realization region, one target.
+Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. Each target machine has its own compiler, shared by every game for it. With the original machine's declarations, the original machine's compiler writes the original binary, byte for byte. Running the game on another machine is a Port: new presentation Processors and Records, that machine's declarations, and that machine's compiler. What may change in a compiler is open; [The compiler](./README.md#the-compiler) states the reading this spec uses pending the owner. In CONTEXT.md's words (294-311), the compiler's work is baking and the image is a Build: one Rules region, one Realization region, one target.
 
 This document specifies the declarations in general terms, then shows each part on RUNS-Spacewar's PDP-1 declarations, `pdp1/` in [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar). Its `pdp1/README.md` defines the full PDP-1 vocabulary. Each section also carries a sketch of declarations that a conversion would design for the byte-addressed machine of [A second machine](./MACHINE_DESCRIPTION.md#a-second-machine-an-8-bit-byte-with-carry), `micro8`, with registers `A`, `X` and `Y`, a status register `P`, and a vertical-blank interrupt. The sketches illustrate the form. They are not a vocabulary any compiler reads.
 
@@ -155,7 +155,7 @@ routine = "torpedo_velocity"
 convention = "XCT"
 ```
 
-The `diff` macro is one routine with inputs and outputs in RUNS, `inertia`, wired once an axis (`velocity: objects.dx[slot]`, `position: objects.x[slot]`, and the y axis's). One `[[inline]]` entry names it and lays out both copies, where two entries named one routine an axis. RUNS-Spacewar's `tools/check_ports_scratch.py` builds the original image from that source. Declared as a `JSP` subroutine instead, it is refused, because its runs wire it two ways. Minskytron, the second PDP-1 program, keeps each count its pick chooses with one Processor, `keep` (`in value: word`, `out kept: word`), wired six ways (`kept: shifts.ya` to `kept: shifts.xc`). No declaration names it, and its image matches.
+The `diff` macro is one routine with inputs and outputs in RUNS, `inertia`, wired once an axis (`velocity: objects.dx[slot]`, `position: objects.x[slot]`, and the y axis's). One `[[inline]]` entry names it and lays out both copies, where two entries named one routine an axis. Declared as a `JSP` subroutine instead, it is refused, because its runs wire it two ways. Minskytron, the second PDP-1 program, keeps each count its pick chooses with one Processor, `keep` (`in value: word`, `out kept: word`), wired six ways (`kept: shifts.ya` to `kept: shifts.xc`). No declaration names it, and its image matches.
 
 ```toml
 [[inline]]
@@ -342,7 +342,7 @@ The compiler refuses:
 
 - Declarations with no `devices.toml`.
 - A top Network that no event fires, or an event that names a routine that is not a top Network.
-- A field that comes in from a device (a field of a top Network's `reads:` with no initial value, whose word the image does not hold; `reads:` is today's keyword for an inbound boundary Record, see [The host](#the-host)) with no input device. A field whose value is the machine's power-on contents of a word the image leaves unloaded, such as Spacewar's scores, needs no device.
+- A field that comes in from a device (a field of an inbound boundary Record, under a top Network's `requires:`, with no initial value, whose word the image does not hold) with no input device. A field whose value is the machine's power-on contents of a word the image leaves unloaded, such as Spacewar's scores, needs no device.
 - A device declared for a field of a game Record. Devices carry interface and presentation Records only: boundary Records and Realization-region Records. The Rules/Realization split is the enduring-games pattern, a conventions-repo convention and not a base-protocol primitive (CONTEXT.md 131-135, 158-160). This refusal is the conversion's own rule.
 - A device the compiler does not know for this machine, or a device used two ways at once.
 
@@ -480,7 +480,7 @@ A number the game computes with is not on that list. A tunable's value, a bound,
 
 Every compiler checks these before it writes an image:
 
-1. **Only accepted RUNS.** It compiles only RUNS source that `runs.check` accepts: what each kind may say, the contracts, a static scope check of names, fields and runs, each routine's inputs and outputs and each wire to them (or, in the older form, each Processor's `reads:` and `writes:` against its body in both directions), the type of each expression, and no routine that fires itself. The older form falls short of the vision, where a Processor knows no Record and only the Network knows both sides of a wire (CONTEXT.md 166-169).
+1. **Only accepted RUNS.** It compiles only RUNS source that `runs.check` accepts: what each kind may say, the contracts, a static scope check of names, fields and runs, each routine's inputs and outputs and each wire to them (or, in the older form, each Processor's `reads:` and `writes:` against its body in both directions), the type of each expression, and no routine that fires itself. A conversion converts the older form away: a Processor knows no Record, and only the Network knows both sides of a wire (CONTEXT.md 166-169).
 2. **Unknown keys refused.** Every key of every declarations file is one the compiler knows, with a value of its kind. An unknown key is an error that names the file and the key.
 3. **Needed keys missing refused.** A choice the RUNS source needs and no declaration gives is an error that names what is missing, such as a routine with no convention or an enum with no encoding.
 4. **Names checked.** Every name the declarations give is a name of the RUNS source of the right kind. A member's name means the member of the enum of the field it is stored in or compared with, as in the evaluator. A name the declarations give a word of their own names nothing else: no other such word, no routine, Record or field, and no word of the target toolchain.
@@ -503,7 +503,7 @@ The PDP-1 compiler's rules are this kind. Among them:
 - A `match` whose arms each run the routine their member is encoded as is a jump through the field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 361-364). A network file writes a loop with a data-dependent exit as a loop bundle that a guard stops (CONTEXT.md 204-206).
+These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. A bounded fold has a count fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 361-364). RUNS-Spacewar writes a loop with a data-dependent exit as a loop bundle that a guard stops (CONTEXT.md 204-206). Whether a loop must sit in a bundle of its own is open ([Open questions](./README.md#open-questions)).
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 
@@ -530,7 +530,7 @@ The gate makes each of these, one at a time:
 - **Preconditions.** Each `requires:` deleted.
 - **Loop bounds.** Each loop's bound mutated as a number, a field, an operator, or a member.
 
-The contract entries and preconditions are today's written form. In the vision a Processor declares no Records (CONTEXT.md 166-169), and `requires:` names a top Network's inbound boundary Records (272-274), where a precondition is a DIGS boolean a Processor declares (372-384). The two senses of `requires:` are a gap.
+Contract entries belong to the older form. In converted source a Processor declares no Records (CONTEXT.md 166-169). `requires:` on a top Network's header names its inbound boundary Records (272-274). On a routine, a `requires:` condition is a precondition, a DIGS boolean a Processor declares (372-384), and only that kind is mutated here.
 
 ### Mutants of the declarations
 
@@ -571,7 +571,7 @@ Three kinds have their own rule:
 
 - **An initial value.** The gate plays games from power-on before and after, on the same inputs (RUNS-Spacewar plays 60 games of 30 frames). The mutant passes when every firing puts out the same and every game ends with the same Records, the changed field aside.
 - **A deleted `requires:`.** A precondition is the conversion's check that a firing is one the game makes, not code. The mutant passes when every firing the precondition lets run is the same and the precondition stops some firing. A precondition that stops no firing says nothing, and the gate fails.
-- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which today's source allows and the vision's bounded fold does not (CONTEXT.md 361-364).
+- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which the inline form allows and a bounded fold does not (CONTEXT.md 361-364).
 
 The PDP-1 instance is `tools/check_compiled.py`.
 
@@ -583,7 +583,7 @@ Every host does these, and nothing else:
 
 1. **It fires top Networks on events.** Each event the declarations name fires its top Networks, in order: power-on, reset, a start address, each frame or vertical blank, each interrupt or timer, the main loop starting again. A firing runs to its end before the next begins.
 2. **Before a firing, it gives the world's values.** Each field that comes in takes the value its device holds now. At power-on, each field with no initial value takes the machine's power-on contents. Each stream is emptied.
-3. **During a firing, `wait` hands it the turn.** The host takes each stream's contents so far to its device, may change what comes in, then the firing goes on from the `wait`. This falls short of the vision, where the runtime writes inbound boundary Records before a tick and reads outbound ones after (CONTEXT.md 272-274, 284-286). How a halt inside a firing, such as Spacewar's between games, fits a tick is open.
+3. **There is nothing between ticks.** A firing runs to its end. The host writes inbound boundary Records before a tick and reads outbound ones after (CONTEXT.md 272-274, 284-286). A halt the operator continues past ends the tick, and a Record the tick produces (Spacewar's `pause`) says what the next tick does when the operator answers. The loader still reads `wait`, which hands the firing to the host in the middle, from an earlier form. RUNS source does not use it.
 4. **`stop` ends the game** as the original halts. No event fires after it.
 5. **After a firing, it takes each stream's contents** to the device the declarations name, in the order emitted.
 
@@ -591,15 +591,15 @@ An error is not an event of the game. A loop past its bound, a failed `requires:
 
 The host's choices belong to the Realization region. Two hosts that fire the same top Networks on the same events, with the same values coming in, give the same Records and the same streams.
 
-**PDP-1.** The operator starts the machine at 4 or at 5. Each start fires its start Network once, `start_with_control_boxes` or `start_with_test_word`. When a firing ends, the machine runs `frame` again (`repeat`), and so does the evaluator's host, firing `frame` once a frame. Between games, `show_scores` emits the scores to the `scoreboard` stream and then waits. On the PDP-1 that pair is `hlt`, which shows the two words on the console lights. The operator sets the test word and continues, and the firing goes on. RUNS-Spacewar's frame Network is declared this way:
+**PDP-1.** The operator starts the machine at 4 or at 5. Each start fires its start Network once, `start_with_control_boxes` or `start_with_test_word`. Then the evaluator's host fires `tick` once a tick. On the PDP-1 the main loop starts again when a firing ends (`repeat = "frame"` names the routine its code jumps back to). Between games, `show_scores` emits the scores to the `scoreboard` stream, and the tick ends. On the PDP-1 that is `hlt`, which shows the two words on the console lights. The operator sets the test word and continues, and the next tick is the operator's answer, which `pause.phase` names. RUNS-Spacewar's top Network declares its boundary this way, in `runs/game/tick.net`:
 
 ```text
-network frame                                               # ml0
-  reads: console, score, controls, outline_code
-  writes: display, scoreboard, lights
+network tick
+  requires: console, score, controls, outline_code, pause
+  produces: display, scoreboard, lights, pause
 ```
 
-These `reads:` and `writes:` lines are today's form of the frame's boundary. The vision names inbound boundary Records `requires:` and outbound ones `produces:` (CONTEXT.md 272-275). The keywords disagree, a gap.
+`requires:` names the inbound boundary Records and `produces:` the outbound ones (CONTEXT.md 272-275). The loader lowers them to the inline form's `reads:` and `writes:`.
 
 **Sketch.** On the byte-addressed machine, reset fires `power_on` once, vertical blank fires `tick` each frame, the host reads the joypad port into `pad.held` before each firing, and after it writes each tuple of `screen` to the video register. Where the original's main loop runs past the start of the next vertical blank and the interrupt lands inside it, the landing point is timing, as [Interrupts](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) states.
 

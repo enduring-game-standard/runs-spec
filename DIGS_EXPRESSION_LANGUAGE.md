@@ -6,7 +6,7 @@ DIGS is the language of Processor bodies. Processors live in `.runs-prim` files.
 
 A Processor is one rule of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
 
-In the vision, a body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 112-115). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (lines 90-93). Today's evaluator runs a body as statements in order, and its loops can exit early (see [Statements](#statements)).
+A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 112-115). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (lines 90-93). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
 
 DIGS is the language of Rules Processor bodies. A Realization Processor's body is not DIGS, and the standard specifies no language for it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 150-157). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
 
@@ -51,6 +51,12 @@ network demo
     number: random.number
     scatter: cloud.scatter
   run plot_particle
+    number: random.number
+    spread: cloud.spread
+    scatter: cloud.scatter
+    x: position.x
+    y: position.y
+    points: display
 ```
 
 ## Processor declarations
@@ -78,9 +84,9 @@ processor take_entry
 
 An input's or output's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole field of a collection of N, which the body indexes itself. The body uses its name as it would use the field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#inputs-and-outputs) states how a Network wires them, and the checks on each wire.
 
-In the vision, a precondition is a DIGS boolean a Processor declares, and the guards that route to the Processor discharge it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 372-384). The vision also names a top Network's inbound boundary Records `requires:` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 272-275). Today's source uses `requires:` for the precondition, so the keyword disagrees with the vision's.
+A precondition is a DIGS boolean a Processor declares, and the guards that route to the Processor discharge it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 372-384). A top Network's inbound boundary Records are also named `requires:` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 272-275). The line shows which is meant: a condition on a Processor is a precondition.
 
-A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A Processor that emits to a stream keeps this form, because an output does not carry a stream yet. The older form falls short of the vision, where a Processor knows nothing of a Record and only the Network knows both sides ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 166-169).
+A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A conversion converts it away: a Processor knows nothing of a Record, and only the Network knows both sides ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 166-169).
 
 `runs.check` checks each Processor's source before anything runs, and the evaluator checks each Record access again when it happens. A Processor in the older form that reads a Record in neither `reads:` nor `writes:` is an error, and so is one that writes a Record not in `writes:`:
 
@@ -100,7 +106,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network. The vision allows a body to call a sub-Processor: a pure call whose intermediates are locals of the body, which the Network sees as one transition ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 172-186). Today's DIGS has no such call:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network. CONTEXT.md describes a body that calls a sub-Processor: a pure call whose intermediates are locals of the body, which the Network sees as one transition ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 172-186). Whether RUNS allows it is open. RUNS-Spacewar's DIGS has no such call:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called
@@ -125,10 +131,10 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `break` | Leave the innermost `loop`. |
 | `continue` | Start the next pass of the innermost `loop`. |
 | `return` | End the Processor. It takes no value. |
-| `emit stream: a, b, c` | Append one entry to a declared stream, one value per field in order. A Processor that emits keeps the older form, with the stream under `writes:`. |
+| `emit stream: a, b, c` | Append one entry to a stream, one value per field in order. The Processor takes the stream as an `inout` of the stream's kind, such as `inout points: display`, and emits to it by that name. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-In the vision, a loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 112-115, 344-347). Today's `loop`, `break`, `continue`, and `return` fall short of that. How a body states a loop whose exit depends on data, such as the square root below, is open.
+A loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 112-115, 344-347). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
 
@@ -165,7 +171,7 @@ processor square_root                                       # sqt
     set root = root + 1
 ```
 
-`passes_left` and `root` are outputs, not locals, because they are the routine's own words in the original, `sq1` and `sq2`. The Network wires them to fields of `square_root_call`. A value that a Processor sets before it reads it, and never hands on, is a local.
+`passes_left` and `root` are outputs, not locals, because the Network hands them on: a value one rule hands to the next is a field. The Network wires them to fields of `square_root_call`. Which words held them in the original, `sq1` and `sq2`, is the declarations' choice. A value that a Processor sets before it reads it, and never hands on, is a local.
 
 ## Expressions
 
@@ -265,16 +271,20 @@ processor scatter_particle
 # The dot is presentation. The random number it reads is in the interface:
 # the draw is the game's, because hyperspace draws from the same generator.
 processor plot_particle
-  reads: random, position, cloud
-  writes: display
-  let (high, low) = scr(random.number, 0, 9)
+  in number: word
+  in spread: word
+  in scatter: word
+  in x: word
+  in y: word
+  inout points: display
+  let (high, low) = scr(number, 0, 9)
   set low = low >> 9
-  set (high, low) = scr(high, low, cloud.spread)
-  set (high, low) = scl(high, low, cloud.scatter)
-  set high = high + position.y
+  set (high, low) = scr(high, low, spread)
+  set (high, low) = scl(high, low, scatter)
+  set high = high + y
   set (high, low) = rcl(high, low, 18)
-  set high = high + position.x
-  emit display: high, low, 3
+  set high = high + x
+  emit points: high, low, 3
 ```
 
 ## A Record holds no code
@@ -283,7 +293,7 @@ A Record holds data and nothing else. Instructions that a Processor runs are log
 
 Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. Pure RUNS source states what that code computes, in Processors of its own. The binary holds the instructions. A general compiler for the machine reproduces those bytes, and RUNS itself does not hold them. The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
 
-The language parses `type insn`, the instruction constructors, and `jump` for source that keeps code in a Record, as RUNS-Spacewar's outline does. The loader counts each use as an impurity, with one of two messages:
+The language parses `type insn`, the instruction constructors, and `jump` for source that keeps code in a Record, as an earlier RUNS-Spacewar outline did. The loader counts each use as an impurity, with one of two messages:
 
 - `<record>.<field>: a Record holds data; instructions a Processor runs are logic`, for each field of type `insn`.
 - `processor <name>: runs instructions from a Record (jump); its logic belongs in a Processor of its own`, for each Processor that runs `jump`.
@@ -351,7 +361,7 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `... writes ...; declare writes: ...`, `... reads ...; declare reads: ...` | `runs.check` | The routine touches a Record its headers do not declare. |
 | `... declares reads: ..., but nothing in it reads ...`, the same for `writes:` | `runs.check` | A header declares a Record the routine never touches. |
 | `... holds ..., not ...`, `... is passed ...` | `runs.check` | A value of one type goes where another is wanted: a member into a word field, an instruction where a word goes, or a parameter passed different types by different runs. |
-| `... fires itself` | `runs.check` | A routine fires itself. Today a recursion is written as a stack Record and a bounded Network loop. |
+| `... fires itself` | `runs.check` | A routine fires itself. A recursion is written as a stack Record and a bounded Network loop. |
 | `... compares a word with 0 only, or a slot or count with a number` | `runs.check` | An ordering compare has a word on the left and anything but 0 on the right. |
 | `... of two constants is constant` | `runs.check` | A comparison or operator has a constant on both sides. |
 | `... does not fit a word` (in `runs.check`) | `runs.check` | A literal is wider than 18 bits. |

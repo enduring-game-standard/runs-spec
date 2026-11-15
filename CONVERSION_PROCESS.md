@@ -6,6 +6,12 @@ A **conversion** is not a re-vibe or a rewrite. It reorganizes the **original** 
 
 At every step, the RUNS source plus the original machine's declarations rebuilds the original binary. The binary checks the behavior. Purity is the structure, and the structure is what the conversion changes.
 
+## The route
+
+Assemble the original source into the binary, the oracle. Lift the program to readable code (Spacewar: C, in `lift/`) and build a compiler that turns that code back into the identical binary. The lift buys a codebase people can read, where the assembly is hard to follow. Then convert into RUNS, with the binary checking every step.
+
+The order of that last stage is open. The owner's stated wish is top-down: each deep module first becomes one large Processor, which gives the shape of the tick's order, and is then refactored into coherent groupings of the game's rules, apart from the presentation. The aim is a process as automatable as possible, so that running it on another game, such as DOOM, gives logical groupings of its rules. Spacewar went the other way, routine by routine, and the owner called that order wrong. Which order is better, and how to automate it, is not settled. The numbered steps below are the order Spacewar used.
+
 Two rules this guide holds a conversion to are conventions, not RUNS compliance. The split of a game into a Rules region and a Realization region is the enduring-games pattern, not a base-protocol primitive ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 131-135, 158-160). Decomposing a routine into Processors is convention too: a monolith that passes every test vector is the game ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 117-129). A conversion that follows this guide chooses both, and its tools enforce them as its own rules.
 
 Three documents hold what this guide points to:
@@ -103,11 +109,11 @@ The **mutation gate** checks that the RUNS source, not the declarations, decides
 
 ### One script that runs every check
 
-The conversion has one script that runs every check above in order and fails on the first failure.
+The conversion has one script that runs every check above.
 
 - **Takes.** Nothing but the repository.
-- **Gives.** One line per check, and a nonzero exit on the first failure.
-- **Spacewar.** `tools/check_all.sh` runs the compile, the mutation gate on a sample of 8000 mutants, the comparison checks, and this spec's examples against the conversion's evaluator (`tools/check_examples.py`). The full gate, the reach oracle, the purity report, and `tools/mutate.sh` run by hand.
+- **Gives.** One line per check with its time, and a nonzero exit if any check failed.
+- **Spacewar.** `tools/check_all.sh` runs the compile, then every other check at once: the mutation gate on the changed mutants and a sample of 2000 others, the comparison checks, and this spec's examples against the conversion's evaluator (`tools/check_examples.py`). The full gate, the reach oracle, the purity report, and `tools/mutate.sh` run by hand.
 
 ## Rule or machine: the one test
 
@@ -116,7 +122,7 @@ Every detail of the original program is sorted by one question: **does changing 
 - **Yes: it is a rule, and it goes in the RUNS source, declared.** The arithmetic is a rule. Spacewar's 18-bit ones' complement is its six-sided die, and DOOM with floats instead of its fixed point desyncs its demos and is a different game. Limits are rules, such as how many objects can exist. The order of two steps is a rule wherever swapping them changes a result. A glitch play can reach is a rule.
 - **No: it is the machine, and it goes in the machine's declarations or its compiler, never in the RUNS source.** Which register holds a value, the address of a field, a scratch word, a return address, the order of two steps that swapping changes nothing, and the instructions that move a word between memory and a register are all the machine.
 
-The test can be run, not only argued. Change the detail and check whether the game can come out differently: the mutation gate does this for each declaration and each piece of the source (see [The mutation gate](#the-mutation-gate)), and the case-by-case rules below apply it to values (step 2), layout (step 6) and kinds (step 5). Machine detail found in the RUNS source is a defect, however it got there. In RUNS-Spacewar, the Processors that only copy a word from one place to another and the scratch fields that stand in for the PDP-1's accumulator are machine detail that leaked into the rules, and the conversion removes them. The compiler, not the source, is where the original machine's choices are recovered to rebuild the original binary.
+The test can be run, not only argued. Change the detail and check whether the game can come out differently. The game-alone check (`check_frame.py alone`) and the same-game rule of the mutation gate change a detail and compare every Record over play (see [The mutation gate](#the-mutation-gate)). A source detail whose every mutant is the same game is a candidate for machine detail. A declaration whose mutants all build the original image holds nothing. The case-by-case rules below apply the test to values (step 2), layout (step 6) and kinds (step 5). Machine detail found in the RUNS source is a defect, however it got there. In RUNS-Spacewar, the `copy` transitions that move a word from one place to another, and Records that collect register carries such as `handoff`, are machine detail still in the rules. The purity report does not count them yet. The compiler, not the source, is where the original machine's choices are recovered to rebuild the original binary.
 
 ## Move in small steps that each compile
 
@@ -134,13 +140,13 @@ The declarations are never the place to make a hard shape compile. Their count o
 
 A step is one routine, one Record, or one change of shape. A step that moves several routines at once hides which change broke a check.
 
-When one change of shape sweeps every unit of the source, such as splitting each Processor as far as it goes, take the riskiest unit first and finish it end to end before the rest. The risk is the compiler's: count the values each split hands from one piece to the next through a field where the original kept them in a register, the control flow inside the routines, and the routines the declarations name. The unit with the most of these, and a comparison check strong enough to catch a wrong binary, goes first. Pieces it shares with other units get one file in that unit, and the other units' routines point to that file during the sweep.
+When one change of shape sweeps every unit of the source, such as converting every Processor from `reads:` and `writes:` to inputs and outputs, take the riskiest unit first and finish it end to end before the rest. The risk is the compiler's: count the values each split hands from one piece to the next through a field where the original kept them in a register, the control flow inside the routines, and the routines the declarations name. The unit with the most of these, and a comparison check strong enough to catch a wrong binary, goes first. Pieces it shares with other units get one file in that unit, and the other units' routines point to that file during the sweep. How far to split Processors, and into what bundles, is open.
 
 **Done when** the five conditions of [8. Compile with the declarations](#8-compile-with-the-declarations) pass after every step.
 
 ## 1. Describe the machine
 
-The machine description states everything RUNS takes from the original machine. Every type RUNS source uses that is not a count, a condition, or an enum comes from it. [MACHINE_DESCRIPTION.md](./MACHINE_DESCRIPTION.md) defines its form. This step writes it and checks it.
+The machine description states the game's arithmetic: the number types and operators of the original machine, which are rules of the game. Every type RUNS source uses that is not a count, a condition, or an enum comes from it. [MACHINE_DESCRIPTION.md](./MACHINE_DESCRIPTION.md) defines its form. This step writes it and checks it.
 
 1. **Find the types play computes with.** List every width of value the original's arithmetic and logic run on. An 18-bit word machine has one type. An 8-bit microprocessor has a byte and a 16-bit address. A machine with a floating point unit has a type for each format it computes in. Spacewar computes with one type, the PDP-1's 18-bit ones' complement `word`.
 2. **List the operators play uses.** Read each routine of the original, and write down each operation it performs on a value of a machine type: each add, subtract, compare, shift, rotate, multiply step, and logic operation, and each operation that leaves a status bit a later instruction reads. Spacewar uses add and subtract with end-around carry, the shifts `sal` and `sar`, the rotates `ral` and `rar`, the pair rotates and shifts `rcl`, `rcr`, `scl`, and `scr`, the multiply and divide steps `mus` and `dis`, a count of set bits, and the comparisons.
@@ -159,7 +165,7 @@ A conversion on a machine that already has a description uses it. It adds an ope
 A Record field is any value of the original that carries meaning from one routine to another or from one frame to the next. On most machines such a value lives in a memory word. It can also live in a register, a status flag, a device register the program reads back, an instruction's operand, or a stack slot.
 
 1. Name each field for what it means, not for its symbol. Put the original symbol in a comment, as in `particles: word = 0  # mxc`.
-2. Make a value that a routine sets before it reads it, and never hands on, a local of the Processor instead. Make a value that the routines of one Network hand between them, set before it is read in every firing and touched by nothing outside that Network, the Network's scratch (`owns`), as the original kept such a value in one register. Anything read outside the Network is a field.
+2. Make a value that a routine sets before it reads it, and never hands on, a local of the Processor instead. Any value one Processor hands to another is a field of a Record: the Processor takes it out, computes, and puts it back, and the next Processor takes it from there.
 3. Keep a value that the game counts and never reads, such as Spacewar's `objects_seen`. It becomes a field that no Processor reads, and the graph shows it is dead.
 4. Drop values that only the machine uses and play never observes, such as a cursor kept in an instruction's address field, a return address on a call stack, or a saved register an interrupt handler restores. They belong to the declarations.
 5. Keep global data in Records like any other state. Data in the image, such as Spacewar's star catalog and ship outlines, is a Record whose field takes one initial value a slot.
@@ -178,7 +184,7 @@ The original passes values between routines in registers, in flags, on a stack, 
 
 A conversion may start from an older form, which the loader still reads: Processors that name the Records they touch under `reads:` and `writes:`, and Networks that pass a slot with `run name(slot)`. Convert each to inputs, outputs, and wires, one interaction at a time. `slot` stays only in the Network that walks the slots. A bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it, to an input or output of kind `word[N]`.
 
-Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment names the register and the instruction. Do not collect register carries into one Record named for the register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it.
+Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment names the register and the instruction. Do not collect register carries into one Record named for the register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it. The purity report does not count it yet.
 
 Map each way the original shares a rule. The first column is the idiom on any machine. The third column is the Spacewar (PDP-1) instance. An empty third column names no Spacewar instance.
 
@@ -199,7 +205,7 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 | A loop that runs a macro or a tunable | A loop bundle that fires the Processor once a pass. See **Loops** below. | The explosion's dots, `particle_dots.net`. |
 | A routine that runs macros or tunables | A Network of the Processors. Its wiring orders them as the original runs them (see [4. Keep the order](#4-keep-the-order)). | |
 | A label that several places jump to | A Network of its own. Each jump is a transition that runs it, the last on its branch. | |
-| The main loop | A top Network. Its wiring orders it as the original runs it (see [4. Keep the order](#4-keep-the-order)). The host fires it on the frame event the declarations name. | `network frame`, from `ml0`. |
+| The main loop | A top Network that fires once a tick. Its wiring orders it as the original runs it (see [4. Keep the order](#4-keep-the-order)). The host fires it on the event the declarations name. | `tick.net`, which runs `frame.net`, from `ml0`. |
 | A vertical-blank wait, or a busy-wait on a hardware register that paces the frame | Nothing in the game. The frame event the declarations name fires the top Network. Where the wait's count reaches game state, the count is a value that comes in. | The spare-time loop burns the rest of the frame's instruction budget. Nothing in the game reads the budget after, so `spare_time` is presentation. |
 | A start address, a reset vector, or a power-on entry | A top Network that the host fires once, on the event the declarations name for that entry. | `start_with_test_word` at 5 and `start_with_control_boxes` at 4. |
 | An interrupt handler | A top Network that the host fires on that event. Where the handler lands mid-routine and play observes it, that is timing (see below). | The PDP-1 sequence break words at 0 to 3 are machine words in the declarations. Play raises no sequence break, so no top Network handles one. |
@@ -208,17 +214,17 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 | Registers an interrupt handler saves and restores | Nothing in the RUNS source. The interrupt convention in the declarations saves and restores them. | |
 | A jump through a word that names a routine | An n-way test on the enum, one `when == member` arc for each routine. | `calc.net`, the calc routine. |
 | A jump table indexed by a number | An n-way test, one `when == n` arc for each value, then `when else`. See **Guards** below. | |
-| A halt that the operator continues past, or a wait for a key | An `emit` of what the halt shows, then `wait`. | The halt between games shows the scores. |
+| A halt that the operator continues past, or a wait for a key | An `emit` of what the halt shows, and the end of the tick. A Record the tick produces makes the next tick the operator's answer. Nothing computes between ticks. | The halt between games shows the scores: `show_scores.net` and `pause.phase`. |
 | A halt that halts again when continued, or a hang | `stop`. | A ship fires when the object table is full. |
 | Code the program writes, then runs (self-modifying code) | Processors that state what the code computes. The compiler reproduces the code's words. A Record of `insn` values run with `jump` is impure. | The outline compiler writes each ship's outline as instructions. |
 | A word the routine rewrites, then copies into the code | A field that holds what the word means. The compiler reproduces the instruction around it. | |
 | An instruction built at run time and executed | The rule it computes. | The explosion builds a shift from a random number, and the conversion writes a shift by `popcount` places. |
-| A value carried in a register between two rules | A field the Network names, of the Record of the concern it belongs to, named for what it means. When only one Network touches it, and every firing sets it before reading it, it is that Network's scratch. | The space warpage's AC, as in the example below. |
+| A value carried in a register between two rules | A field the Network names, of the Record of the concern it belongs to, named for what it means. | The space warpage's AC, as in the example below. |
 | A bank switch | Layout. The declarations place each routine and Record in its bank, and the compiler emits the switch. Where play reads through a bank the game did not mean to map, the stated layout places those Records. | |
 | A DMA transfer to a device | Presentation. The Records it copies are interface Records or a stream, and the device the declarations name carries them out. Where play observes the transfer's timing, that is timing. | |
 | A DMA transfer from memory to memory | A Processor that states the copy. | |
 | A stack used for calls | The return addresses belong to the conventions in the declarations. A value pushed to pass to a callee is a field of the callee's Record. | |
-| Recursion | Today, a stack Record (a collection with a depth field) and a bounded Network loop that pushes and pops it. See **Loops** below. A stack that overflows into other data is layout. | |
+| Recursion | A stack Record (a collection with a depth field) and a bounded Network loop that pushes and pops it. See **Loops** below. A stack that overflows into other data is layout. | |
 | A heap allocator | The game's own allocator, converted like any routine, over a Record that holds the pool. A stale reference does what the stated layout says. | |
 | A memory-mapped device read | A field with no initial value in an interface Record that comes in. The devices in the declarations say which register carries it. | `console.test_word`, read by `lat`. |
 | A memory-mapped device write | An interface Record or a stream that the presentation writes. The devices in the declarations say which register carries it. | `lights`, program flags 1 and 2. The `display` stream. |
@@ -228,11 +234,11 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 Rules that cover more than one row:
 
 - **Interrupts.** An interrupt handler is a top Network that the host fires on that event. [The host](./DECLARATIONS.md#the-host) fires it between two firings of other top Networks. Where the interrupt lands inside a routine and play observes where it landed, the landing point is timing, the fourth way the game touches the machine (see [Three kinds of Record](./README.md#three-kinds-of-record)). It becomes a rule the RUNS source states, or a value that comes in.
-- **Guards.** In the vision, the guards of one branch form a complete partition: exactly one is true. A discriminant that is not an enum needs an explicit `else` arc. A guard reads a fact a Processor computed into a Record, and never computes one ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 351-358). The loader checks that the guards of a network file partition. The inline form's `else` is optional ([Grammar](./NETWORK_TOPOLOGY.md#grammar)).
-- **Loops.** In the vision, one tick of the Rules region is a DAG outside its loop bundles. A loop bundle runs through a counter set before the loop starts. Each pass takes one token, and the loop ends when the counter reaches zero or a guard stops it. The only unbounded loop is the tick feedback through `state:` Records, in the wiring ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 197-206). Spacewar writes each loop of a Network as a loop bundle ([Loop bundles](./NETWORK_TOPOLOGY.md#loop-bundles)).
-- **Recursion.** Today, a recursive routine becomes a stack Record and a bounded Network loop. The bound is the deepest the original's stack can go before it overflows. A stack that overflows is layout, and the stated layout says what the overflow reads and writes.
+- **Guards.** The guards of one branch form a complete partition: exactly one is true. A discriminant that is not an enum needs an explicit `else` arc. A guard reads a fact a Processor computed into a Record, and never computes one ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 351-358). The loader checks that the guards of a network file partition. The inline form's `else` is optional ([Grammar](./NETWORK_TOPOLOGY.md#grammar)).
+- **Loops.** Every loop is bounded. The only unbounded loop is the tick feedback through `state:` Records, in the wiring ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 197-206). Spacewar writes each loop of a Network as a loop bundle: a counter Record set before the loop starts, one token taken a pass, ending when the counter reaches zero or a guard stops it ([Loop bundles](./NETWORK_TOPOLOGY.md#loop-bundles)). Whether a loop must sit in a bundle of its own, or bounded loops are a general rule of the graph, is open ([Open questions](./README.md#open-questions)).
+- **Recursion.** A recursive routine becomes a stack Record and a bounded Network loop. The bound is the deepest the original's stack can go before it overflows. A stack that overflows is layout, and the stated layout says what the overflow reads and writes.
 - **Allocation.** The game's own allocator is converted. RUNS has no allocator of its own. A stale reference does what the stated layout says.
-- **Versions.** Each version of a game is its own game, with its own RUNS source. Two versions share Processors only by copying them.
+- **Versions.** Each version of a game is its own game, with its own RUNS source and its own wiring. Two versions may use the same published Processors and bundles.
 - **Code with no source.** It is converted from its machine code, through a disassembly. Each routine's symbol names come from the disassembly.
 
 Here is a torpedo's flight from Spacewar, reduced to the x axis. The original executes the tunable `the` with `xct` and passes values through AC. The values belong to the space warpage, so they are fields of `warpage`. RUNS-Spacewar's source keeps them in `handoff`.
@@ -279,7 +285,7 @@ processor inertia                                           # diff
   set position = (velocity >> 3) + position
 ```
 
-The example uses the inline form of a Network, which the loader lowers each network file to. `inout` takes a field's value and gives the result back to the same field. The vision allows that. Only a Processor changes a Record, and it may put its result back where it took the value from ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93).
+The example uses the inline form of a Network, which the loader lowers each network file to. `inout` takes a field's value and gives the result back to the same field: only a Processor changes a Record, and it may put its result back where it took the value from ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 90-93).
 
 `inertia` names no axis. The y axis is the same Processor, wired to `objects.dy[slot]` and `objects.y[slot]`, as the original expanded `diff` once an axis.
 
@@ -315,15 +321,16 @@ Each Record is the game's, the interface's, or the presentation's. `game` marks 
 5. Make every stream presentation. Every stream leaves to a device, so a stream of another kind does not load. A Processor that emits to a stream is presentation, so split from it any work that touches a game Record.
 6. Check the split by observation. Run the game with every presentation Processor removed against the original. Every game Record must match. RUNS-Spacewar does this with `tools/check_frame.py` in its `alone` mode.
 7. Declare in the top Networks' contracts what crosses between the program and the world.
-   - Every stream the presentation writes, and every Record that leaves, goes in `writes:`. Spacewar's frame declares `writes: display, scoreboard, lights`.
-   - Every Record with a field that has no initial value, and that a routine inside reads, goes in `reads:`. Spacewar's frame declares `reads: console, score, controls, outline_code`. The loader refuses a top Network that misses one.
+   - Every stream the presentation writes, and every Record that leaves, goes in `produces:`.
+   - Every Record with a field that has no initial value, and that a routine inside reads, goes in `requires:`. The loader refuses a top Network that misses one.
+   - Spacewar's `tick` declares `requires: console, score, controls, outline_code, pause` and `produces: display, scoreboard, lights, pause`.
 
-   These Records are the boundary Records. The vision names inbound ones `requires:`, written by the runtime before a tick, and outbound ones `produces:`, read after it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 272-275). It makes a precondition a DIGS boolean a Processor declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 372-384). Today's source uses `reads:` and `writes:` for the boundary and `requires:` for the precondition, so its keywords disagree with the vision's.
+   These Records are the boundary Records: the host writes the inbound ones before a tick and reads the outbound ones after ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 272-275). The loader lowers them to the inline form's `reads:` and `writes:`. On a routine, a `requires:` condition is a precondition, a DIGS boolean a Processor declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), lines 372-384).
 8. Leave the devices out of RUNS. Which switch, joypad port, device register, light, or start address carries each field belongs to the declarations, and each machine's declarations state it in their events and devices (see [DECLARATIONS.md](./DECLARATIONS.md)). RUNS-Spacewar states all of them in `pdp1/devices.toml`.
 
 Timing, pacing, and the machine underneath are presentation unless a game value depends on them. A frame budget, a wait for vertical blank, and a delay loop are presentation. A rule that reads how many instructions ran, or which line the beam was on, reads timing, and timing becomes a rule or a value that comes in.
 
-**Done when** every Record has a kind, the purity report does not grow (Spacewar runs `tools/check_purity.py --against` the previous revision), the game with the presentation removed matches the original on every game Record, and the top Networks' contracts load. The conversion is done when the purity report's count is 0.
+**Done when** every Record has a kind, the purity report does not grow (Spacewar runs `tools/check_purity.py --against` the previous revision), the game with the presentation removed matches the original on every game Record, and the top Networks' contracts load. A purity report count of 0 is necessary for a finished conversion. What else a finished conversion requires is open ([Open questions](./README.md#open-questions)).
 
 ## 6. Measure where play reaches the machine
 
@@ -348,11 +355,11 @@ Then decide each site:
 |-------------------|--------------------|
 | The machine's arithmetic | Nothing more. The machine description's operators state it. |
 | A status flag a later instruction reads | A field that the operator returns and the RUNS source stores. |
-| Memory the image never loaded | Fields with no initial value, which the top Networks declare under `reads:`. |
-| A device register | A field with no initial value in an interface Record, which the top Networks declare under `reads:`. The devices in the declarations name the register. |
+| Memory the image never loaded | Fields with no initial value, which the top Networks declare under `requires:`. |
+| A device register | A field with no initial value in an interface Record, which the top Networks declare under `requires:`. The devices in the declarations name the register. |
 | Code the program writes, then runs | Processors that state what the code computes. The compiler reproduces the code. |
 | A jump into the middle of code | A machine glitch. A Processor states the rule the machine runs on that path. The compiler reproduces the bytes. |
-| A halt or a hang | `stop`, or `emit` then `wait`. |
+| A halt or a hang | `stop`, or an `emit` and the end of the tick, with a Record that makes the next tick the operator's answer. |
 | An interrupt whose landing point play observes | Timing. A rule the RUNS source states, or a value that comes in. |
 | A layout that play observes | A `layout` declaration in the RUNS source, as [MACHINE_DESCRIPTION.md](./MACHINE_DESCRIPTION.md) defines it under stated layout. It places only the Records play reads through layout. |
 | A layout that play does not observe | Leave it out of the RUNS source. |
