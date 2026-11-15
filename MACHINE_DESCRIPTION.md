@@ -6,7 +6,7 @@ A **machine description** is a text file, `<machine>.runs-machine`, that states 
 
 A machine description is game-neutral. Every game on that machine shares it. A conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches.
 
-A machine description is how RUNS source takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 40-49, 321-326). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. CONTEXT.md makes the contract opt-in, not required for compliance. This page's rule that every program names one machine is the rule of this format. Whether RUNS source that takes up no arithmetic contract names a machine is open.
+A machine description is how RUNS source takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 40-49, 338-343). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. CONTEXT.md makes the contract opt-in, not required for compliance. This page's rule that every program names one machine is the rule of this format. Whether RUNS source that takes up no arithmetic contract names a machine is open.
 
 A machine description holds four things:
 

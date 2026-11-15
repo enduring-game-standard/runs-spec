@@ -272,7 +272,7 @@ Each input and output of each transition is wired exactly once, to a place of it
 
 ### Guards
 
-The guards on one place form a partition. Exactly one side is true (CONTEXT.md 353-358). The sides are one of these:
+The guards on one place form a partition. Exactly one side is true (CONTEXT.md 370-375). The sides are one of these:
 
 - A test and its else: `when < 0` and `when else`.
 - An n-way dispatch: `when == m` for distinct members or numbers, then `when else`.
@@ -313,7 +313,7 @@ Spacewar's counters hold minus the passes left, so its `count_down` adds 1. A co
 | `counter name: type` | The user sets the count. |
 | `counter name: type = -count` | The bundle states the most passes it makes, and no user sets it. It needs a guard on its `count_down`, which stops the loop before the count runs out. |
 | `counter name: type to end` | The counter counts up to an end, such as the slots of a collection. The passes may read it, and the user sees where it stopped. |
-| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a dispatch over a collection (CONTEXT.md 342-345). Each pass's transitions take it as their slot, and no user sets it. |
+| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a dispatch over a collection (CONTEXT.md 359-362). Each pass's transitions take it as their slot, and no user sets it. |
 
 ### Grammar of a network file
 
@@ -421,7 +421,7 @@ network drift
 
 ### Inputs and outputs
 
-An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its Realization Processors (CONTEXT.md 313-320).
+An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its Realization Processors (CONTEXT.md 330-337).
 
 | Direction | Meaning |
 |-----------|---------|
@@ -455,7 +455,7 @@ The evaluator holds scratch in a field of its own. A compiler keeps it where the
 | `writes: a, b` | Records and streams the top Network's contract says leave it. |
 | `requires: condition` | A precondition. If it is false when the Network fires, the RUNS source is wrong. |
 
-The vision's keywords differ. An inbound boundary Record, written by the runtime before a tick, is declared under `requires:`, and an outbound one, read after the tick, under `produces:` (CONTEXT.md 272-275). A precondition is a DIGS boolean a Processor declares (CONTEXT.md 372-384). Today's `reads:`, `writes:` and `requires:` disagree with them.
+The vision's keywords differ. An inbound boundary Record, written by the runtime before a tick, is declared under `requires:`, and an outbound one, read after the tick, under `produces:` (CONTEXT.md 272-275). A precondition is a DIGS boolean a Processor declares (CONTEXT.md 389-401). Today's `reads:`, `writes:` and `requires:` disagree with them.
 
 A bundle's contract is its inputs and outputs. [Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
 
@@ -476,7 +476,7 @@ A Network body may hold only these statements.
 | `wait` | Hand the firing to the world. The host shows what has left the game, may change what comes in, and then the firing goes on. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-This is today's statement set, and parts of it fall short of the vision. `for` has the shape of the vision's Dispatch, a bounded fold whose count is fixed before it starts (CONTEXT.md 343-350). `loop at most N:` with `break` does not: a Dispatch has no `break`, `continue`, or early return, and one tick of the Rules region is a DAG (CONTEXT.md 197-199, 345-346). The vision's guards on a branch partition, exactly one true, and an open-typed discriminant needs an explicit `else` arc (CONTEXT.md 351-356). Today's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum.
+This is today's statement set, and parts of it fall short of the vision. `for` has the shape of the vision's Dispatch, a bounded fold whose count is fixed before it starts (CONTEXT.md 360-367). `loop at most N:` with `break` does not: a Dispatch has no `break`, `continue`, or early return, and one tick of the Rules region is a DAG (CONTEXT.md 197-199, 362-363). The vision's guards on a branch partition, exactly one true, and an open-typed discriminant needs an explicit `else` arc (CONTEXT.md 368-373). Today's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum.
 
 A guard only tests. It compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs, its outputs and its scratch, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. A condition that needs arithmetic on a value is a Processor that computes it into a Record, and the guard tests that Record. The README's [Where the order comes from](./README.md#where-the-order-comes-from) says how a network file's wiring carries the order.
 
@@ -623,7 +623,7 @@ network explosion
     run free_slot
 ```
 
-Today totality comes from the bound on each loop. The vision's bounded fold also has no `break` (CONTEXT.md 345-346), so this loop falls short of it.
+Today totality comes from the bound on each loop. The vision's bounded fold also has no `break` (CONTEXT.md 362-363), so this loop falls short of it.
 
 ### The Processors of the example
 

@@ -1,6 +1,6 @@
 # RUNS declarations
 
-A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is encoded in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no rule reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same Rules region on other hardware ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 313-320), leaves them behind with that machine's Realization Processors.
+A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is encoded in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no rule reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same Rules region on other hardware ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 330-337), leaves them behind with that machine's Realization Processors.
 
 _Avoid_: binding. The name is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps it. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
 
@@ -503,7 +503,7 @@ The PDP-1 compiler's rules are this kind. Among them:
 - A `match` whose arms each run the routine their member is encoded as is a jump through the field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 344-347). A network file writes a loop with a data-dependent exit as a loop bundle that a guard stops (CONTEXT.md 204-206).
+These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. The vision's loop is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md 112-115, 361-364). A network file writes a loop with a data-dependent exit as a loop bundle that a guard stops (CONTEXT.md 204-206).
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 
@@ -571,7 +571,7 @@ Three kinds have their own rule:
 
 - **An initial value.** The gate plays games from power-on before and after, on the same inputs (RUNS-Spacewar plays 60 games of 30 frames). The mutant passes when every firing puts out the same and every game ends with the same Records, the changed field aside.
 - **A deleted `requires:`.** A precondition is the conversion's check that a firing is one the game makes, not code. The mutant passes when every firing the precondition lets run is the same and the precondition stops some firing. A precondition that stops no firing says nothing, and the gate fails.
-- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which today's source allows and the vision's bounded fold does not (CONTEXT.md 344-347).
+- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which today's source allows and the vision's bounded fold does not (CONTEXT.md 361-364).
 
 The PDP-1 instance is `tools/check_compiled.py`.
 
@@ -587,7 +587,7 @@ Every host does these, and nothing else:
 4. **`stop` ends the game** as the original halts. No event fires after it.
 5. **After a firing, it takes each stream's contents** to the device the declarations name, in the order emitted.
 
-An error is not an event of the game. A loop past its bound, a failed `requires:`, a read of an unknown field, or a reached `unreachable` means the RUNS source is wrong. A failed `requires:` is a violated precondition, which lies outside the determinism contract, and catching it is a tooling concern (CONTEXT.md 378-384). The host reports each error and the game does not go on.
+An error is not an event of the game. A loop past its bound, a failed `requires:`, a read of an unknown field, or a reached `unreachable` means the RUNS source is wrong. A failed `requires:` is a violated precondition, which lies outside the determinism contract, and catching it is a tooling concern (CONTEXT.md 395-401). The host reports each error and the game does not go on.
 
 The host's choices belong to the Realization region. Two hosts that fire the same top Networks on the same events, with the same values coming in, give the same Records and the same streams.
 
