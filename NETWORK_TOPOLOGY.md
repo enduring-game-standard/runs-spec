@@ -608,7 +608,7 @@ A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
 
 One Network fires the game's Processors and the presentation's in one order. `plot` above is the presentation's, and `torpedo` runs it between the game's steps. With the presentation removed, `torpedo` is `count_down`, `explode`, `drift` twice and `show` in the same order.
 
-A halt or a hang that the original reaches is a rule of the game. A halt that halts again when continued is `stop`. A halt that the operator continues past emits what it shows and ends the tick, and a Record the tick produces makes the next tick the operator's answer. [Exact over every input](./README.md#exact-over-every-input-glitches-included) gives Spacewar's two halts.
+A halt or a hang that the original reaches is part of the game's rules. A halt that halts again when continued is `stop`. A halt that the operator continues past emits what it shows and ends the tick, and a Record the tick produces makes the next tick the operator's answer. [Spacewar's rules and the machine](./README.md#spacewars-rules-and-the-machine) gives Spacewar's two halts.
 
 ### The Network loop
 

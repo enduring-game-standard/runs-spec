@@ -348,7 +348,7 @@ A machine with several memories that play reads, such as a console's video memor
 
 ## Stated layout
 
-In a layout glitch, play reads past the last slot of a collection, or reads one kind of object as another. In that state the rule is whatever lies there in memory, so the layout is part of the game. The RUNS source states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
+Where the program reads past the last entry of a collection, or reads one kind of object as another, the machine supplies the answer: whatever lies there in memory, the same every time. Where play observes that value, the layout is part of the complete rules ([README](./README.md#the-rules-are-complete-and-glitches-emerge-from-them)). The RUNS source states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
 
 ```text
 layout ram
@@ -414,7 +414,7 @@ A reference the original kept as an address becomes an index into the collection
 
 `type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own source. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-A machine glitch runs data as code or jumps into the middle of a routine. Its rule is what the machine does with those bytes on that path, and the RUNS source states that rule in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler.
+Where the program runs data as code or jumps into the middle of a routine, the rule on that path is what the machine does with those bytes. It is part of the complete rules, and the RUNS source states it in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
