@@ -235,7 +235,7 @@ The command exits with status 0 when every example passes.
 ## Open questions
 
 - **The kind of each Record.** A conversion decides each kind by hand, from what the Record's values reach. A tool could trace each value through the original in SIMH instead.
-- **Loops and halts in the graph.** Spacewar writes each loop of a Network as a loop bundle. Whether a loop must sit in a loop bundle of its own is not settled. Neither is what a halt (`stop`) means for transitions the wiring leaves unordered.
+- **Loops and halts in the graph.** Every loop within a tick runs through a counter and need not sit in a bundle (owner, 2026-11-14); RUNS-Spacewar's loader reads a loop only as a loop bundle (a network file with a `counter` line), so every loop in its source is one; reading a counter loop anywhere in a graph is tool work still to do. Neither is what a halt (`stop`) means for transitions the wiring leaves unordered.
 - **How fine to cut Processors, and the shape of bundles.** How small a Processor should be, and how bundles of bundles are cut and named, is not settled. Decomposition is convention, not compliance (CONTEXT.md, Processor).
 - **A bundle that names no game's Record.** RUNS-Spacewar's bundles still list Record fields as places, such as `cosine_work.shifted` and `pause.phase`, so none can be shared with another game yet. How a bundle holds a value between two of its transitions without naming a game's Record is not settled.
 - **The order of the conversion process.** Which order turns an original program into coherent groupings of rules best, and how to automate it, is not settled. [Conversion process](./CONVERSION_PROCESS.md#the-route) states the route and the owner's stated wish.
