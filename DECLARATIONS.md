@@ -2,7 +2,7 @@
 
 A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is encoded in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no rule reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same Rules region on other hardware ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Port), leaves them behind with that machine's Realization Processors.
 
-_Avoid_: binding. The name is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps it. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
+The name is **declarations**; the older name, binding, is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps the old name. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
 
 Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. Each target machine has its own compiler, shared by every game for it. With the original machine's declarations, the original machine's compiler writes the original binary, byte for byte. Running the game on another machine is a Port: new presentation Processors and Records, that machine's declarations, and that machine's compiler. The compiler holds the machine's details and no game's logic or timing, and a change to it is a general rule for the machine, never a fix for one game ([The compiler](./README.md#the-compiler)). In CONTEXT.md's words (Baking and Build), the compiler's work is baking and the image is a Build: one Rules region, one Realization region, one target.
 
@@ -503,7 +503,7 @@ The PDP-1 compiler's rules are this kind. Among them:
 - A `match` whose arms each run the routine their member is encoded as is a jump through the field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. A bounded fold has a count fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md, Processor and Phase / Dispatch / Guard). RUNS-Spacewar writes a loop with a data-dependent exit as a loop bundle that a guard stops (CONTEXT.md, Network). Whether a loop must sit in a bundle of its own is open ([Open questions](./README.md#open-questions)).
+These rules read the inline form that network files lower to, whose loops may exit mid-body with `break`. A bounded fold has a count fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md, Processor and Phase / Dispatch / Guard). RUNS-Spacewar writes a loop with a data-dependent exit as a loop bundle that a guard stops, under the loop rule of [The Network loop](./NETWORK_TOPOLOGY.md#the-network-loop).
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 
@@ -530,7 +530,7 @@ The gate makes each of these, one at a time:
 - **Preconditions.** Each `requires:` deleted.
 - **Loop bounds.** Each loop's bound mutated as a number, a field, an operator, or a member.
 
-Contract entries belong to the older form. In converted source a Processor declares no Records (CONTEXT.md, Processor). `requires:` on a top Network's header names its inbound boundary Records (272-274). On a routine, a `requires:` condition is a precondition, a DIGS boolean a Processor declares (372-384), and only that kind is mutated here.
+Contract entries belong to the older form. In converted source a Processor declares no Records (CONTEXT.md, Processor). `requires:` on a top Network's header names its inbound boundary Records (CONTEXT.md, Boundary Record). On a routine, a `requires:` condition is a precondition, a DIGS boolean a Processor declares (CONTEXT.md, Precondition), and only that kind is mutated here.
 
 ### Mutants of the declarations
 
@@ -629,5 +629,3 @@ A conversion on a machine with no declarations vocabulary designs its own. It st
 4. **Cover each key with the mutation gate.** Delete it, delete each element, replace each value. Each mutant must change the image or be refused. A key whose mutants build the same image holds nothing, and the conversion removes it.
 5. **Keep devices in one file.** Every event and every device the original uses goes in `devices.toml`, but for the two kinds [Files and units](#files-and-units) lets a unit file hold. The Realization side of the declarations is then in one place.
 6. **Record the count.** Once the image matches, the count of entries only shrinks, as [The declarations only shrink](#the-declarations-only-shrink) states.
-
-When a pure RUNS shape will not compile to the original binary, change the RUNS source first, then add a general compiler rule, then stop and report, as [Where a change goes](#where-a-change-goes) states.

@@ -2,7 +2,9 @@
 
 This guide converts an existing program on any machine to RUNS. Its worked example is `RUNS-Spacewar`, which converts Spacewar! 3.1 on the PDP-1. Each rule is stated for any machine first, then shown on Spacewar.
 
-A **conversion** is not a re-vibe or a rewrite. It reorganizes the original program, from its source, from code lifted from it, or from its machine code, into RUNS. Every sequence of inputs from power-on gives the same game. The RUNS source states the rules completely, including what the original machine does the same way every time, and the original's glitches emerge from those rules as they did on the original machine. The binary stays the **original**, and the RUNS source is its **edition**: it carries everything by default, and any departure is an **exclusion**, stated at an exit point with its evidence and who decided it ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). A conversion neither recreates a glitch nor removes one ([README](./README.md#the-rules-are-complete-and-glitches-emerge-from-them)). The game does not change to fit RUNS. Where RUNS cannot say what the game does, RUNS grows, and that growth is a change to this spec. Every decision about the language that a conversion makes lands in this spec in the same step, with an example the conversion's tools run. A decision the spec does not state leaves the spec stale.
+A **conversion** reorganizes the original program, from its source, from code lifted from it, or from its machine code, into RUNS, and keeps the game exactly the same ([README](./README.md#a-conversion-is-not-a-re-vibe)). The RUNS source states the rules completely, and the original's glitches emerge from them ([README](./README.md#the-rules-are-complete-and-glitches-emerge-from-them)). The binary stays the **original**, and the RUNS source is its **edition**, which carries everything by default and states each departure as an **exclusion** ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)).
+
+Where RUNS cannot say what the game does, RUNS grows. Every decision about the language that a conversion makes lands in this spec in the same step, with an example the conversion's tools run. A decision the spec does not state leaves the spec stale.
 
 At every step, the RUNS source plus the original machine's declarations rebuilds the original binary. The binary checks the behavior. Purity is the structure, and the structure is what the conversion changes.
 
@@ -128,15 +130,9 @@ The test can be run, not only argued. Change the detail and check whether the ga
 
 A conversion moves in small steps. Each step rebuilds the original binary from the RUNS source and the declarations, and passes the checks in [8. Compile with the declarations](#8-compile-with-the-declarations), before the next step begins.
 
-The conversion's progress is the purity report. Nothing is exempt. A flag, a marker, or an exception that hides an impurity from the report is not allowed. The loader refuses every impurity, a Record with no kind included. Only the purity report reads source that is not yet pure, so a finished conversion is checked with no switch to remove.
+The conversion's progress is the purity report. Every impurity stays on it until it is converted; a flag, a marker, or an exception that hides one is the shortcut the report exists to refuse. The loader refuses every impurity, a Record with no kind included. Only the purity report reads source that is not yet pure, so a finished conversion is checked with no switch to remove.
 
-When a pure shape does not compile to the original binary, the RUNS source changes first. Purity stays as it is. Look for the change in this order, as [Where a change goes](./DECLARATIONS.md#where-a-change-goes) states:
-
-1. The RUNS source. Source that is hard to compile has the wrong shape. Sketch at least two pure shapes for the rule and compile each.
-2. The compiler. It belongs to the target machine, and every game for that machine shares it. Change it only by a general rule, for an idiom that a second program for that machine uses.
-3. Neither works. Stop, and report the shapes tried and the evidence.
-
-The declarations are never the place to make a hard shape compile. Their count of entries only shrinks, as [The declarations only shrink](./DECLARATIONS.md#the-declarations-only-shrink) states.
+When a pure shape does not compile to the original binary, purity stays, and the change goes where [Where a change goes](./DECLARATIONS.md#where-a-change-goes) says: the RUNS source first, then a general compiler rule, then stop and report. The declarations' count of entries only shrinks ([The declarations only shrink](./DECLARATIONS.md#the-declarations-only-shrink)).
 
 A step is one routine, one Record, or one change of shape. A step that moves several routines at once hides which change broke a check.
 
@@ -184,7 +180,7 @@ The original passes values between routines in registers, in flags, on a stack, 
 
 A conversion may start from an older form, which the loader still reads: Processors that name the Records they touch under `reads:` and `writes:`, and Networks that pass a slot with `run name(slot)`. Convert each to inputs, outputs, and wires, one interaction at a time. `slot` stays only in the Network that walks the slots. A bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it, to an input or output of kind `word[N]`.
 
-Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment names the register and the instruction. Do not collect register carries into one Record named for the register. Spacewar's `handoff` Record does, so it is impure by this rule, and its conversion splits it. The purity report does not count it yet.
+Organize Records by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next becomes a field of the Record of the concern it belongs to, named for what it means. A comment names the register and the instruction. A Record that collects register carries under the register's name is impure by this rule: Spacewar's `handoff` is one, and its conversion splits it. The purity report does not count it yet.
 
 Map each way the original shares a rule. The first column is the idiom on any machine. The third column is the Spacewar (PDP-1) instance. An empty third column names no Spacewar instance.
 
@@ -234,8 +230,8 @@ Map each way the original shares a rule. The first column is the idiom on any ma
 Rules that cover more than one row:
 
 - **Interrupts.** An interrupt handler is a top Network that the host fires on that event. [The host](./DECLARATIONS.md#the-host) fires it between two firings of other top Networks. Where the interrupt lands inside a routine and play observes where it landed, the landing point is timing, the fourth way the game touches the machine (see [Three kinds of Record](./README.md#three-kinds-of-record)). It becomes a rule the RUNS source states, or a value that comes in.
-- **Guards.** The guards of one branch form a complete partition: exactly one is true. A discriminant that is not an enum needs an explicit `else` arc. A guard reads a fact a Processor computed into a Record, and never computes one ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Phase / Dispatch / Guard). The loader checks that the guards of a network file partition. The inline form's `else` is optional ([Grammar](./NETWORK_TOPOLOGY.md#grammar)).
-- **Loops.** Every loop is bounded. The only unbounded loop is the tick feedback through `state:` Records, in the wiring ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). Spacewar writes each loop of a Network as a loop bundle: a counter Record set before the loop starts, one token taken a pass, ending when the counter reaches zero or a guard stops it ([Loop bundles](./NETWORK_TOPOLOGY.md#loop-bundles)). The counter is the rule, for the whole graph; a loop need not sit in a bundle of its own (owner, 2026-11-14). RUNS-Spacewar's loader reads a loop only as a loop bundle, so every loop in its source is one.
+- **Guards.** The guards of one branch form a complete partition, and a guard tests a fact a Processor computed into a Record ([Guards](./NETWORK_TOPOLOGY.md#guards)).
+- **Loops.** Every loop is bounded, through a counter ([The Network loop](./NETWORK_TOPOLOGY.md#the-network-loop)). RUNS-Spacewar writes each one as a [loop bundle](./NETWORK_TOPOLOGY.md#loop-bundles).
 - **Recursion.** A recursive routine becomes a stack Record and a bounded Network loop. The bound is the deepest the original's stack can go before it overflows. A stack that overflows is layout, and the stated layout says what the overflow reads and writes.
 - **Allocation.** The game's own allocator is converted. RUNS has no allocator of its own. A stale reference does what the stated layout says.
 - **Versions.** Each version of a game is its own game, with its own RUNS source and its own wiring. Two versions may use the same published Processors and bundles.
@@ -304,7 +300,7 @@ The order in which the original runs its rules is part of the game. A Network is
 Two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table. The wiring orders them: the collisions give the table to a place, and the calc routine takes it from there. The loader refuses two writers of one place that the wiring leaves unordered. To keep the original's order:
 
 - Wire Processors so that the wiring orders them as the original runs them, even when the order looks like an accident.
-- Do not split a loop into phases. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. [Where the order comes from](./README.md#where-the-order-comes-from) says what a split changes.
+- Keep each loop whole, every step of a pass inside that pass. In Spacewar, object *i* is tested against every later colliding object and then moves, before object *i+1* is touched. Splitting the loop into phases changes that order.
 - Keep dead tests and odd ranges. Spacewar's explosion tests a size that can never pass, and its last object slot is never tested for collisions. Both stay.
 - Keep the order of events. Where the original handles two events in a fixed order (a reset before a frame, an interrupt before the main loop resumes), the host fires their top Networks in that order, as [The host](./DECLARATIONS.md#the-host) states.
 
@@ -334,7 +330,7 @@ Timing, pacing, and the machine underneath are presentation unless a game value 
 
 ## 6. Measure where play reaches the machine
 
-Do not guess which behavior of the machine the program reaches. Every behavior it reaches deterministically is part of the complete rules, and the RUNS source states it; a behavior it never reaches is not. Measure it by running the original through real play with the reach oracle. The scripted play covers every start address, every switch setting, and inputs that drive the game into its edge states: full tables, empty tables, the end of a match, every way an object dies. RUNS-Spacewar's `tools/reach_oracle.py` runs seventeen scripted matches in SIMH and names every data access by the Record field or source label it lands in.
+Measure which behavior of the machine the program reaches; a guess is not evidence. Every behavior it reaches deterministically is part of the complete rules, and the RUNS source states it; a behavior it never reaches is not. Run the original through real play with the reach oracle. The scripted play covers every start address, every switch setting, and inputs that drive the game into its edge states: full tables, empty tables, the end of a match, every way an object dies. RUNS-Spacewar's `tools/reach_oracle.py` runs seventeen scripted matches in SIMH and names every data access by the Record field or source label it lands in.
 
 The reach oracle reports these kinds of site. Spacewar's oracle reports the first seven.
 
@@ -423,11 +419,11 @@ The standard exclusion is code the player writes and the program then runs. Ocar
 
 ## 10. Archive the original with the edition
 
-The reference archive keeps the original binary, always, with the toolchain that builds it: the source it was assembled or compiled from, the assembler or compiler, and the emulator the conversion checked against. On its original machine the binary has everything, uninterpreted. Next to it the archive keeps the edition, its machine description, its declarations, its compiler, and its exclusion list.
+The reference archive identifies the original binary by its hash and keeps what rebuilds it: the source it was assembled or compiled from, the assembler or compiler, and the emulator the conversion checked against. The binary itself stays out of the repository; the archive rebuilds it and verifies it against the hash. On its original machine the binary has everything, uninterpreted. Next to it the archive keeps the edition, its machine description, its declarations, its compiler, and its exclusion list.
 
-- **Spacewar.** The original is `build/oracle.rim`, with sha256 `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`, assembled from `source/spacewar3.1_complete.txt`. The edition is `runs/`, the declarations are `pdp1/`, the compiler is `tools/runsc.py` with `tools/pdp1cc`, the emulator is SIMH, and the exclusion list is `docs/exclusions.md`. RUNS-Spacewar keeps the source and builds the binary into `build/`, which git does not track, so the repository does not yet keep the original binary itself.
+- **Spacewar.** The original is `build/oracle.rim`, with sha256 `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`, assembled from `source/spacewar3.1_complete.txt`. The edition is `runs/`, the declarations are `pdp1/`, the compiler is `tools/runsc.py` with `tools/pdp1cc`, the emulator is SIMH, and the exclusion list is `docs/exclusions.md`. RUNS-Spacewar keeps the source and the hash, and builds the binary into `build/`, which git does not track.
 
-**Done when** the archive holds the original with its toolchain, and the edition with everything that rebuilds the original from it.
+**Done when** the archive holds the original's hash with the source and toolchain that rebuild it, and the edition with everything that rebuilds the original from it.
 
 ## Assets
 

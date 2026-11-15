@@ -2,13 +2,13 @@
 
 > Every accepted example on this page loads in RUNS-Spacewar's evaluator, `tools/runs.py`, passes `runs.check`, and runs. Every rejected example fails with the error its first line quotes. [Check the examples](./README.md#check-the-examples) says how.
 
-DIGS is the language of Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
+DIGS is the language of Rules Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
 A Processor is one rule of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
 
-A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (lines 90-93). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
+A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (CONTEXT.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
 
-DIGS is the language of Rules Processor bodies. A Realization Processor's body is not DIGS, and the standard specifies no language for it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
+A Realization Processor's body is not DIGS, and the standard specifies no language for it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
 
 ## A running example
 
@@ -106,7 +106,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression cannot call a Processor or a Network. A Processor never calls another Processor. Processors connect only through the Network, by way of Records, and composition is bundling ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). A body computes with its own locals. RUNS-Spacewar's DIGS has no Processor call:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and composition is bundling ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). A body computes with its own locals:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called

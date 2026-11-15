@@ -2,13 +2,11 @@
 
 > Blocks tagged `runs-machine` on this page are machine-description source. `tools/check_examples.py` does not run them. RUNS-Spacewar's evaluator, `tools/runs.py`, holds [The PDP-1 description](#the-pdp-1-description) in code.
 
-A **machine description** is a text file, `<machine>.runs-machine`, that states the arithmetic of the games written for one machine: its number types and every operation on them, each with a body. That arithmetic is a rule of each game, by the test in [Rule or machine](./CONVERSION_PROCESS.md#rule-or-machine-the-one-test). The description is named for the machine because every game on that machine shares it. Registers, addresses, and other choices that change nothing belong to the [declarations](./DECLARATIONS.md). Every type RUNS source uses that is not a count, a condition, or an enum comes from the description. An evaluator reads it. RUNS-Spacewar's evaluator holds the PDP-1 description in code, and no `pdp1.runs-machine` file exists yet.
+A **machine description** is a text file, `<machine>.runs-machine`, that states the arithmetic of the games written for one machine: its number types and every operation on them, each with a body. That arithmetic is a rule of each game, by the test in [Rule or machine](./CONVERSION_PROCESS.md#rule-or-machine-the-one-test). The description is named for the machine because every game on that machine shares it: a conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches. Registers, addresses, and other choices that change nothing belong to the [declarations](./DECLARATIONS.md). Every type RUNS source uses that is not a count, a condition, or an enum comes from the description. An evaluator reads it. RUNS-Spacewar's evaluator holds the PDP-1 description in code, and no `pdp1.runs-machine` file exists yet.
 
 The owner described this arithmetic as a RUNS Processor written in DIGS. This page writes the operator bodies in the core, a separate small language. Which form they take is open.
 
-A machine description is game-neutral. Every game on that machine shares it. A conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches.
-
-A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. Every game states its arithmetic, converted or born in RUNS, because the arithmetic is a rule of the game; another arithmetic is another game (CONTEXT.md, DIGS). This page's rule that every program names one machine is the rule of this format.
+A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
 
 A machine description holds four things:
 
@@ -176,7 +174,7 @@ operator word_of(n: count) -> word as literal
 
 If the condition is false, the RUNS source is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS source.
 
-CONTEXT.md calls a condition of this kind a precondition (372-384), and also uses `requires:` for a top Network's inbound boundary Records (272-274). In an operator, `requires:` is always a condition.
+CONTEXT.md calls a condition of this kind a precondition (Precondition), and also uses `requires:` for a top Network's inbound boundary Records (Boundary Record). In an operator, `requires:` is always a condition.
 
 ### Bodies
 
@@ -271,7 +269,7 @@ processor add_high
   set score.high = high
 ```
 
-This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md, Processor). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (90-93).
+This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md, Processor). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (CONTEXT.md, Record).
 
 A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
@@ -391,7 +389,7 @@ The contract still holds. A Processor that reads through layout declares every R
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
 
-This contract is the older form, where a Processor declares its Records. In converted source a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md, Processor). A write here replaces part of a slot, which is allowed, because a Processor makes the change (90-93). How a read or write through layout is wired to inputs and outputs is open.
+This contract is the older form, where a Processor declares its Records. In converted source a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md, Processor). A write here replaces part of a slot, which is allowed, because a Processor makes the change (CONTEXT.md, Record). How a read or write through layout is wired to inputs and outputs is open.
 
 ### An example
 
