@@ -414,11 +414,17 @@ A reference the original kept as an address becomes an index into the collection
 
 `type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own source. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-Where the program runs data as code or jumps into the middle of a routine, the rule on that path is what the machine does with those bytes. It is part of the complete rules, and the RUNS source states it in a Processor. The instruction encodings that rebuild the bytes belong to the target's compiler.
+Where the program runs code it fixed for itself or jumps into the middle of a routine, the rule on that path is what the machine does with those bytes. It is part of the complete rules, and the RUNS source states it in a Processor. Code the player writes and the program then runs is the standard example of an exclusion, a stated departure of the edition ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
 A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves belong to the machine's declarations. [Declarations](./DECLARATIONS.md) states them. The description holds types, literals, operators, and address spaces.
+
+## What counts as the machine
+
+Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the rules. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Glitch).
+
+The form a description states this in is not settled, and this page defines none. The PDP-1 description below does not state it yet. RUNS-Spacewar checks against SIMH's PDP-1 simulator, whose CPU semantics it never alters.
 
 ## The PDP-1 description
 

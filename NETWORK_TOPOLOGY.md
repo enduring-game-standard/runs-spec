@@ -608,7 +608,11 @@ A Network has no `let`, `set`, `emit`, `return`, `continue`, or `jump`.
 
 One Network fires the game's Processors and the presentation's in one order. `plot` above is the presentation's, and `torpedo` runs it between the game's steps. With the presentation removed, `torpedo` is `count_down`, `explode`, `drift` twice and `show` in the same order.
 
+### Halts, hangs, and exit points
+
 A halt or a hang that the original reaches is part of the game's rules. A halt that halts again when continued is `stop`. A halt that the operator continues past emits what it shows and ends the tick, and a Record the tick produces makes the next tick the operator's answer. [Spacewar's rules and the machine](./README.md#spacewars-rules-and-the-machine) gives Spacewar's two halts.
+
+An exit point is not a halt. It is where play leaves an edition: the state and the step past which the edition states nothing and the original binary alone governs ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Exclusion). The original keeps running past it, so it is not `stop`, and the RUNS source is not wrong there, so it is not `unreachable`. RUNS has no form for an exit point yet. Which form a network file uses to state one is a work item. Spacewar's edition has no exclusions, so its source has no exit point.
 
 ### The Network loop
 
