@@ -8,7 +8,7 @@ The owner described this arithmetic as a RUNS Processor written in DIGS. This pa
 
 A machine description is game-neutral. Every game on that machine shares it. A conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches.
 
-A machine description is how RUNS source takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md) 40-49, 338-343). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. A conversion always states its arithmetic, because the arithmetic is a rule of the game (CONTEXT.md, Conversion). CONTEXT.md calls arithmetic determinism an opt-in contract for compliance in general. Whether a game born in RUNS may leave its arithmetic unstated is open. This page's rule that every program names one machine is the rule of this format.
+A machine description is how RUNS source takes up the arithmetic reach-contract ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description, which every game on that machine shares. A conversion always states its arithmetic, because the arithmetic is a rule of the game (CONTEXT.md, Conversion). CONTEXT.md lists arithmetic determinism as a reach-contract, separate from the DIGS core. Whether a game born in RUNS may leave its arithmetic unstated is open. This page's rule that every program names one machine is the rule of this format.
 
 A machine description holds four things:
 
@@ -271,7 +271,7 @@ processor add_high
   set score.high = high
 ```
 
-This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md 166-169). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (90-93).
+This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md, Processor). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (90-93).
 
 A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
@@ -391,7 +391,7 @@ The contract still holds. A Processor that reads through layout declares every R
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
 
-This contract is the older form, where a Processor declares its Records. In converted source a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md 166-169). A write here replaces part of a slot, which is allowed, because a Processor makes the change (90-93). How a read or write through layout is wired to inputs and outputs is open.
+This contract is the older form, where a Processor declares its Records. In converted source a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md, Processor). A write here replaces part of a slot, which is allowed, because a Processor makes the change (90-93). How a read or write through layout is wired to inputs and outputs is open.
 
 ### An example
 
