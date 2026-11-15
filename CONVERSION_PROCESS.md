@@ -419,7 +419,7 @@ The standard exclusion is code the player writes and the program then runs. Ocar
 
 ## 10. Archive the original with the edition
 
-The reference archive identifies the original binary by its hash and keeps what rebuilds it: the source it was assembled or compiled from, the assembler or compiler, and the emulator the conversion checked against. The binary itself stays out of the repository; the archive rebuilds it and verifies it against the hash. On its original machine the binary has everything, uninterpreted. Next to it the archive keeps the edition, its machine description, its declarations, its compiler, and its exclusion list.
+The reference archive identifies the original binary by its hash and keeps what rebuilds it: the source it was assembled or compiled from, the assembler or compiler, and the emulator the conversion checked against. A game's GitHub repo keeps the hash in place of the binary (owner, 2026-11-15: "a hash of the binary is a fine shortcut"); the binary is rebuilt and verified against the hash. On its original machine the binary has everything, uninterpreted. Next to it the archive keeps the edition, its machine description, its declarations, its compiler, and its exclusion list.
 
 - **Spacewar.** The original is `build/oracle.rim`, with sha256 `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`, assembled from `source/spacewar3.1_complete.txt`. The edition is `runs/`, the declarations are `pdp1/`, the compiler is `tools/runsc.py` with `tools/pdp1cc`, the emulator is SIMH, and the exclusion list is `docs/exclusions.md`. RUNS-Spacewar keeps the source and the hash, and builds the binary into `build/`, which git does not track.
 
