@@ -6,12 +6,12 @@ A `.runs` file declares the game's state and its structure. It holds types, enum
 
 ## The net
 
-A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and its wires and guards state the order of execution (CONTEXT.md, Network). A network file writes that graph down. It lists places, transitions, and arcs, with no separate list of steps. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
+A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and its wires and guards state the order of execution (GLOSSARY.md, Network). A network file writes that graph down. It lists places, transitions, and arcs, with no separate list of steps. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
 
 - No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record field that the Network names.
-- A Processor names no Record. It declares inputs and outputs, and they are its whole contract. Records and Processors are mutually opaque, and only the Network knows both sides (CONTEXT.md, Processor and Network). Two Processors with the same inputs and outputs can be swapped.
-- A Network that another uses as a transition is a **bundle**. It declares inputs and outputs the same way, and wires them on to the routines it runs. Only a top Network names Records. A bundle names only its inputs and outputs and places of its own, so it can be wired into another game. RUNS-Spacewar's network files still let a bundle list Record fields among its places, and its bundles do, so none of them can be shared yet ([Open questions](./README.md#open-questions)). Seen from outside, a bundle is a Sub-Network, a Network used as a Processor (CONTEXT.md, Sub-Network).
-- Processors connect only through the Network, by way of Records, and composition is bundling (CONTEXT.md, Network). An expression calls only the machine description's operators and the instruction constructors of `type insn`, never a routine.
+- A Processor names no Record. It declares inputs and outputs, and they are its whole contract. Records and Processors are mutually opaque, and only the Network knows both sides (GLOSSARY.md, Processor and Network). Two Processors with the same inputs and outputs can be swapped.
+- A Network that another uses as a transition is a **bundle**. It declares inputs and outputs the same way, and wires them on to the routines it runs. Only a top Network names Records. A bundle names only its inputs and outputs and places of its own, so it can be wired into another game. RUNS-Spacewar's network files still let a bundle list Record fields among its places, and its bundles do, so none of them can be shared yet ([Open questions](./README.md#open-questions)). Seen from outside, a bundle is a Sub-Network, a Network used as a Processor (GLOSSARY.md, Sub-Network).
+- Processors connect only through the Network, by way of Records, and composition is bundling (GLOSSARY.md, Network). An expression calls only the machine description's operators and the instruction constructors of `type insn`, never a routine.
 - A Network writes nothing. It wires each input and output of each transition to a place, chooses with guards, and repeats in loop bundles.
 - The original's order is part of the game, and the wires and guards carry it. [Order](#order) states the rule the loader enforces, and [Where the order comes from](./README.md#where-the-order-comes-from) says why it is the whole order.
 
@@ -143,7 +143,7 @@ processor show
 
 A game Record holds what only the rules use. An interface Record holds what the game and its presentation share: what the game writes for the presentation to show, and what the world writes for the game to read. A presentation Record belongs to one platform.
 
-The three kinds are the enduring-games pattern: `game` marks a Rules-region Record, `presentation` a Realization-region one, and `interface` a boundary Record (CONTEXT.md, Processor). The pattern is a convention, not a base primitive of RUNS (CONTEXT.md, Processor). RUNS-Spacewar's loader enforces it as this project's own rule.
+The three kinds are the enduring-games pattern: `game` marks a Rules-region Record, `presentation` a Realization-region one, and `interface` a boundary Record (GLOSSARY.md, Processor). The pattern is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor). RUNS-Spacewar's loader enforces it as this project's own rule.
 
 A Processor that touches a presentation Record is part of the presentation. Every other Processor is part of the game. The loader enforces three rules:
 
@@ -252,7 +252,7 @@ A network file has a header and three sections. The header is the `network` line
 | `network name(slot)` | A Network that takes a slot from the transition that runs it. Its arcs use the slot to name one entry of a collection, as in `table[slot].routine`. |
 | `in name: kind`, `out name: kind`, `inout name: kind` | An input or output, as on a Processor. Its kind is a type, an enum, `type[N]`, or the name of a Record or stream, which the input or output then holds whole. |
 | `counter name: type` | The counter of a loop bundle. [Loop bundles](#loop-bundles) describes its forms. |
-| `requires: a, b` and `produces: a, b` | On a top Network, the Records the host writes before it fires and reads after (CONTEXT.md, Boundary Record). They lower to `reads:` and `writes:`. |
+| `requires: a, b` and `produces: a, b` | On a top Network, the Records the host writes before it fires and reads after (GLOSSARY.md, Boundary Record). They lower to `reads:` and `writes:`. |
 | `requires: condition` | A precondition, as in [Headers](#headers). |
 | `assumes: place != member` | A precondition that a tested place never holds the member, so the test needs no side for it. |
 
@@ -276,7 +276,7 @@ Each input and output of each transition is wired exactly once, to a place of it
 
 ### Guards
 
-The guards on one place form a partition. Exactly one side is true (CONTEXT.md, Phase / Dispatch / Guard). The sides are one of these:
+The guards on one place form a partition. Exactly one side is true (GLOSSARY.md, Phase / Dispatch / Guard). The sides are one of these:
 
 - A test and its else: `when < 0` and `when else`.
 - An n-way dispatch: `when == m` for distinct members or numbers, then `when else`.
@@ -288,13 +288,13 @@ A guard only tests. A condition that needs arithmetic is a Processor that comput
 
 ### Order
 
-Order comes only from the wires and the guards, never from names or the order of lines. One tick of the Rules region is a DAG of firings, and any topological order of it yields identical results (CONTEXT.md, Network), so transitions that share no place may fire in parallel. RUNS-Spacewar's loader reads one order from the wires and guards, lowers the file to an inline Network in that order, and its evaluator fires one transition at a time. A transition fires after the transitions that give the places it reads, and after the transition that gives the place its guard tests. Several transitions may give one place. The wiring orders each two of them by a path from one to the other, or puts them on two sides of one test. The loader refuses two that it leaves unordered. A reader reads the value of the latest writer before it. A transition that takes a place and gives its result back to the same place fires after the place's earlier writers.
+Order comes only from the wires and the guards, never from names or the order of lines. One tick of the Rules region is a DAG of firings, and any topological order of it yields identical results (GLOSSARY.md, Network), so transitions that share no place may fire in parallel. RUNS-Spacewar's loader reads one order from the wires and guards, lowers the file to an inline Network in that order, and its evaluator fires one transition at a time. A transition fires after the transitions that give the places it reads, and after the transition that gives the place its guard tests. Several transitions may give one place. The wiring orders each two of them by a path from one to the other, or puts them on two sides of one test. The loader refuses two that it leaves unordered. A reader reads the value of the latest writer before it. A transition that takes a place and gives its result back to the same place fires after the place's earlier writers.
 
 A transition may be `stop` in place of a Processor. It halts the machine, as Spacewar does when its object table has no free slot.
 
 ### Loop bundles
 
-A loop bundle repeats its transitions. It declares one counter, `counter name: type`, an input set before the loop starts. A `count_down` transition takes the counter and gives it back one nearer its end, and no other transition writes it. Each pass fires every transition once and takes one token. The loop ends when the counter reaches 0, or after a pass in which a guard keeps the `count_down` from firing. Each `inout` of the bundle holds one value a pass, and the bundle's user sees the final values. The bundle's user sees one transition, never the cycle (CONTEXT.md, Network). A place that a parent wires to a counter is the loop bundle's alone: no other transition of the parent reads it.
+A loop bundle repeats its transitions. It declares one counter, `counter name: type`, an input set before the loop starts. A `count_down` transition takes the counter and gives it back one nearer its end, and no other transition writes it. Each pass fires every transition once and takes one token. The loop ends when the counter reaches 0, or after a pass in which a guard keeps the `count_down` from firing. Each `inout` of the bundle holds one value a pass, and the bundle's user sees the final values. The bundle's user sees one transition, never the cycle (GLOSSARY.md, Network). A place that a parent wires to a counter is the loop bundle's alone: no other transition of the parent reads it.
 
 This is Spacewar's wait for a ship in the star, `runs/spaceship/wait_in_star.net`, without its comment. It takes one token a pass and does nothing else:
 
@@ -317,7 +317,7 @@ Spacewar's counters hold minus the passes left, so its `count_down` adds 1. A co
 | `counter name: type` | The user sets the count. |
 | `counter name: type = -count` | The bundle states the most passes it makes, and no user sets it. It needs a guard on its `count_down`, which stops the loop before the count runs out. |
 | `counter name: type to end` | The counter counts up to an end, such as the slots of a collection. The passes may read it, and the user sees where it stopped. |
-| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a dispatch over a collection (CONTEXT.md, Phase / Dispatch / Guard). Each pass's transitions take it as their slot, and no user sets it. |
+| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a dispatch over a collection (GLOSSARY.md, Phase / Dispatch / Guard). Each pass's transitions take it as their slot, and no user sets it. |
 
 ### Grammar of a network file
 
@@ -435,7 +435,7 @@ network drift
 
 ### Inputs and outputs
 
-An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its Realization Processors (CONTEXT.md, Port).
+An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its Realization Processors (GLOSSARY.md, Port).
 
 | Direction | Meaning |
 |-----------|---------|
@@ -449,7 +449,7 @@ An input or output carries one place. Its kind says how much: a type of the mach
 
 A `run` wires each input and output of the routine it fires, one per indented line, `port: field`. The field is a field of a Record, a slot of one, a whole Record or stream, or an input or output of the Network that runs it. Each input and output is wired exactly once. A wire to a field of the same name may be left out: `run inertia` in `drift` wires `velocity` to `drift`'s input `velocity`, `position` to its `position`, and `acceleration` to its `acceleration`. `run torpedo` in `calc` leaves out every wire.
 
-A bundle is a Sub-Network: a Network used as a Processor from outside, with typed inputs and outputs at its boundary, whose content references its parts by ID. There is no privileged sub-network entity, only regions of one graph at different zoom levels (CONTEXT.md, Sub-Network and Network). In the inline form a bundle collapsed is `run name` and its wires. Expanded, it is its own lines. In a network file it is one transition, and expanded it is its own file. A bundle's input or output wired to an outer one resolves through to the field the top Network wires: the first `run drift` in `torpedo` moves `objects.dx[slot]` and `objects.x[slot]`, and the second moves `objects.dy[slot]` and `objects.y[slot]`. Any bundle, from one Processor up to the whole game, can be read and published alone, because its inputs and outputs are its whole contract.
+A bundle is a Sub-Network: a Network used as a Processor from outside, with typed inputs and outputs at its boundary, whose content references its parts by ID. There is no privileged sub-network entity, only regions of one graph at different zoom levels (GLOSSARY.md, Sub-Network and Network). In the inline form a bundle collapsed is `run name` and its wires. Expanded, it is its own lines. In a network file it is one transition, and expanded it is its own file. A bundle's input or output wired to an outer one resolves through to the field the top Network wires: the first `run drift` in `torpedo` moves `objects.dx[slot]` and `objects.x[slot]`, and the second moves `objects.dy[slot]` and `objects.y[slot]`. Any bundle, from one Processor up to the whole game, can be read and published alone, because its inputs and outputs are its whole contract.
 
 Values between Processors stay Records that the Network names. A `let` stays local to one Processor, and no local outlives the firing.
 
@@ -467,7 +467,7 @@ The loader still reads `owns name: kind`, a field that only one Network touches,
 | `writes: a, b` | Records and streams the top Network's contract says leave it. |
 | `requires: condition` | A precondition. If it is false when the Network fires, the RUNS source is wrong. |
 
-A network file names a top Network's boundary Records with `requires:`, the inbound Records the host writes before the tick, and `produces:`, the outbound ones it reads after (CONTEXT.md, Boundary Record). The loader lowers them to the inline form's `reads:` and `writes:`. A precondition is a DIGS boolean a routine declares (CONTEXT.md, Precondition). The header line shows which `requires:` is meant: a list of Records, or a condition.
+A network file names a top Network's boundary Records with `requires:`, the inbound Records the host writes before the tick, and `produces:`, the outbound ones it reads after (GLOSSARY.md, Boundary Record). The loader lowers them to the inline form's `reads:` and `writes:`. A precondition is a DIGS boolean a routine declares (GLOSSARY.md, Precondition). The header line shows which `requires:` is meant: a list of Records, or a condition.
 
 A bundle's contract is its inputs and outputs. [Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
 
@@ -488,7 +488,7 @@ A Network body may hold only these statements.
 | `wait` | Hand the firing to the world in the middle of a firing. The loader still reads it, from an earlier form. RUNS source does not use it: nothing computes between ticks, and a halt the operator continues past ends the tick. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-A Dispatch is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (CONTEXT.md, Phase / Dispatch / Guard). `for` has that shape. `loop at most N:` with `break` does not, and network files write a loop as a loop bundle instead. The inline form's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum; a network file's guards partition, as [Guards](#guards) states.
+A Dispatch is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Phase / Dispatch / Guard). `for` has that shape. `loop at most N:` with `break` does not, and network files write a loop as a loop bundle instead. The inline form's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum; a network file's guards partition, as [Guards](#guards) states.
 
 An inline guard compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs and outputs, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. Arithmetic on a value belongs in a Processor, as [Guards](#guards) states.
 
@@ -610,11 +610,11 @@ One Network fires the game's Processors and the presentation's in one order. `pl
 
 A halt or a hang that the original reaches is part of the game's rules. A halt that halts again when continued is `stop`. A halt that the operator continues past emits what it shows and ends the tick, and a Record the tick produces makes the next tick the operator's answer. [Spacewar's rules and the machine](./README.md#spacewars-rules-and-the-machine) gives Spacewar's two halts.
 
-An exit point is not a halt. It is where play leaves an edition: the state and the step past which the edition states nothing and the original binary alone governs ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Exclusion). The original keeps running past it, so it is not `stop`, and the RUNS source is not wrong there, so it is not `unreachable`. RUNS has no form for an exit point yet. Which form a network file uses to state one is a work item. Spacewar's edition has no exclusions, so its source has no exit point.
+An exit point is not a halt. It is where play leaves an edition: the state and the step past which the edition states nothing and the original binary alone governs ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Exclusion). The original keeps running past it, so it is not `stop`, and the RUNS source is not wrong there, so it is not `unreachable`. RUNS has no form for an exit point yet. Which form a network file uses to state one is a work item. Spacewar's edition has no exclusions, so its source has no exit point.
 
 ### The Network loop
 
-This is the one statement of the loop rule; other pages point here. Every loop is bounded, and the only unbounded loop is the tick feedback through `state:` Records (CONTEXT.md, Network). Every loop within a tick runs through a counter Record set before the loop starts: each pass consumes one token, and the loop ends when the counter reaches zero or a guard stops it. This is a rule for the whole graph, and a loop need not sit in a bundle of its own (owner, 2026-11-14). RUNS-Spacewar's loader reads a loop only as a [loop bundle](#loop-bundles) (a network file with a `counter` line), so every loop in its source is one; reading a counter loop anywhere in a graph is tool work still to do.
+This is the one statement of the loop rule; other pages point here. Every loop is bounded, and the only unbounded loop is the tick feedback through `state:` Records (GLOSSARY.md, Network). Every loop within a tick runs through a counter Record set before the loop starts: each pass consumes one token, and the loop ends when the counter reaches zero or a guard stops it. This is a rule for the whole graph, and a loop need not sit in a bundle of its own (owner, 2026-11-14). RUNS-Spacewar's loader reads a loop only as a [loop bundle](#loop-bundles) (a network file with a `counter` line), so every loop in its source is one; reading a counter loop anywhere in a graph is tool work still to do.
 
 The inline form, which network files lower to, has its own Network loop, described below.
 
@@ -642,7 +642,7 @@ network explosion
     run free_slot
 ```
 
-Here totality comes from the bound on the loop. A bounded fold has no `break` (CONTEXT.md, Phase / Dispatch / Guard), so a network file writes this loop as a loop bundle.
+Here totality comes from the bound on the loop. A bounded fold has no `break` (GLOSSARY.md, Phase / Dispatch / Guard), so a network file writes this loop as a loop bundle.
 
 ### The Processors of the example
 

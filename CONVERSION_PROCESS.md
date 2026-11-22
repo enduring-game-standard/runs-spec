@@ -14,7 +14,7 @@ Assemble the original source into the binary, the oracle. Lift the program to re
 
 The order of that last stage is open. The owner's stated wish is top-down: each deep module first becomes one large Processor, which gives the shape of the tick's order, and is then refactored into coherent groupings of the game's rules, apart from the presentation. The aim is a process as automatable as possible, so that running it on another game, such as DOOM, gives logical groupings of its rules. Spacewar went the other way, routine by routine, and the owner called that order wrong. Which order is better, and how to automate it, is not settled. The numbered steps below are the order Spacewar used.
 
-Two rules this guide holds a conversion to are conventions, not RUNS compliance. The split of a game into a Rules region and a Realization region is the enduring-games pattern, not a base-protocol primitive ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). Decomposing a routine into Processors is convention too: a monolith that passes every test vector is the game ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). A conversion that follows this guide chooses both, and its tools enforce them as its own rules.
+Two rules this guide holds a conversion to are conventions, not RUNS compliance. The split of a game into a Rules region and a Realization region is the enduring-games pattern, not a base-protocol primitive ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). Decomposing a routine into Processors is convention too: a monolith that passes every test vector is the game ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). A conversion that follows this guide chooses both, and its tools enforce them as its own rules.
 
 Three documents hold what this guide points to:
 
@@ -176,7 +176,7 @@ A routine word that names which code runs an object is a state. Make it an enum.
 
 ## 3. Map each routine to Processors and Networks
 
-The original passes values between routines in registers, in flags, on a stack, and in shared memory. RUNS passes every value through a Record field that a Network names. A Processor names no Record: it declares its inputs and outputs, its whole contract, and the Network that runs it wires each one to one field. Records and Processors know nothing of each other, and the Network is the only thing that knows both sides ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). Each Network is a network file of places, transitions, and arcs. A bundle is a Network that another uses as a transition, with inputs and outputs of its own. [Network files](./NETWORK_TOPOLOGY.md#network-files) states the syntax.
+The original passes values between routines in registers, in flags, on a stack, and in shared memory. RUNS passes every value through a Record field that a Network names. A Processor names no Record: it declares its inputs and outputs, its whole contract, and the Network that runs it wires each one to one field. Records and Processors know nothing of each other, and the Network is the only thing that knows both sides ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network). Each Network is a network file of places, transitions, and arcs. A bundle is a Network that another uses as a transition, with inputs and outputs of its own. [Network files](./NETWORK_TOPOLOGY.md#network-files) states the syntax.
 
 A conversion may start from an older form, which the loader still reads: Processors that name the Records they touch under `reads:` and `writes:`, and Networks that pass a slot with `run name(slot)`. Convert each to inputs, outputs, and wires, one interaction at a time. `slot` stays only in the Network that walks the slots. A bundle gets `objects.x[slot]` already chosen, as the original's pointers gave each routine "this object's x". A slot the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it, to an input or output of kind `word[N]`.
 
@@ -281,7 +281,7 @@ processor inertia                                           # diff
   set position = (velocity >> 3) + position
 ```
 
-The example uses the inline form of a Network, which the loader lowers each network file to. `inout` takes a field's value and gives the result back to the same field: only a Processor changes a Record, and it may put its result back where it took the value from ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Record).
+The example uses the inline form of a Network, which the loader lowers each network file to. `inout` takes a field's value and gives the result back to the same field: only a Processor changes a Record, and it may put its result back where it took the value from ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Record).
 
 `inertia` names no axis. The y axis is the same Processor, wired to `objects.dy[slot]` and `objects.y[slot]`, as the original expanded `diff` once an axis.
 
@@ -295,7 +295,7 @@ A loop bundle has one way in. If the original enters a loop in two places, state
 
 ## 4. Keep the order
 
-The order in which the original runs its rules is part of the game. A Network is a colored Petri net, and its wires and guards state the order of execution. Only a Processor changes a Record, and the wires and guards order any two Processors that touch one place. So any topological order of one tick gives the same results ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Record and Network).
+The order in which the original runs its rules is part of the game. A Network is a colored Petri net, and its wires and guards state the order of execution. Only a Processor changes a Record, and the wires and guards order any two Processors that touch one place. So any topological order of one tick gives the same results ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Record and Network).
 
 Two Processors can write the same Record. In Spacewar, `collision` and each object's calc routine both write the object table. The wiring orders them: the collisions give the table to a place, and the calc routine takes it from there. The loader refuses two writers of one place that the wiring leaves unordered. To keep the original's order:
 
@@ -308,7 +308,7 @@ Two Processors can write the same Record. In Spacewar, `collision` and each obje
 
 ## 5. Give each Record a kind, and split each Processor by it
 
-Each Record is the game's, the interface's, or the presentation's. `game` marks a Record of the Rules region, `presentation` one of the Realization region, and `interface` a boundary Record between them. The split is the enduring-games convention ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor), and RUNS-Spacewar's loader enforces it as that project's own rule. [Three kinds of Record](./NETWORK_TOPOLOGY.md#three-kinds-of-record) states the rules the loader enforces. The presentation then comes out and is replaced whole, with no change to a rule.
+Each Record is the game's, the interface's, or the presentation's. `game` marks a Record of the Rules region, `presentation` one of the Realization region, and `interface` a boundary Record between them. The split is the enduring-games convention ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor), and RUNS-Spacewar's loader enforces it as that project's own rule. [Three kinds of Record](./NETWORK_TOPOLOGY.md#three-kinds-of-record) states the rules the loader enforces. The presentation then comes out and is replaced whole, with no change to a rule.
 
 1. Decide each Record's kind by what its values reach, not by what the code was written for. A value is the game's if any rule can observe it. Spacewar's central star draws two random numbers each frame from the generator that hyperspace also uses, so the draws are the game's. The line the star draws from them is presentation.
 2. Put in the interface each Record that both sides need: what the game writes for the presentation to show, such as each object's position, and what comes in from the world, such as the controls.
@@ -321,7 +321,7 @@ Each Record is the game's, the interface's, or the presentation's. `game` marks 
    - Every Record with a field that has no initial value, and that a routine inside reads, goes in `requires:`. The loader refuses a top Network that misses one.
    - Spacewar's `tick` declares `requires: console, score, controls, outline_code, pause` and `produces: display, scoreboard, lights, pause`.
 
-   These Records are the boundary Records: the host writes the inbound ones before a tick and reads the outbound ones after ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Boundary Record). The loader lowers them to the inline form's `reads:` and `writes:`. On a routine, a `requires:` condition is a precondition, a DIGS boolean a Processor declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Precondition).
+   These Records are the boundary Records: the host writes the inbound ones before a tick and reads the outbound ones after ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Boundary Record). The loader lowers them to the inline form's `reads:` and `writes:`. On a routine, a `requires:` condition is a precondition, a DIGS boolean a Processor declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Precondition).
 8. Leave the devices out of RUNS. Which switch, joypad port, device register, light, or start address carries each field belongs to the declarations, and each machine's declarations state it in their events and devices (see [DECLARATIONS.md](./DECLARATIONS.md)). RUNS-Spacewar states all of them in `pdp1/devices.toml`.
 
 Timing, pacing, and the machine underneath are presentation unless a game value depends on them. A frame budget, a wait for vertical blank, and a delay loop are presentation. A rule that reads how many instructions ran, or which line the beam was on, reads timing, and timing becomes a rule or a value that comes in. Lag that reaches the rules comes in as a clock reading, an input.

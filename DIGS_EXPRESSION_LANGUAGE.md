@@ -6,9 +6,9 @@ DIGS is the language of Rules Processor bodies. Processors live in `.runs-prim` 
 
 A Processor is one rule of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
 
-A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (CONTEXT.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
+A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (GLOSSARY.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
 
-A Realization Processor's body is not DIGS, and the standard specifies no language for it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
+A Realization Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
 
 ## A running example
 
@@ -84,9 +84,9 @@ processor take_entry
 
 An input's or output's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole field of a collection of N, which the body indexes itself. The body uses its name as it would use the field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#inputs-and-outputs) states how a Network wires them, and the checks on each wire.
 
-A precondition is a DIGS boolean a Processor declares, and the guards that route to the Processor discharge it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Precondition). A top Network's inbound boundary Records are also named `requires:` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Boundary Record). The line shows which is meant: a condition on a Processor is a precondition.
+A precondition is a DIGS boolean a Processor declares, and the guards that route to the Processor discharge it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Precondition). A top Network's inbound boundary Records are also named `requires:` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Boundary Record). The line shows which is meant: a condition on a Processor is a precondition.
 
-A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A conversion converts it away: a Processor knows nothing of a Record, and only the Network knows both sides ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network).
+A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A conversion converts it away: a Processor knows nothing of a Record, and only the Network knows both sides ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network).
 
 `runs.check` checks each Processor's source before anything runs, and the evaluator checks each Record access again when it happens. A Processor in the older form that reads a Record in neither `reads:` nor `writes:` is an error, and so is one that writes a Record not in `writes:`:
 
@@ -106,7 +106,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and composition is bundling ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Network). A body computes with its own locals:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and composition is bundling ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network). A body computes with its own locals:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called
@@ -134,7 +134,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `emit stream: a, b, c` | Append one entry to a stream, one value per field in order. The Processor takes the stream as an `inout` of the stream's kind, such as `inout points: display`, and emits to it by that name. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-A loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Processor and Phase / Dispatch / Guard). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
+A loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor and Phase / Dispatch / Guard). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
 

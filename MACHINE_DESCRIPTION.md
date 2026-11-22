@@ -6,7 +6,7 @@ A **machine description** is a text file, `<machine>.runs-machine`, that states 
 
 The owner described this arithmetic as a RUNS Processor written in DIGS. This page writes the operator bodies in the core, a separate small language. Which form they take is open.
 
-A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. CONTEXT.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
+A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
 
 A machine description holds four things:
 
@@ -174,7 +174,7 @@ operator word_of(n: count) -> word as literal
 
 If the condition is false, the RUNS source is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS source.
 
-CONTEXT.md calls a condition of this kind a precondition (Precondition), and also uses `requires:` for a top Network's inbound boundary Records (Boundary Record). In an operator, `requires:` is always a condition.
+GLOSSARY.md calls a condition of this kind a precondition (Precondition), and also uses `requires:` for a top Network's inbound boundary Records (Boundary Record). In an operator, `requires:` is always a condition.
 
 ### Bodies
 
@@ -269,7 +269,7 @@ processor add_high
   set score.high = high
 ```
 
-This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (CONTEXT.md, Processor). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (CONTEXT.md, Record).
+This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (GLOSSARY.md, Processor). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (GLOSSARY.md, Record).
 
 A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
 
@@ -389,7 +389,7 @@ The contract still holds. A Processor that reads through layout declares every R
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
 
-This contract is the older form, where a Processor declares its Records. In converted source a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (CONTEXT.md, Processor). A write here replaces part of a slot, which is allowed, because a Processor makes the change (CONTEXT.md, Record). How a read or write through layout is wired to inputs and outputs is open.
+This contract is the older form, where a Processor declares its Records. In converted source a Processor declares no Records, and only the Network knows which Fields reach its inputs and outputs (GLOSSARY.md, Processor). A write here replaces part of a slot, which is allowed, because a Processor makes the change (GLOSSARY.md, Record). How a read or write through layout is wired to inputs and outputs is open.
 
 ### An example
 
@@ -420,7 +420,7 @@ A machine description says nothing about how the world drives the game. The even
 
 ## What counts as the machine
 
-Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the rules. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([CONTEXT.md](https://github.com/enduring-game-standard/.github/blob/main/CONTEXT.md), Glitch).
+Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the rules. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Glitch).
 
 The form a description states this in is not settled, and this page defines none. The PDP-1 description below does not state it yet. RUNS-Spacewar checks against SIMH's PDP-1 simulator, whose CPU semantics it never alters.
 
