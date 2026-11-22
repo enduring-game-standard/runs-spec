@@ -5,7 +5,7 @@ date: 2026-11-22
 
 # The split between game logic and Realization is a convention, not protocol
 
-The protocol is valid RUNS: Records, Processors, the Network, and DIGS. It hardens now and stays still. The conventions are standard RUNS: how compliant a program is, and what that unlocks (shared Records and Processors, side-by-side comparison, Ports, the Edition check). The split between game logic and Realization belongs to the conventions, because where the line falls is an editorial judgment: it sorts behaviors by evidence, names who decided, and a later editor may revise it (GLOSSARY.md, Edition). A protocol holds rules that stay still, and a judgment open to revision cannot be one. Bitcoin draws the same line between consensus rules (what is valid) and standardness policy (what nodes relay).
+The protocol is valid RUNS: Records, Processors, the Network, and DIGS. It hardens now and stays still. The conventions are standard RUNS: how compliant a program is, and what that unlocks (shared Records and Processors, side-by-side comparison, Ports, the check that the game logic run alone matches the original). The split between game logic and Realization belongs to the conventions, because where the line falls is a judgment a later editor may revise. A protocol holds rules that stay still, and a judgment open to revision cannot be one. Bitcoin draws the same line between consensus rules (what is valid) and standardness policy (what nodes relay).
 
 ## Considered options
 
@@ -14,5 +14,5 @@ The protocol is valid RUNS: Records, Processors, the Network, and DIGS. It harde
 ## Consequences
 
 - A program that rewrites an original line for line into Records, Processors, and Networks, with no split, is valid RUNS and not yet standard.
-- Port, Variant, and Edition are defined against the conventions, not the protocol.
+- Port and Variant are defined against the conventions, not the protocol.
 - This spec declares Record kinds today (`game`, `interface`, `presentation`; DIGS_EXPRESSION_LANGUAGE.md, the running example). They move to the conventions, or the spec marks them as convention.
