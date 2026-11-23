@@ -15,7 +15,7 @@ Fixed arithmetic, a static step bound, and a static memory footprint are not par
 
 **Reach-contracts**, declared in types:
 
-1. **Arithmetic**: the Game Logic declares every arithmetic it depends on (ADR-0002), so it gives identical bits on every machine. Floating point without it diverges across hardware; Quake demos desync, and fixed-point DOOM's do not.
+1. **Arithmetic**: the Game Logic declares every arithmetic it depends on (ADR-0002): a fixed-point algorithm, an exact float algorithm, or `float` as each machine computes it. Each declaration fixes exactly what it states; `float` leaves the bits to each machine, so Quake's demos desync between machines.
 2. **Static step bound**, optional: a ceiling on steps per tick for real-time targets. Totality does not imply it.
 3. **Static memory footprint**, optional: bounded lists give a RAM ceiling at bake time for small targets.
 
