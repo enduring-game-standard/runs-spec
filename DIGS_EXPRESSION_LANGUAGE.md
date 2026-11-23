@@ -2,13 +2,13 @@
 
 > Every accepted example on this page loads in RUNS-Spacewar's evaluator, `tools/runs.py`, passes `runs.check`, and runs. Every rejected example fails with the error its first line quotes. [Check the examples](./README.md#check-the-examples) says how.
 
-DIGS is the language of Rules Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
+DIGS is the language of game logic Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
 
-A Processor is one rule of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
+A Processor is one step of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
 
 A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (GLOSSARY.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
 
-A Realization Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
+A presentation Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
 
 ## A running example
 
@@ -126,7 +126,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `set target = e` | Update a local bound by `let`, an output (`out` or `inout`), or, in the older form, a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
 | `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS source is wrong. |
-| `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, by the original machine's rules. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
+| `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, as the original machine runs them. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
 | `for i in a .. b:` | Run the body once for each count from `a` to `b`, both included, in ascending order. |
 | `break` | Leave the innermost `loop`. |
 | `continue` | Start the next pass of the innermost `loop`. |
@@ -171,7 +171,7 @@ processor square_root                                       # sqt
     set root = root + 1
 ```
 
-`passes_left` and `root` are outputs, not locals, because the Network hands them on: a value one rule hands to the next is a field. The Network wires them to fields of `square_root_call`. Which words held them in the original, `sq1` and `sq2`, is the declarations' choice. A value that a Processor sets before it reads it, and never hands on, is a local.
+`passes_left` and `root` are outputs, not locals, because the Network hands them on: a value one Processor hands to the next is a field. The Network wires them to fields of `square_root_call`. Which words held them in the original, `sq1` and `sq2`, is the declarations' choice. A value that a Processor sets before it reads it, and never hands on, is a local.
 
 ## Expressions
 
@@ -235,7 +235,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 
 ## The word
 
-Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The `word` is the game's number. That it is 18 bits in ones' complement is a rule of Spacewar, which the RUNS source states exactly: the examples on this page use the PDP-1 description, where Spacewar's word is defined. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
+Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The `word` is the game's number. That it is 18 bits in ones' complement is part of Spacewar's game logic, which the RUNS source states exactly: the examples on this page use the PDP-1 description, where Spacewar's word is defined. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
 
 | Operation | What it does |
 |-----------|--------------|
@@ -258,7 +258,7 @@ The machine description's named operators are the only calls in RUNS. The PDP-1'
 | `dis(h, l, m)` | One step of the PDP-1's divide (`dis`). The result is a pair. |
 | `popcount(a)` | The number of bits set in `a`, as a count. |
 
-The explosion's dot shows the pair operators. The original builds an `scl` instruction from a random number and then executes it. RUNS states that rule as a shift by `popcount` places.
+The explosion's dot shows the pair operators. The original builds an `scl` instruction from a random number and then executes it. RUNS states that game logic as a shift by `popcount` places.
 
 ```runs-prim
 # The original builds an scl from the random number's low 9 bits; it
@@ -340,7 +340,7 @@ The pure form of `patched` is one Processor that adds the step to the value, the
 To read source that uses these forms:
 
 - A field of type `insn` holds one word of code. An expression builds an instruction by its name and operand, as in `lac(counter.value)` or `jmp(after_patch)`. An instruction with no operand, such as `cma`, is a bare name. Naming a word does not read it, so building `lac(counter.value)` is not a read of `counter`. `rcl` with one operand is the instruction. With three, it is the pair operator.
-- `jump code at most N` runs the words from `code` by the original machine's rules, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
+- `jump code at most N` runs the words from `code` as the original machine runs them, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
 - The parser needs `type insn` to read an instruction, so a file that builds instructions loads only together with the file that declares it. [Network topology](./NETWORK_TOPOLOGY.md#types) describes `type insn`.
 
 ## What the evaluator rejects

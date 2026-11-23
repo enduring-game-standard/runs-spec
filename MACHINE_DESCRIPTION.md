@@ -2,11 +2,11 @@
 
 > Blocks tagged `runs-machine` on this page are machine-description source. `tools/check_examples.py` does not run them. RUNS-Spacewar's evaluator, `tools/runs.py`, holds [The PDP-1 description](#the-pdp-1-description) in code.
 
-A **machine description** is a text file, `<machine>.runs-machine`, that states the arithmetic of the games written for one machine: its number types and every operation on them, each with a body. That arithmetic is a rule of each game, by the test in [Rule or machine](./CONVERSION_PROCESS.md#rule-or-machine-the-one-test). The description is named for the machine because every game on that machine shares it: a conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches. Registers, addresses, and other choices that change nothing belong to the [declarations](./DECLARATIONS.md). Every type RUNS source uses that is not a count, a condition, or an enum comes from the description. An evaluator reads it. RUNS-Spacewar's evaluator holds the PDP-1 description in code, and no `pdp1.runs-machine` file exists yet.
+A **machine description** is a text file, `<machine>.runs-machine`, that states the arithmetic of the games written for one machine: its number types and every operation on them, each with a body. That arithmetic is part of each game's logic, by the test in [Game logic or machine](./CONVERSION_PROCESS.md#game-logic-or-machine-the-one-test). The description is named for the machine because every game on that machine shares it: a conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches. Registers, addresses, and other choices that change nothing belong to the [declarations](./DECLARATIONS.md). Every type RUNS source uses that is not a count, a condition, or an enum comes from the description. An evaluator reads it. RUNS-Spacewar's evaluator holds the PDP-1 description in code, and no `pdp1.runs-machine` file exists yet.
 
 The owner described this arithmetic as a RUNS Processor written in DIGS. This page writes the operator bodies in the core, a separate small language. Which form they take is open.
 
-A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Rules region bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
+A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the game logic bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
 
 A machine description holds four things:
 
@@ -237,7 +237,7 @@ The core has no recursion, no unbounded loop, no floating point, no memory, no R
 
 A carry, an overflow, or a condition bit is not part of a type. A type is a bit vector, and an operator is a function of its operands. An operator that the machine runs with a flag takes the flag as an operand and returns the new flag in its result.
 
-A flag that one routine leaves and another reads is a value the original carried between rules. It is a field of the Record of the concern it belongs to, exactly as a value the original carried in AC or IO is. The operator returns it, and the RUNS source stores it. A flag that a routine sets and reads before it hands it on is a local.
+A flag that one routine leaves and another reads is a value the original carried between routines. It is a field of the Record of the concern it belongs to, exactly as a value the original carried in AC or IO is. The operator returns it, and the RUNS source stores it. A flag that a routine sets and reads before it hands it on is a local.
 
 A machine's add with carry shows the form. It returns the byte, the carry out, and the signed overflow:
 
@@ -346,7 +346,7 @@ A machine with several memories that play reads, such as a console's video memor
 
 ## Stated layout
 
-Where the program reads past the last entry of a collection, or reads one kind of object as another, the machine supplies the answer: whatever lies there in memory, the same every time. Where play observes that value, the layout is part of the complete rules ([README](./README.md#the-rules-are-complete-and-glitches-emerge-from-them)). The RUNS source states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
+Where the program reads past the last entry of a collection, or reads one kind of object as another, the machine supplies the answer: whatever lies there in memory, the same every time. Where play observes that value, the layout is part of the complete game logic ([README](./README.md#the-game-logic-is-complete-and-glitches-emerge-from-it)). The RUNS source states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
 
 ```text
 layout ram
@@ -412,7 +412,7 @@ A reference the original kept as an address becomes an index into the collection
 
 `type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own source. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-Where the program runs code it fixed for itself or jumps into the middle of a routine, the rule on that path is what the machine does with those bytes. It is part of the complete rules, and the RUNS source states it in a Processor. Code the player writes and the program then runs is the standard example of an exclusion, a stated departure of the edition ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). The instruction encodings that rebuild the bytes belong to the target's compiler.
+Where the program runs code it fixed for itself or jumps into the middle of a routine, the game logic on that path is what the machine does with those bytes. It is part of the complete game logic, and the RUNS source states it in a Processor. Code the player writes and the program then runs is the standard example of an exclusion, a stated departure of the edition ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
@@ -420,7 +420,7 @@ A machine description says nothing about how the world drives the game. The even
 
 ## What counts as the machine
 
-Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the rules. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Glitch).
+Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the game logic. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Glitch).
 
 The form a description states this in is not settled, and this page defines none. The PDP-1 description below does not state it yet. RUNS-Spacewar checks against SIMH's PDP-1 simulator, whose CPU semantics it never alters.
 

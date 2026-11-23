@@ -1,10 +1,10 @@
 # RUNS declarations
 
-A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is encoded in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no rule reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same Rules region on other hardware ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Port), leaves them behind with that machine's Realization Processors.
+A machine's **declarations** are the half of its package that never runs. They record where that machine keeps each value and how it calls each routine: where each routine and field lies, how each routine is entered and left, which register or word holds each value, how each enum member is encoded in bits, how code is laid out, which device carries each value that comes in or goes out, and the words the machine needs that no game logic reads. They record the original programmer's arbitrary choices, never game logic. They may name game Records, because they never run. A Port, the same game logic on other hardware ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Port), leaves them behind with that machine's presentation Processors.
 
 The name is **declarations**; the older name, binding, is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps the old name. `tools/runsc.py` reads the declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the declarations.
 
-Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. Each target machine has its own compiler, shared by every game for it. With the original machine's declarations, the original machine's compiler writes the original binary, byte for byte. Running the game on another machine is a Port: new presentation Processors and Records, that machine's declarations, and that machine's compiler. The compiler holds the machine's details and no game's logic or timing, and a change to it is a general rule for the machine, never a fix for one game ([The compiler](./README.md#the-compiler)). In GLOSSARY.md's words (Baking and Build), the compiler's work is baking and the image is a Build: one Rules region, one Realization region, one target.
+Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. Each target machine has its own compiler, shared by every game for it. With the original machine's declarations, the original machine's compiler writes the original binary, byte for byte. Running the game on another machine is a Port: new presentation Processors and Records, that machine's declarations, and that machine's compiler. The compiler holds the machine's details and no game's logic or timing, and a change to it is a general rule for the machine, never a fix for one game ([The compiler](./README.md#the-compiler)). The image is a build: one game logic, one presentation, one target.
 
 This document specifies the declarations in general terms, then shows each part on RUNS-Spacewar's PDP-1 declarations, `pdp1/` in [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar). Its `pdp1/README.md` defines the full PDP-1 vocabulary. Each section also carries a sketch of declarations that a conversion would design for the byte-addressed machine of [A second machine](./MACHINE_DESCRIPTION.md#a-second-machine-an-8-bit-byte-with-carry), `micro8`, with registers `A`, `X` and `Y`, a status register `P`, and a vertical-blank interrupt. The sketches illustrate the form. They are not a vocabulary any compiler reads.
 
@@ -52,7 +52,7 @@ A place is one of these:
 - A routine: a Processor or a Network compiled to one piece of code.
 - A list of Record fields laid out as data words, each holding its RUNS initial value in the target's encoding.
 - A range of slots of a collection's field, laid out the same way.
-- Reserved room: a count of words or bytes that no rule reads, such as room left for an operator's patches.
+- Reserved room: a count of words or bytes that no game logic reads, such as room left for an operator's patches.
 
 A unit's places lie in the order the unit file lists them. A place may state its address where the original fixes it. Every other address follows from the order and the sizes.
 
@@ -79,7 +79,7 @@ result = ["integer_multiply_call.product"]
 fields = ["multiply_call.partial"]
 ```
 
-`pdp1/outlines.toml` lays out each ship's outline as a range of slots, then five words of room no rule reads:
+`pdp1/outlines.toml` lays out each ship's outline as a range of slots, then five words of room no game logic reads:
 
 ```toml
 [[place]]
@@ -329,7 +329,7 @@ apart = ["bounce"]
 
 ### Events and devices
 
-**Events and devices** live in `devices.toml`. They are the Realization side of the boundary Records. Play sees the value of each field that comes in and goes out, never the device.
+**Events and devices** live in `devices.toml`. They are the presentation side of the boundary Records. Play sees the value of each field that comes in and goes out, never the device.
 
 `devices.toml` may say:
 
@@ -343,7 +343,7 @@ The compiler refuses:
 - Declarations with no `devices.toml`.
 - A top Network that no event fires, or an event that names a routine that is not a top Network.
 - A field that comes in from a device (a field of an inbound boundary Record, under a top Network's `requires:`, with no initial value, whose word the image does not hold) with no input device. A field whose value is the machine's power-on contents of a word the image leaves unloaded, such as Spacewar's scores, needs no device.
-- A device declared for a field of a game Record. Devices carry interface and presentation Records only: boundary Records and Realization-region Records. The Rules/Realization split is the enduring-games pattern, a `runs-library` convention and not a base-protocol primitive (GLOSSARY.md, Processor). This refusal is the conversion's own rule.
+- A device declared for a field of a game Record. Devices carry interface and presentation Records only: boundary Records and presentation Records. The split between game logic and presentation is the enduring-games pattern, a `runs-library` convention and not a base-protocol primitive (GLOSSARY.md, Processor). This refusal is the conversion's own rule.
 - A device the compiler does not know for this machine, or a device used two ways at once.
 
 **PDP-1.** `pdp1/devices.toml` declares the console's test word and control boxes, six sense switches, the two survival lights, and the two start addresses:
@@ -413,14 +413,14 @@ screen = { write = 0xD400 }
 
 ### Machine words
 
-**Machine words** are words the target machine or its operator needs that no rule reads: interrupt vectors, sequence-break words, the assembler's constants pool and variables pool, patch space, and the header bytes a cartridge needs.
+**Machine words** are words the target machine or its operator needs that no game logic reads: interrupt vectors, sequence-break words, the assembler's constants pool and variables pool, patch space, and the header bytes a cartridge needs.
 
 A machine word is a kind of place the compiler knows for its target, the way it knows the call instruction. A machine word may hold an address or a jump that the events determine, such as a start vector. It never holds a number the game computes with. A constant of the image is a number of the RUNS source, and a pool word is a field.
 
 The compiler refuses:
 
 - A machine word kind it does not know.
-- A machine word that a rule reads as a place.
+- A machine word that game logic reads as a place.
 - A machine word that a field's RUNS initial value would have to fill.
 
 **PDP-1.** `pdp1/tunables.toml` begins the tape with the sequence break words and the start vectors, which come from `devices.toml`. `pdp1/core_layout.toml` lays out the constants, the pool words, and the patch space, then places the object table (`table = true`), which is a place of Records, not a machine word:
@@ -465,7 +465,7 @@ at = 0xFFFA
 
 ## What the declarations may not say
 
-The declarations hold no game logic. It has no expressions, no statements, and no number the game computes with. Every word of the image that the rules decide comes from the RUNS source. Every RUNS reference compiles as the field it names.
+The declarations hold no game logic. It has no expressions, no statements, and no number the game computes with. Every word of the image that the game logic decides comes from the RUNS source. Every RUNS reference compiles as the field it names.
 
 A declaration's value is one of these:
 
@@ -589,7 +589,7 @@ Every host does these, and nothing else:
 
 An error is not an event of the game. A loop past its bound, a failed `requires:`, a read of an unknown field, or a reached `unreachable` means the RUNS source is wrong. A failed `requires:` is a violated precondition, which lies outside the determinism contract, and catching it is a tooling concern (GLOSSARY.md, Precondition). The host reports each error and the game does not go on.
 
-The host's choices belong to the Realization region. Two hosts that fire the same top Networks on the same events, with the same values coming in, give the same Records and the same streams.
+The host's choices belong to the presentation. Two hosts that fire the same top Networks on the same events, with the same values coming in, give the same Records and the same streams.
 
 **PDP-1.** The operator starts the machine at 4 or at 5. Each start fires its start Network once, `start_with_control_boxes` or `start_with_test_word`. Then the evaluator's host fires `tick` once a tick. On the PDP-1 the main loop starts again when a firing ends (`repeat = "frame"` names the routine its code jumps back to). Between games, `show_scores` emits the scores to the `scoreboard` stream, and the tick ends. On the PDP-1 that is `hlt`, which shows the two words on the console lights. The operator sets the test word and continues, and the next tick is the operator's answer, which `pause.phase` names. RUNS-Spacewar's top Network declares its boundary this way, in `runs/game/tick.net`:
 
@@ -627,5 +627,5 @@ A conversion on a machine with no declarations vocabulary designs its own. It st
 2. **Add a key only when the original's image needs it.** A key earns its place when the original's image makes a choice play cannot observe, and the compiler cannot derive that choice from the RUNS source's shape. If every routine of that shape makes the choice the same way, it is a compiler rule, not a key.
 3. **Give each key a refusal rule.** For each key the compiler states what it refuses: a name of the wrong kind, a value out of range, a choice the routine's shape does not allow, a storage the shared-words check rejects.
 4. **Cover each key with the mutation gate.** Delete it, delete each element, replace each value. Each mutant must change the image or be refused. A key whose mutants build the same image holds nothing, and the conversion removes it.
-5. **Keep devices in one file.** Every event and every device the original uses goes in `devices.toml`, but for the two kinds [Files and units](#files-and-units) lets a unit file hold. The Realization side of the declarations is then in one place.
+5. **Keep devices in one file.** Every event and every device the original uses goes in `devices.toml`, but for the two kinds [Files and units](#files-and-units) lets a unit file hold. The presentation side of the declarations is then in one place.
 6. **Record the count.** Once the image matches, the count of entries only shrinks, as [The declarations only shrink](#the-declarations-only-shrink) states.

@@ -8,7 +8,7 @@ A `.runs` file declares the game's state and its structure. It holds types, enum
 
 A Network is the game's colored Petri net. Records are the places, field values are the tokens, Processors are the transitions, and guarded arcs are the gates ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network). A Network is the explicit wiring of Record fields to Processors' inputs and outputs, and its wires and guards state the order of execution (GLOSSARY.md, Network). A network file writes that graph down. It lists places, transitions, and arcs, with no separate list of steps. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own. A tangle in the drawing is coupling in the code.
 
-- No value goes from one Processor straight to another. Each value one rule hands to the next goes through a Record field that the Network names.
+- No value goes from one Processor straight to another. Each value one Processor hands to the next goes through a Record field that the Network names.
 - A Processor names no Record. It declares inputs and outputs, and they are its whole contract. Records and Processors are mutually opaque, and only the Network knows both sides (GLOSSARY.md, Processor and Network). Two Processors with the same inputs and outputs can be swapped.
 - A Network that another uses as a transition is a **bundle**. It declares inputs and outputs the same way, and wires them on to the routines it runs. Only a top Network names Records. A bundle names only its inputs and outputs and places of its own, so it can be wired into another game. RUNS-Spacewar's network files still let a bundle list Record fields among its places, and its bundles do, so none of them can be shared yet ([Open questions](./README.md#open-questions)). Seen from outside, a bundle is a Sub-Network, a Network used as a Processor (GLOSSARY.md, Sub-Network).
 - Processors connect only through the Network, by way of Records, and composition is bundling (GLOSSARY.md, Network). An expression calls only the machine description's operators and the instruction constructors of `type insn`, never a routine.
@@ -29,9 +29,9 @@ A program's machine types come from its [machine description](./MACHINE_DESCRIPT
 machine pdp1
 ```
 
-For Spacewar, that is `word`, the game's number. That a word is 18 bits in ones' complement is a rule of Spacewar, and the RUNS source states it exactly: [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) gives each operator a body, and the [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) summarizes them.
+For Spacewar, that is `word`, the game's number. That a word is 18 bits in ones' complement is part of Spacewar's game logic, and the RUNS source states it exactly: [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) gives each operator a body, and the [DIGS reference](./DIGS_EXPRESSION_LANGUAGE.md#the-word) summarizes them.
 
-`type insn` is a word of code, and a field of type `insn` is impure. The language parses it only for source that keeps code in a Record, as an earlier RUNS-Spacewar outline did. `instructions:` lists the original machine's instructions that the source builds. The evaluator knows the rules of `lac`, `lio`, `dac`, `dio`, `add`, `sub`, `jmp`, `stf`, `clf`, `szf`, `rcl`, `cma`, `ioh`, and `dpy`, and refuses any other. `display:` names the stream that `dpy` plots on. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) says why the loader counts each use as an impurity, and [Instructions are not part of the description](./MACHINE_DESCRIPTION.md#instructions-are-not-part-of-the-description) says where instruction encodings belong.
+`type insn` is a word of code, and a field of type `insn` is impure. The language parses it only for source that keeps code in a Record, as an earlier RUNS-Spacewar outline did. `instructions:` lists the original machine's instructions that the source builds. The evaluator knows the behavior of `lac`, `lio`, `dac`, `dio`, `add`, `sub`, `jmp`, `stf`, `clf`, `szf`, `rcl`, `cma`, `ioh`, and `dpy`, and refuses any other. `display:` names the stream that `dpy` plots on. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) says why the loader counts each use as an impurity, and [Instructions are not part of the description](./MACHINE_DESCRIPTION.md#instructions-are-not-part-of-the-description) says where instruction encodings belong.
 
 ### Enums
 
@@ -107,7 +107,7 @@ game record spreads[4]
 - A field with no initial value is unknown until the game sets it or the world gives it. Reading it while it is unknown is an error. That is how the source says what comes in from outside the game, such as the console's switches and the words core held at power-on.
 - Global data is a Record like any other. RUNS has no separate kind for it.
 
-Records are organized by meaning, not by where the original kept a value. A value the original carried in a register from one rule to the next is a field of the Record of the concern it belongs to, named for what it means, as `warpage.acceleration` below. Which register held it is the machine's, and the declarations say so. [Map each routine to Processors and Networks](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) states the rule.
+Records are organized by meaning, not by where the original kept a value. A value the original carried in a register from one routine to the next is a field of the Record of the concern it belongs to, named for what it means, as `warpage.acceleration` below. Which register held it is the machine's, and the declarations say so. [Map each routine to Processors and Networks](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) states the rule.
 
 ### Streams
 
@@ -141,9 +141,9 @@ processor show
 
 ### Three kinds of Record
 
-A game Record holds what only the rules use. An interface Record holds what the game and its presentation share: what the game writes for the presentation to show, and what the world writes for the game to read. A presentation Record belongs to one platform.
+A game Record holds what only the game logic uses. An interface Record holds what the game and its presentation share: what the game writes for the presentation to show, and what the world writes for the game to read. A presentation Record belongs to one platform.
 
-The three kinds are the enduring-games pattern: `game` marks a Rules-region Record, `presentation` a Realization-region one, and `interface` a boundary Record (GLOSSARY.md, Processor). The pattern is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor). RUNS-Spacewar's loader enforces it as this project's own rule.
+The three kinds are the enduring-games pattern: `game` marks a game logic Record, `presentation` a presentation one, and `interface` a boundary Record (GLOSSARY.md, Processor). The pattern is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor). RUNS-Spacewar's loader enforces it as this project's own rule.
 
 A Processor that touches a presentation Record is part of the presentation. Every other Processor is part of the game. The loader enforces three rules:
 
@@ -185,7 +185,7 @@ processor plot_particle
   set particle.x = 0
 ```
 
-A game rule may not depend on the presentation's state through a guard either:
+Game logic may not depend on the presentation's state through a guard either:
 
 ```runs-rejected
 # rejected: network frame: a guard reads the presentation's budget, and the game's advance
@@ -288,7 +288,7 @@ A guard only tests. A condition that needs arithmetic is a Processor that comput
 
 ### Order
 
-Order comes only from the wires and the guards, never from names or the order of lines. One tick of the Rules region is a DAG of firings, and any topological order of it yields identical results (GLOSSARY.md, Network), so transitions that share no place may fire in parallel. RUNS-Spacewar's loader reads one order from the wires and guards, lowers the file to an inline Network in that order, and its evaluator fires one transition at a time. A transition fires after the transitions that give the places it reads, and after the transition that gives the place its guard tests. Several transitions may give one place. The wiring orders each two of them by a path from one to the other, or puts them on two sides of one test. The loader refuses two that it leaves unordered. A reader reads the value of the latest writer before it. A transition that takes a place and gives its result back to the same place fires after the place's earlier writers.
+Order comes only from the wires and the guards, never from names or the order of lines. One tick of the game logic is a DAG of firings, and any topological order of it yields identical results (GLOSSARY.md, Network), so transitions that share no place may fire in parallel. RUNS-Spacewar's loader reads one order from the wires and guards, lowers the file to an inline Network in that order, and its evaluator fires one transition at a time. A transition fires after the transitions that give the places it reads, and after the transition that gives the place its guard tests. Several transitions may give one place. The wiring orders each two of them by a path from one to the other, or puts them on two sides of one test. The loader refuses two that it leaves unordered. A reader reads the value of the latest writer before it. A transition that takes a place and gives its result back to the same place fires after the place's earlier writers.
 
 A transition may be `stop` in place of a Processor. It halts the machine, as Spacewar does when its object table has no free slot.
 
@@ -435,7 +435,7 @@ network drift
 
 ### Inputs and outputs
 
-An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its Realization Processors (GLOSSARY.md, Port).
+An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its presentation Processors (GLOSSARY.md, Port).
 
 | Direction | Meaning |
 |-----------|---------|
@@ -490,7 +490,7 @@ A Network body may hold only these statements.
 
 A Dispatch is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Phase / Dispatch / Guard). `for` has that shape. `loop at most N:` with `break` does not, and network files write a loop as a loop bundle instead. The inline form's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum; a network file's guards partition, as [Guards](#guards) states.
 
-An inline guard compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs and outputs, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. Arithmetic on a value belongs in a Processor, as [Guards](#guards) states.
+An inline guard compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs and outputs, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's arithmetic. Arithmetic inside a slot's index chooses a slot and is allowed. Arithmetic on a value belongs in a Processor, as [Guards](#guards) states.
 
 A `run` passes only wires. `slot` stays in the one Network that walks the slots, `frame` above, and a bundle gets `objects.x[slot]` already chosen. A slot that the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it. A `run` that passes a value instead of a wire, in the form a conversion starts from, is an impurity. The loader reports a guard that computes and a `run` that passes a value, and refuses them.
 
@@ -608,7 +608,7 @@ One Network fires the game's Processors and the presentation's in one order. `pl
 
 ### Halts, hangs, and exit points
 
-A halt or a hang that the original reaches is part of the game's rules. A halt that halts again when continued is `stop`. A halt that the operator continues past emits what it shows and ends the tick, and a Record the tick produces makes the next tick the operator's answer. [Spacewar's rules and the machine](./README.md#spacewars-rules-and-the-machine) gives Spacewar's two halts.
+A halt or a hang that the original reaches is part of the game logic. A halt that halts again when continued is `stop`. A halt that the operator continues past emits what it shows and ends the tick, and a Record the tick produces makes the next tick the operator's answer. [Spacewar's game logic and the machine](./README.md#spacewars-game-logic-and-the-machine) gives Spacewar's two halts.
 
 An exit point is not a halt. It is where play leaves an edition: the state and the step past which the edition states nothing and the original binary alone governs ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Exclusion). The original keeps running past it, so it is not `stop`, and the RUNS source is not wrong there, so it is not `unreachable`. RUNS has no form for an exit point yet. Which form a network file uses to state one is a work item. Spacewar's edition has no exclusions, so its source has no exit point.
 
