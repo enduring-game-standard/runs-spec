@@ -343,7 +343,7 @@ The compiler refuses:
 - Declarations with no `devices.toml`.
 - A top Network that no event fires, or an event that names a routine that is not a top Network.
 - A Field that comes in from a device (a Field of a Record under a top Network's `requires:`, with no initial value, whose word the image does not hold) with no input device. A Field whose value is the machine's power-on contents of a word the image leaves unloaded, such as Spacewar's scores, needs no device.
-- A device declared for a Field of a game Record. Devices carry interface and Presentation Records only: Interface Records and Presentation Records. The split between Game Logic and Presentation is the enduring-games pattern, a `runs-library` convention and not a base-protocol primitive (GLOSSARY.md, Processor). This refusal is the conversion's own rule.
+- A device declared for a Field of a game Record. Devices carry interface and Presentation Records only: Interface Records and Presentation Records. The split between Game Logic and Presentation is the enduring-games pattern, a `runs-library` convention and not a base-protocol primitive (GLOSSARY.md, Kind). This refusal is the conversion's own rule.
 - A device the compiler does not know for this machine, or a device used two ways at once.
 
 **PDP-1.** `pdp1/devices.toml` declares the console's test word and control boxes, six sense switches, the two survival lights, and the two start addresses:
