@@ -15,4 +15,4 @@ Game logic bodies are DIGS. Presentation bodies are written in whatever the targ
 
 - A Port rewrites the presentation in the target's language. EGS claims only the game logic and the Interface Records will still be readable in a century.
 - Network guards are DIGS expressions (ADR-0003). Whether guards inside a presentation are DIGS too is open until a real Port uses one; the lean is yes, because guards are wiring.
-- **Open**: how much a target's platform provides (a fantasy console's `draw_sprite` or a raw framebuffer) depends on where the Runtime sits (ADR-0002).
+- How much presentation a game needs depends on how much its machine provides: a fantasy console's `draw_sprite` leaves little, a raw framebuffer leaves a lot.

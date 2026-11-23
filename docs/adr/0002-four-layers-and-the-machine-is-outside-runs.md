@@ -22,4 +22,4 @@ A Conversion's goal is the game, not the machine the game shipped on. So the lin
 
 - `jump code at most N` stays in DIGS: it runs code the program wrote for itself, by the original machine's rules.
 - Super Mario World's source does not contain Flappy Bird, and its Conversion does not either.
-- **Open**: whether a Runtime (a browser, a console, a libretro core) is part of the machine or a layer of its own.
+- "Machine", "compiler", and "runtime" keep their ordinary computing meanings. A runtime environment (an OS, a browser, PICO-8) is part of the machine a binary targets.
