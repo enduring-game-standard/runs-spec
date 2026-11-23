@@ -217,7 +217,7 @@ Only the third could widen the boundary, and a conversion always resolves it by 
 
 ## The Declarations
 
-A machine's **Declarations** are the half of its package that never runs. They hold only choices that play cannot observe, such as where each routine and Field lies, which register carries a value, how an enum is encoded in bits, and which device carries each value that comes in or goes out. They record the original programmer's arbitrary choices, never Game Logic, and a Game Port leaves them behind with that machine's Presentation. Their count of entries only shrinks. [Declarations](./DECLARATIONS.md) is the reference. RUNS-Spacewar's PDP-1 Declarations are `pdp1/`.
+The original machine's **Declarations** are the half of its package that never runs. They hold only choices that play cannot observe, such as where each routine and Field lies, which register carries a value, how an enum is encoded in bits, and which device carries each value that comes in or goes out. They record the original programmer's arbitrary choices, never Game Logic, and a Game Port leaves them behind with that machine's Presentation. Their count of entries only shrinks. [Declarations](./DECLARATIONS.md) is the reference. RUNS-Spacewar's PDP-1 Declarations are `pdp1/`.
 
 ## The compiler
 
