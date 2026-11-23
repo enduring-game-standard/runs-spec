@@ -10,6 +10,14 @@ A body's semantics are single-assignment dataflow: a `set` that looks like reass
 
 A Presentation Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Presentation). RUNS-Spacewar writes its Presentation Processors in DIGS too, as `plot_particle` below shows.
 
+## What a body guarantees
+
+A DIGS body is pure: it reads only its inputs and writes only its outputs. It is total: it halts on every input. It is deterministic: its order of evaluation is fixed. It is inspectable: nothing in it is hidden, because every value enters and leaves by a declared input or output, and every loop states its bound.
+
+Every game declares its arithmetic in DIGS: its number types and their operations, typed like any value. A declaration states as much as the game chooses: a fixed-point algorithm, an exact float algorithm, or `float` as each machine computes it. All three are the same kind of declaration, and each fixes exactly what it states: `float` leaves the bits to each machine, so Quake's demos fall out of sync between machines. The arithmetic is Game Logic: it is to DOOM what the six-sided die is to Yahtzee, and DOOM computed with floats is not DOOM. No arithmetic declaration ranks above another, and `float` is a declaration like the others.
+
+A game may also declare a fixed bound on its running time or its memory, to reach machines that need one. Neither follows from totality: "total" means only that a body halts.
+
 ## A running example
 
 The examples on this page together form one program with one top Network, `demo`. The integer square root, the random number generator, and the explosion's dot are taken from RUNS-Spacewar. The plot is simplified to read one position instead of the object table.
