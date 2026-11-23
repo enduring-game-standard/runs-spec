@@ -2,7 +2,7 @@
 
 This guide converts an existing program on any machine to RUNS. Its worked example is `RUNS-Spacewar`, which converts Spacewar! 3.1 on the PDP-1. Each rule is stated for any machine first, then shown on Spacewar.
 
-A **conversion** reorganizes the original program, from its source, from code lifted from it, or from its machine code, into RUNS, and keeps the game exactly the same ([README](./README.md#a-conversion-is-not-a-re-vibe)). The RUNS source states the game logic completely, and the original's glitches emerge from it ([README](./README.md#the-game-logic-is-complete-and-glitches-emerge-from-it)). The binary stays the **original**, and the RUNS source is its **edition**, which carries everything by default and states each departure as an **exclusion** ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)).
+A **conversion** reorganizes the original program, from its source, from code lifted from it, or from its machine code, into RUNS, and keeps the game exactly the same ([README](./README.md#a-conversion-is-not-a-re-vibe)). The RUNS source states the game logic completely, and the original's glitches emerge from it ([README](./README.md#the-game-logic-is-complete-and-glitches-emerge-from-it)). The binary stays the **original**, and the RUNS source carries everything the program does by default ([README](./README.md#the-binary-is-the-original)).
 
 Where RUNS cannot say what the game does, RUNS grows. Every decision about the language that a conversion makes lands in this spec in the same step, with an example the conversion's tools run. A decision the spec does not state leaves the spec stale.
 
@@ -26,7 +26,7 @@ Three documents hold what this guide points to:
 
 You need:
 
-- **The original image.** The exact binary the original machine loads (a tape, a ROM, a disk image, an executable), with its hash. Each version of a game is its own game: each shipped binary is its own original, with its own edition. A conversion picks one image and reproduces that image. Spacewar's image is `build/oracle.rim`, assembled from `source/spacewar3.1_complete.txt`.
+- **The original image.** The exact binary the original machine loads (a tape, a ROM, a disk image, an executable), with its hash. Each version of a game is its own game: each shipped binary is its own original. A conversion picks one image and reproduces that image. Spacewar's image is `build/oracle.rim`, assembled from `source/spacewar3.1_complete.txt`.
 - **The original program, as source or as machine code.** Code with no source is converted from its machine code, through a disassembly. Spacewar has its source, and RUNS-Spacewar also lifted it to C, in `lift/`.
 - **A symbol table or a disassembly with names.** It names every address the conversion maps. Spacewar's is the assembler listing, `build/oracle.lst`.
 - **The original running in an emulator you can script and whose state you can read and write.** The running original is the authority. Reading the source is not. Spacewar uses SIMH's PDP-1 simulator, built into `build/pdp1` by `tools/build-simh.sh`.
@@ -353,15 +353,15 @@ Then decide each site:
 | A status flag a later instruction reads | A field that the operator returns and the RUNS source stores. |
 | Memory the image never loaded | An input, not game logic. Fields with no initial value, which the top Networks declare under `requires:`. |
 | A device register | A field with no initial value in an interface Record, which the top Networks declare under `requires:`. The devices in the declarations name the register. |
-| Code the program writes from its own data, then runs | Processors that state what the code computes. The compiler reproduces the code. The edition carries it. |
-| Code the player writes, then the program runs | Carried by default, like everything else. It is the standard example of an exclusion: see [9. Write the exclusion list](#9-write-the-exclusion-list). |
+| Code the program writes from its own data, then runs | Processors that state what the code computes. The compiler reproduces the code. It is game logic. |
+| Code the player writes, then the machine runs | The machine's behavior, not game logic. The conversion does not carry it ([README](./README.md#the-binary-is-the-original)). |
 | A jump into the middle of code | Game logic the machine supplied. A Processor states what the machine does on that path. The compiler reproduces the bytes. |
 | A halt or a hang | `stop`, or an `emit` and the end of the tick, with a Record that makes the next tick the operator's answer. |
 | An interrupt whose landing point play observes | Timing. Game logic the RUNS source states, or a value that comes in. |
 | A layout the game logic reaches | A `layout` declaration in the RUNS source, as [MACHINE_DESCRIPTION.md](./MACHINE_DESCRIPTION.md) defines it under stated layout. It places only the Records play reads through layout. |
 | A layout the game logic does not reach | Not part of the game logic. Leave it out of the RUNS source. |
 
-A read past an array is part of the game logic only if what it loads can change what happens in the game. Show that it cannot before you leave the layout out of the RUNS source. Patch the emulator so that every such read loads a value no game logic could use (a jump to address 0, an illegal opcode, a value that crashes the next instruction), and run the per-frame comparison. If every frame still matches the evaluator, play does not observe the read. Run the same check with the legitimate slots poisoned too, and confirm the emulator then fails, so the check can fail. Spacewar's main loop reads past the ships' two-word outline array for every torpedo slot. RUNS-Spacewar's `tools/check_frame.py` in its `poison` mode loads a jump to address 0 on every such read, and every frame with collisions still matches the evaluator. In its `poison-all` mode, the ships' own slots are poisoned too, and SIMH stops at once. What the read loads changes nothing in the game, so that layout is not part of the game logic, and the image's layout carries it. Where such a check cannot show that play never observes a read, the edition carries the read by default: state the layout. Leaving it out without that evidence would be an exclusion made in silence, which [9. Write the exclusion list](#9-write-the-exclusion-list) does not allow.
+A read past an array is part of the game logic only if what it loads can change what happens in the game. Show that it cannot before you leave the layout out of the RUNS source. Patch the emulator so that every such read loads a value no game logic could use (a jump to address 0, an illegal opcode, a value that crashes the next instruction), and run the per-frame comparison. If every frame still matches the evaluator, play does not observe the read. Run the same check with the legitimate slots poisoned too, and confirm the emulator then fails, so the check can fail. Spacewar's main loop reads past the ships' two-word outline array for every torpedo slot. RUNS-Spacewar's `tools/check_frame.py` in its `poison` mode loads a jump to address 0 on every such read, and every frame with collisions still matches the evaluator. In its `poison-all` mode, the ships' own slots are poisoned too, and SIMH stops at once. What the read loads changes nothing in the game, so that layout is not part of the game logic, and the image's layout carries it. Where such a check cannot show that play never observes a read, state the layout: the RUNS source carries everything the program does by default.
 
 A read past an array whose value play does observe makes the layout part of the complete game logic. State the layout with a `layout` declaration that places the array and what follows it, in the machine description's address space, by its unit and byte order. Then the evaluator reads past the array what the layout puts there, and the comparison checks test it.
 
@@ -401,29 +401,13 @@ A step is done when all of these pass:
 4. The checks of earlier steps still pass. In RUNS-Spacewar, `tools/check_all.sh` runs them.
 5. The count of entries in the declarations did not rise. Spacewar's check is `tools/check_declarations.py`.
 
-## 9. Write the exclusion list
+## 9. Archive the original
 
-The edition carries everything the original binary does. An exclusion is the one way to depart from it, and it is never a silence ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). Write the edition's exclusion list, even when it is empty.
+The reference archive identifies the original binary by its hash and keeps what rebuilds it: the source it was assembled or compiled from, the assembler or compiler, and the emulator the conversion checked against. A game's GitHub repo keeps the hash in place of the binary; the binary is rebuilt and verified against the hash. On its original machine the binary has everything, uninterpreted. Next to it the archive keeps the RUNS source, its machine description, its declarations, and its compiler.
 
-1. List each behavior the edition departs from. For each, state the exit point: the state and the step where play leaves the edition. Past it, the behavior is the binary's alone. RUNS has no form for an exit point in the source yet ([Network topology](./NETWORK_TOPOLOGY.md#halts-hangs-and-exit-points)).
-2. Give each exclusion its evidence: developer statements, the manual, speedrun categories, sequels, and the choices of port communities. Chocolate Doom's choices of which overflows to emulate are such evidence for DOOM.
-3. Name who decided each exclusion. Intent never decides silently. A later editor who disagrees makes another edition, and the binary does not change.
-4. When the list is empty, say so, with the evidence: the reach oracle's report, and the poison check for each read past an array the RUNS source leaves out.
-5. Check the edition against the list. The game logic, run alone against the binary, must match everywhere except the listed exclusions. RUNS-Spacewar has no such tool yet. Its `tools/check_frame.py alone` compares the game with the presentation removed against the whole program, and binary identity covers the rest.
+- **Spacewar.** The original is `build/oracle.rim`, with sha256 `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`, assembled from `source/spacewar3.1_complete.txt`. The RUNS source is `runs/`, the declarations are `pdp1/`, the compiler is `tools/runsc.py` with `tools/pdp1cc`, and the emulator is SIMH. RUNS-Spacewar keeps the source and the hash, and builds the binary into `build/`, which git does not track.
 
-The standard exclusion is code the player writes and the program then runs. Ocarina of Time's arbitrary code execution leaves the edition at the step where control jumps into bytes the player chose. Code the program fixes for itself is never excluded on that ground: Spacewar's outline code is the program's own, and the edition carries it.
-
-- **Spacewar.** `docs/exclusions.md` states that the list is empty. Play reaches only the word's own arithmetic, the one read past an array is shown unobserved by the poison check, and a player can give the program only switches and controls, never code.
-
-**Done when** the exclusion list exists, each entry has an exit point, evidence, and who decided it, and an empty list states its evidence.
-
-## 10. Archive the original with the edition
-
-The reference archive identifies the original binary by its hash and keeps what rebuilds it: the source it was assembled or compiled from, the assembler or compiler, and the emulator the conversion checked against. A game's GitHub repo keeps the hash in place of the binary (owner, 2026-11-15: "a hash of the binary is a fine shortcut"); the binary is rebuilt and verified against the hash. On its original machine the binary has everything, uninterpreted. Next to it the archive keeps the edition, its machine description, its declarations, its compiler, and its exclusion list.
-
-- **Spacewar.** The original is `build/oracle.rim`, with sha256 `8744e9c9c8540cc5075c5cbb91c56745a4305fdf8e7afca43bea2e9e04ca4bdf`, assembled from `source/spacewar3.1_complete.txt`. The edition is `runs/`, the declarations are `pdp1/`, the compiler is `tools/runsc.py` with `tools/pdp1cc`, the emulator is SIMH, and the exclusion list is `docs/exclusions.md`. RUNS-Spacewar keeps the source and the hash, and builds the binary into `build/`, which git does not track.
-
-**Done when** the archive holds the original's hash with the source and toolchain that rebuild it, and the edition with everything that rebuilds the original from it.
+**Done when** the archive holds the original's hash with the source and toolchain that rebuild it, and the RUNS source with everything that rebuilds the original from it.
 
 ## Assets
 

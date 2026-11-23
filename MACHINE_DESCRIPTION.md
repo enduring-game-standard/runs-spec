@@ -412,7 +412,7 @@ A reference the original kept as an address becomes an index into the collection
 
 `type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own source. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-Where the program runs code it fixed for itself or jumps into the middle of a routine, the game logic on that path is what the machine does with those bytes. It is part of the complete game logic, and the RUNS source states it in a Processor. Code the player writes and the program then runs is the standard example of an exclusion, a stated departure of the edition ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). The instruction encodings that rebuild the bytes belong to the target's compiler.
+Where the program runs code it fixed for itself or jumps into the middle of a routine, the game logic on that path is what the machine does with those bytes. It is part of the complete game logic, and the RUNS source states it in a Processor. Code the program never contained, such as code the player writes and the machine then runs, is the machine's behavior, not game logic ([README](./README.md#the-binary-is-the-original)). The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
