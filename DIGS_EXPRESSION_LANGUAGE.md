@@ -106,7 +106,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and composition is bundling ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network). A body computes with its own locals:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and Networks compose by nesting Sub-Networks ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Sub-Network). A body computes with its own locals:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called
