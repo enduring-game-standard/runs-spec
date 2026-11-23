@@ -15,4 +15,4 @@ The protocol is valid RUNS: Records, Processors, the Network, and DIGS. It harde
 
 - A program that rewrites an original line for line into Records, Processors, and Networks, with no split, is valid RUNS and not yet standard.
 - Port and Variant are defined against the conventions, not the protocol.
-- This spec declares Record kinds today (`game`, `interface`, `presentation`; DIGS_EXPRESSION_LANGUAGE.md, the running example). They move to the conventions, or the spec marks them as convention.
+- Kinds are a typesafe convention. From the Separated stage on, every Record and Processor declares Game Logic, Interface, or Presentation, and a check confirms they agree. The protocol ignores Kinds, so a program before the split declares none.
