@@ -19,7 +19,7 @@ Two rules this guide holds a conversion to are conventions, not RUNS compliance.
 Three documents hold what this guide points to:
 
 - [MACHINE_DESCRIPTION.md](./MACHINE_DESCRIPTION.md) defines the **machine description**, the `<machine>.runs-machine` file that states the original machine's types, literals, operators, and address spaces, and the `layout` declaration that states a layout play reads.
-- [DECLARATIONS.md](./DECLARATIONS.md) defines a machine's **Declarations**, the half of its package that never runs, which records where that machine keeps each value and how it calls each routine. It also states where a change goes, the host contract, and the mutation gate.
+- [DECLARATIONS.md](./DECLARATIONS.md) defines the original machine's **Declarations**, the half of its package that never runs, which records where that machine kept each value and how it called each routine. It also states where a change goes, the host contract, and the mutation gate.
 - [NETWORK_TOPOLOGY.md](./NETWORK_TOPOLOGY.md) and [DIGS_EXPRESSION_LANGUAGE.md](./DIGS_EXPRESSION_LANGUAGE.md) define the form of RUNS source.
 
 ## Before you start
