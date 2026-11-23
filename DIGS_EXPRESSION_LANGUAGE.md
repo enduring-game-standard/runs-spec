@@ -6,9 +6,9 @@ DIGS is the language of Game Logic Processor bodies. Processors live in `.runs-p
 
 A Processor computes its outputs from its inputs, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one Field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the Fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
 
-A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (GLOSSARY.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
+A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold. That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (GLOSSARY.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
 
-A Presentation Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). RUNS-Spacewar writes its Presentation Processors in DIGS too, as `plot_particle` below shows.
+A Presentation Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Presentation). RUNS-Spacewar writes its Presentation Processors in DIGS too, as `plot_particle` below shows.
 
 ## A running example
 
