@@ -416,7 +416,7 @@ Where the program runs code it fixed for itself or jumps into the middle of a ro
 
 ## The host is not part of the description
 
-A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves belong to the machine's Declarations. [Declarations](./DECLARATIONS.md) states them. The description holds types, literals, operators, and address spaces.
+A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves belong, for the original binary, to the original machine's Declarations. [Declarations](./DECLARATIONS.md) states them. The description holds types, literals, operators, and address spaces.
 
 ## What counts as the machine
 

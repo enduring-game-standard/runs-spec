@@ -52,7 +52,7 @@ enum light
   on
 ```
 
-Members are written without the enum's name, as in `objects.routine[slot] == torpedo`. An enum value can only be compared with `==` and `!=`. It has no number visible to RUNS. The target's Declarations decide how it is encoded.
+Members are written without the enum's name, as in `objects.routine[slot] == torpedo`. An enum value can only be compared with `==` and `!=`. It has no number visible to RUNS. The compiler decides how it is encoded, and for the original binary the original machine's Declarations decide.
 
 Two enums may share a member's name, as `switch` and `light` share `off` and `on`. The name means the member of the enum that the value is compared with or stored as.
 
@@ -453,7 +453,7 @@ A Sub-Network is a Network inside another, and the levels are zoom levels of one
 
 Values between Processors stay Records that the Network names. A `let` stays local to one Processor, and no local outlives the firing.
 
-Each distinct wiring of a routine is one copy of it: its source with each input and output replaced by the Field wired to it, by reference, the way the original's macros were expanded at each use (Spacewar's `diff` once an axis). The evaluator runs the copies, and a compiler emits one copy a wiring, or one shared subroutine where the target's Declarations call it, as [Declarations](./DECLARATIONS.md#conventions) states. The loader names each copy after its routine and a number, as in `inertia_1`.
+Each distinct wiring of a routine is one copy of it: its source with each input and output replaced by the Field wired to it, by reference, the way the original's macros were expanded at each use (Spacewar's `diff` once an axis). The evaluator runs the copies, and a compiler emits one copy a wiring, or one shared subroutine where the original machine's Declarations call it, as [Declarations](./DECLARATIONS.md#conventions) states. The loader names each copy after its routine and a number, as in `inertia_1`.
 
 ### A Network's own Field
 
@@ -777,7 +777,7 @@ network idle
   stop
 ```
 
-Which device holds each Field that comes in or goes out is not part of RUNS. Each machine's Declarations state it, under [Events and devices](./DECLARATIONS.md#events-and-devices).
+Which device holds each Field that comes in or goes out is not part of the Network. For the original binary the original machine's Declarations state it, under [Events and devices](./DECLARATIONS.md#events-and-devices), and a Game Port's Presentation Processors read and drive their own machine's devices.
 
 ## What the loader and the evaluator reject
 

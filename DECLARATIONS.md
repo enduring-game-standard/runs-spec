@@ -4,7 +4,7 @@ A machine's **Declarations** are the half of its package that never runs. They r
 
 The name is **Declarations**; the older name, binding, is retired, because it read as a layer where hard RUNS source could be solved. RUNS-Spacewar's code keeps the old name. `tools/runsc.py` reads the Declarations into its `Bindings` class and raises `BindError`, and `tools/pdp1.py` has a `Binding` class. Read each as the Declarations.
 
-Three inputs build an image. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The Declarations state how one target carries that RUNS source. A **compiler** for the target reads all three and writes the image. Each target machine has its own compiler, shared by every game for it. With the original machine's Declarations, the original machine's compiler writes the original binary, byte for byte. Running the game on another machine is a Game Port: new Presentation Processors and Records, that machine's Declarations, and that machine's compiler. The compiler holds the machine's details and no game's logic or timing, and a change to it is a general rule for the machine, never a fix for one game ([The compiler](./README.md#the-compiler)). The image is a build: one Game Logic, one Presentation, one target.
+Three inputs build the original binary. The RUNS source is the game. The [machine description](./MACHINE_DESCRIPTION.md) states the original machine's types and operators, which the RUNS source computes with. The Declarations state how the original machine carried that RUNS source. A **compiler** for that machine reads all three and writes the image. Each target machine has its own compiler, shared by every game for it. With the original machine's Declarations, the original machine's compiler writes the original binary, byte for byte. Running the game on another machine is a Game Port: new Presentation Processors and Records, and that machine's compiler, which places everything itself. The compiler holds the machine's details and no game's logic or timing, and a change to it is a general rule for the machine, never a fix for one game ([The compiler](./README.md#the-compiler)). The image is a build: one Game Logic, one Presentation, one target.
 
 This document specifies the Declarations in general terms, then shows each part on RUNS-Spacewar's PDP-1 Declarations, `pdp1/` in [RUNS-Spacewar](https://github.com/wScottSh/RUNS-Spacewar). Its `pdp1/README.md` defines the full PDP-1 vocabulary. Each section also carries a sketch of Declarations that a conversion would design for the byte-addressed machine of [A second machine](./MACHINE_DESCRIPTION.md#a-second-machine-an-8-bit-byte-with-carry), `micro8`, with registers `A`, `X` and `Y`, a status register `P`, and a vertical-blank interrupt. The sketches illustrate the form. They are not a vocabulary any compiler reads.
 
@@ -30,7 +30,7 @@ In RUNS-Spacewar the check is `tools/check_declarations.py`, and the Record is `
 
 ## Files and units
 
-A machine's Declarations are a set of TOML files in one directory.
+The original machine's Declarations are a set of TOML files in one directory.
 
 - **A unit file** declares one **unit**, a span of the image that the target's toolchain lays out as one piece. The original's source files, or its assembler's sections, usually decide the units. A unit file declares every routine and Field that lies in its span.
 - **`devices.toml`** declares the events and the devices. It is the only file that names a control, a light, an I/O port, a start address, or an interrupt. Two kinds of declaration may instead lie in a unit file, because they are instructions of that unit's code: the device of a stream, in the unit that emits to it, and an event that is a jump of that unit, such as a main loop that starts again when it ends.
@@ -492,7 +492,7 @@ In RUNS-Spacewar, `tools/runsc.py` is the compiler and raises `BindError`. Its s
 
 ## Layout rules keyed on RUNS shape
 
-Some choices of layout follow from the shape of the RUNS source alone, the same for every game on the target. They belong to the compiler for that target, not to any machine's Declarations. A declaration decides a choice that differs between routines. A compiler rule decides a choice that one shape of RUNS always makes the same way on that machine, and each rule that replaces Declarations lets the count fall.
+Some choices of layout follow from the shape of the RUNS source alone, the same for every game on the target. They belong to the compiler for that target, not to the Declarations. A declaration decides a choice that differs between routines. A compiler rule decides a choice that one shape of RUNS always makes the same way on that machine, and each rule that replaces Declarations lets the count fall.
 
 The PDP-1 compiler's rules are this kind. Among them:
 
