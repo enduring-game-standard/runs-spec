@@ -38,7 +38,7 @@ A re-vibe re-creates a game from an impression of it, and a re-vibe that is only
 4. **The Network is the net.** A Network is the game's colored Petri net, with Records as places, Field values as tokens, Processors as transitions, and guarded arcs as gates (GLOSSARY.md, Network). Its wires and Guards state when and in what order Processors fire. A drawing of RUNS transcribes the files and adds no grouping or layout rule of its own, so a tangle in the drawing is coupling in the code. [Where the order comes from](#where-the-order-comes-from) says how.
 5. **Variation is native.** A change to the Game Logic is a Variant: an edit to one Processor or one wire of the Network, not a modified copy of a program (GLOSSARY.md, Variant).
 6. **The source is pure.** Every interaction is a Record or a stateless Processor. Nothing else holds logic or values.
-7. **The Presentation is separable.** The Presentation can be removed and replaced whole without touching a game Record. This is the enduring-games pattern of Game Logic and Presentation joined by boundary Records. It is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor), and RUNS-Spacewar holds itself to it.
+7. **The Presentation is separable.** The Presentation can be removed and replaced whole without touching a game Record. This is the enduring-games pattern of Game Logic and Presentation joined by Interface Records. It is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor), and RUNS-Spacewar holds itself to it.
 
 ## Records, Processors, and Networks
 
@@ -50,7 +50,7 @@ RUNS has three parts.
 
 The game runs as a sequence of ticks. A top Network fires once a tick and runs to its end. Nothing computes between ticks. Whatever the original computed between two steps is a transition in the Network, wired so that it fires in its turn.
 
-In RUNS-Spacewar every Record is one of three kinds: a **game** Record, an **interface** Record, or a **Presentation** Record. `game` marks a Game Logic Record, `presentation` a Presentation one, and `interface` a boundary Record. [Three kinds of Record](#three-kinds-of-record) states the rules.
+In RUNS-Spacewar every Record is one of three kinds: a **game** Record, an **interface** Record, or a **Presentation** Record. `game` marks a Game Logic Record, `presentation` a Presentation one, and `interface` a Interface Record. [Three kinds of Record](#three-kinds-of-record) states the rules.
 
 Each value one Processor hands to the next goes through a Record Field that the Network names. Processors connect only through the Network, by way of Records, and composition is bundling (GLOSSARY.md, Network). A Processor never calls another. A body computes with locals, which never leave it, and its only calls are the operators of the [machine description](./MACHINE_DESCRIPTION.md), such as the PDP-1's `rcl`, `scr`, and `popcount`.
 
@@ -194,7 +194,7 @@ A conversion measures which machine behavior the program reaches, so that the RU
 
 ## Three kinds of Record
 
-Presentation is the screen, the sound, the controls, the pacing, and the machine underneath. It is rebuilt for each platform, and the game is not, so the Presentation has to come out whole with no change to the Game Logic. In RUNS-Spacewar every Record is one of three kinds, and each kind says which Processors may touch it. The kinds are the enduring-games pattern, Game Logic and Presentation joined only by boundary Records. The pattern is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor), and RUNS-Spacewar's loader enforces it as this project's own rule.
+Presentation is the screen, the sound, the controls and the pacing; the machine under them is outside RUNS. A Port rebuilds the Presentation for each machine and leaves the Game Logic alone, so the Presentation has to come out whole with no change to the Game Logic. The Conversion keeps the Original's Presentation whole: it is the record of how the Original looked, sounded and played, and each Port reads it to decide what to keep. Every Record has one of three Kinds, and each Kind says which Processors may touch it: Game Logic and Presentation meet only at Interface Records. Kinds are a convention, not a primitive of RUNS (GLOSSARY.md, Kind).
 
 - **A game Record** holds what only the Game Logic uses, such as Spacewar's fuel, the random number, or a ship's angular momentum.
 - **An Interface Record** holds what the game and its Presentation share. The game writes what there is to show, such as each object's position and heading. The world writes what comes in, such as the controls and the switches.
@@ -208,7 +208,7 @@ A conversion checks its split by running the game with every Presentation Proces
 
 The game touches the machine in four ways:
 
-1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a Field with no initial value, in an inbound boundary Record: the host writes it before a tick, and the top Network declares it under `requires:`. An outbound boundary Record is read after the tick and declared under `produces:` (GLOSSARY.md, Boundary Record). Spacewar's `tick` requires `console, score, controls, outline_code, pause` and produces `display, scoreboard, lights, pause`. The loader lowers them to `reads:` and `writes:`, the inline form's keywords. On a routine, `requires:` is a Precondition instead.
+1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a Field with no initial value, in an inbound Interface Record: the host writes it before a tick, and the top Network declares it under `requires:`. An outbound Interface Record is read after the tick and declared under `produces:` (GLOSSARY.md, Interface Record). Spacewar's `tick` requires `console, score, controls, outline_code, pause` and produces `display, scoreboard, lights, pause`. The loader lowers them to `reads:` and `writes:`, the inline form's keywords. On a routine, `requires:` is a Precondition instead.
 2. A value goes out to the Presentation. It is an Interface Record the game writes.
 3. The machine computes something the Game Logic then reads, such as a sum that wraps or a collision a video chip latches. That computation is Game Logic, and it moves inside the game.
 4. Timing. Where the game's state depends on it, timing becomes Game Logic or a value that comes in.

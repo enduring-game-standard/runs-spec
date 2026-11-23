@@ -174,7 +174,7 @@ operator word_of(n: count) -> word as literal
 
 If the condition is false, the RUNS source is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS source.
 
-GLOSSARY.md calls a condition of this kind a Precondition (Precondition), and also uses `requires:` for a top Network's inbound boundary Records (Boundary Record). In an operator, `requires:` is always a condition.
+GLOSSARY.md calls a condition of this kind a Precondition (Precondition), and also uses `requires:` for a top Network's inbound Interface Records (Interface Record). In an operator, `requires:` is always a condition.
 
 ### Bodies
 
