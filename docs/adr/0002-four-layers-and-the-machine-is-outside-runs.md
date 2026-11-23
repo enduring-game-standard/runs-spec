@@ -16,10 +16,10 @@ A Conversion's goal is the game, not the machine the game shipped on. So the lin
 
 ## Considered options
 
-- **Everything the original machine does the same way every time is game logic.** Rejected. It makes the original machine part of the game, so a game's rules would describe one machine's CPU and could not work on any device.
+- **Everything the original machine does the same way every time is game logic.** Rejected. It makes the original machine part of the game, so a game's game logic would describe one machine's CPU and could not work on any device.
 
 ## Consequences
 
-- `jump code at most N` stays in DIGS: it runs code the program wrote for itself, by the original machine's rules.
+- `jump code at most N` stays in DIGS: it runs code the program wrote for itself, the way the original machine runs it.
 - Super Mario World's source does not contain Flappy Bird, and its Conversion does not either.
 - "Machine", "compiler", and "runtime" keep their ordinary computing meanings. A runtime environment (an OS, a browser, PICO-8) is part of the machine a binary targets.
