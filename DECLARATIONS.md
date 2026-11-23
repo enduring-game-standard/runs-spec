@@ -503,7 +503,7 @@ The PDP-1 compiler's rules are this kind. Among them:
 - A `match` whose arms each run the routine their member is encoded as is a jump through the Field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read the inline form that Network files lower to, whose loops may exit mid-body with `break`. A bounded fold has a count fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Processor and Phase / Dispatch / Guard). RUNS-Spacewar writes a loop with a data-dependent exit as a loop bundle that a Guard stops, under the loop rule of [The Network loop](./NETWORK_TOPOLOGY.md#the-network-loop).
+These rules read the inline form that Network files lower to, whose loops may exit mid-body with `break`. A bounded loop has a count fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Processor and Network). RUNS-Spacewar writes a loop with a data-dependent exit as a loop bundle that a Guard stops, under the loop rule of [The Network loop](./NETWORK_TOPOLOGY.md#the-network-loop).
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 
@@ -571,7 +571,7 @@ Three kinds have their own rule:
 
 - **An initial value.** The gate plays games from power-on before and after, on the same inputs (RUNS-Spacewar plays 60 games of 30 frames). The mutant passes when every firing puts out the same and every game ends with the same Records, the changed Field aside.
 - **A deleted `requires:`.** A Precondition is the conversion's check that a firing is one the game makes, not code. The mutant passes when every firing the Precondition lets run is the same and the Precondition stops some firing. A Precondition that stops no firing says nothing, and the gate fails.
-- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which the inline form allows and a bounded fold does not (GLOSSARY.md, Phase / Dispatch / Guard).
+- **A loop bound.** A bound is RUNS's check that the loop ends, and it compiles to nothing. The gate does not build the mutant. It passes when every firing is the same or stops at the bound it states. Such a bound is a ceiling on a loop that may exit early, which the inline form allows and a bounded loop does not (GLOSSARY.md, Network).
 
 The PDP-1 instance is `tools/check_compiled.py`.
 

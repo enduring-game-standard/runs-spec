@@ -276,10 +276,10 @@ Each input and output of each transition is wired exactly once, to a place of it
 
 ### Guards
 
-The Guards on one place form a partition. Exactly one side is true (GLOSSARY.md, Phase / Dispatch / Guard). The sides are one of these:
+The Guards on one place form a partition. Exactly one side is true (GLOSSARY.md, Guard). The sides are one of these:
 
 - A test and its else: `when < 0` and `when else`.
-- An n-way Dispatch: `when == m` for distinct members or numbers, then `when else`.
+- An n-way dispatch: `when == m` for distinct members or numbers, then `when else`.
 - On an enum, `when == m` for every member, with no else. A member that an `assumes:` line rules out needs no side.
 
 A value of a type that is not an enum always needs its `when else`. A side `when != m` beside a side `when == m` is every side but `m`, not a second test. A test may compare its place with another place: `tally.first -> show when != tally.second`.
@@ -317,7 +317,7 @@ Spacewar's counters hold minus the passes left, so its `count_down` adds 1. A co
 | `counter name: type` | The user sets the count. |
 | `counter name: type = -count` | The bundle states the most passes it makes, and no user sets it. It needs a Guard on its `count_down`, which stops the loop before the count runs out. |
 | `counter name: type to end` | The counter counts up to an end, such as the slots of a collection. The passes may read it, and the user sees where it stopped. |
-| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a Dispatch over a collection (GLOSSARY.md, Phase / Dispatch / Guard). Each pass's transitions take it as their slot, and no user sets it. |
+| `counter name: first .. last` | The counter walks the slots from `first` to `last`, a bounded loop over a collection (GLOSSARY.md, Network). Each pass's transitions take it as their slot, and no user sets it. |
 
 ### Grammar of a Network file
 
@@ -488,7 +488,7 @@ A Network body may hold only these statements.
 | `wait` | Hand the firing to the world in the middle of a firing. The loader still reads it, from an earlier form. RUNS source does not use it: nothing computes between ticks, and a halt the operator continues past ends the tick. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-A Dispatch is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Phase / Dispatch / Guard). `for` has that shape. `loop at most N:` with `break` does not, and Network files write a loop as a loop bundle instead. The inline form's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum; a Network file's Guards partition, as [Guards](#guards) states.
+A bounded loop has a count fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Network). `for` has that shape. `loop at most N:` with `break` does not, and Network files write a loop as a loop bundle instead. The inline form's `if` fires its first true arm and may omit `else`, while `match` must cover every member of its enum; a Network file's Guards partition, as [Guards](#guards) states.
 
 An inline Guard compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's Guard tests its inputs and outputs, which are Fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's arithmetic. Arithmetic inside a slot's index chooses a slot and is allowed. Arithmetic on a value belongs in a Processor, as [Guards](#guards) states.
 
@@ -640,7 +640,7 @@ network explosion
     run free_slot
 ```
 
-Here totality comes from the bound on the loop. A bounded fold has no `break` (GLOSSARY.md, Phase / Dispatch / Guard), so a Network file writes this loop as a loop bundle.
+Here totality comes from the bound on the loop. A bounded loop has no `break` (GLOSSARY.md, Network), so a Network file writes this loop as a loop bundle.
 
 ### The Processors of the example
 

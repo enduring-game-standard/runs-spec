@@ -134,7 +134,7 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 | `emit stream: a, b, c` | Append one entry to a stream, one value per Field in order. The Processor takes the stream as an `inout` of the stream's kind, such as `inout points: display`, and emits to it by that name. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-A loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor and Phase / Dispatch / Guard). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
+A loop in a body is a bounded loop, whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor and Network). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
 
