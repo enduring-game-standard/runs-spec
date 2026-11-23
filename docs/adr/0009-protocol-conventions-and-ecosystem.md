@@ -9,7 +9,7 @@ RUNS has three tiers:
 
 - **Protocol**: Records, Fields, Processors, Networks, DIGS, and the reservation of `runs:`. Valid RUNS. It changes rarely. It lives in this repo.
 - **Conventions**: recommended Record shapes and Processor signatures, naming, the manifest format, and namespace governance. Standard RUNS. It lives in runs-library.
-- **Ecosystem**: Bundles on the commons, published as Nostr events.
+- **Ecosystem**: bundles on the commons, published as Nostr events.
 
 Only the standard defines `runs:` keys. A program that uses one uses the standard's exact keys, types, and meaning. Using `runs:` is optional: a game built on its own prefix, such as `spacewar:`, is valid RUNS.
 
