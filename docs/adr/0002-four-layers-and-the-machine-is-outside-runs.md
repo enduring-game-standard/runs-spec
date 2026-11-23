@@ -3,13 +3,13 @@ status: accepted
 date: 2026-11-22
 ---
 
-# Four layers: game logic, Realization, compiler, and the machine, which is outside RUNS
+# Four layers: game logic, presentation, compiler, and the machine, which is outside RUNS
 
 A game in RUNS has three layers, and it runs on a fourth that RUNS does not describe:
 
 - **Game logic**: Processors in DIGS that work on any device. Every arithmetic they depend on is declared in their types, so they stay pure.
-- **Realization**: the machine-specific software that connects the game logic to one machine's devices. It follows the machine's conventions; it does not encode the machine.
-- **Compiler**: one per machine. It takes game logic and a Realization and makes a build for that machine.
+- **Presentation**: everything that is not game logic or an Interface Record. It is the machine-specific software that reads one machine's inputs and drives its outputs. It follows the machine's conventions; it does not encode the machine.
+- **Compiler**: one per machine. It takes game logic and a presentation and makes a build for that machine.
 - **Machine**: the hardware, or an emulator of it, that everything runs on. RUNS says nothing about it.
 
 A Conversion's goal is the game, not the machine the game shipped on. So the line between game logic and machine follows the program. How the program's own operations behave on the hardware is game logic, declared in RUNS: arithmetic overflow, memory past an array, code the program writes for itself. Code the program never contained, such as bytes a player writes and the machine then runs, is the machine's behavior. A Conversion does not carry it, and a build that cannot run it changes no game logic, so it is not a Variant.

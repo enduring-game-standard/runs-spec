@@ -22,7 +22,7 @@ Fixed arithmetic, a static step bound, and a static memory footprint are not par
 ## Considered options
 
 - **Bounded lists required.** Rejected. Determinism does not need them, and they make games with unbounded deterministic state impossible to express.
-- **Unbounded state moved to the Realization.** Rejected. It puts deterministic game logic on the side exempt from determinism.
+- **Unbounded state moved to the presentation.** Rejected. It puts deterministic game logic on the side exempt from determinism.
 
 ## Consequences
 

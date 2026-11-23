@@ -12,7 +12,7 @@ The colored Petri net pattern RUNS is built on is not deterministic by itself: w
 
 Given both, one tick of the game logic is a DAG, and every topological order of it yields identical results. Two Processors the DAG leaves unordered touch no shared Record, so they may run in parallel. The loop across ticks is in the wiring; any other repetition is inside a Processor, where DIGS totality bounds it.
 
-Confluence holds for the game logic only. The Realization uses the same wiring but is exempt (ADR-0006).
+Confluence holds for the game logic only. The presentation uses the same wiring but is exempt (ADR-0006).
 
 ## Consequences
 

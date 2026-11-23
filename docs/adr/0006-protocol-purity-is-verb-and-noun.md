@@ -9,9 +9,9 @@ date: 2026-06-06
 
 ## Consequences
 
-- A game's Processors split into game logic (DIGS, deterministic, works on any device) and Realization (machine-specific I/O: timing and input in, rendering and audio out, exempt from determinism).
+- A game's Processors split into game logic (DIGS, deterministic, works on any device) and presentation (machine-specific I/O: timing and input in, rendering and audio out, exempt from determinism).
 - The two sides meet only at Interface Records. A Record is inert data and belongs to neither side; a Processor at the seam would have to pick a side, and would then be the first Processor of that side. Any translation is a Processor on one side, up to the seam.
-- Two independent swaps follow: replace game logic Processors and you have a **Variant**; replace the Realization and you have a **Port**.
+- Two independent swaps follow: replace game logic Processors and you have a **Variant**; replace the presentation and you have a **Port**.
 - A Port keeps the game logic bit for bit, so its reach-contracts too (ADR-0012). A target that cannot hold them needs changed game logic, which makes the result a Variant.
-- The names are functional, not implementation names: "game logic" and "Realization", not "DIGS" and "machine".
-- Revisit against the first game with two Realizations of one game logic.
+- The names are functional, not implementation names: "game logic" and "presentation", not "DIGS" and "machine".
+- Revisit against the first game with two presentations of one game logic.
