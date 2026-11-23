@@ -252,7 +252,7 @@ A Network file has a header and three sections. The header is the `network` line
 | `network name(slot)` | A Network that takes a slot from the transition that runs it. Its arcs use the slot to name one entry of a collection, as in `table[slot].routine`. |
 | `in name: kind`, `out name: kind`, `inout name: kind` | An input or output, as on a Processor. Its kind is a type, an enum, `type[N]`, or the name of a Record or stream, which the input or output then holds whole. |
 | `counter name: type` | The counter of a loop bundle. [Loop bundles](#loop-bundles) describes its forms. |
-| `requires: a, b` and `produces: a, b` | On a top Network, the Records the host writes before it fires and reads after (GLOSSARY.md, Interface Record). They lower to `reads:` and `writes:`. |
+| `requires: a, b` and `produces: a, b` | On a top Network, the Records the host writes before it fires and reads after: the program's inputs and outputs. They lower to `reads:` and `writes:`. |
 | `requires: condition` | A Precondition, as in [Headers](#headers). |
 | `assumes: place != member` | A Precondition that a tested place never holds the member, so the test needs no side for it. |
 
@@ -467,7 +467,7 @@ The loader still reads `owns name: kind`, a Field that only one Network touches,
 | `writes: a, b` | Records and streams the top Network's contract says leave it. |
 | `requires: condition` | A Precondition. If it is false when the Network fires, the RUNS source is wrong. |
 
-A Network file names a top Network's Interface Records with `requires:`, the inbound Records the host writes before the tick, and `produces:`, the outbound ones it reads after (GLOSSARY.md, Interface Record). The loader lowers them to the inline form's `reads:` and `writes:`. A Precondition is a DIGS boolean a routine declares (GLOSSARY.md, Precondition). The header line shows which `requires:` is meant: a list of Records, or a condition.
+A Network file names a top Network's inputs and outputs with `requires:`, the Records the host writes before the tick, and `produces:`, the ones it reads after. They cross between the program and the machine, and their Kinds may be any of the three. The loader lowers them to the inline form's `reads:` and `writes:`. A Precondition is a DIGS boolean a routine declares (GLOSSARY.md, Precondition). The header line shows which `requires:` is meant: a list of Records, or a condition.
 
 A bundle's contract is its inputs and outputs. [Network contracts](#network-contracts) describes what the loader checks about `reads:` and `writes:`.
 

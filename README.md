@@ -208,7 +208,7 @@ A conversion checks its split by running the game with every Presentation Proces
 
 The game touches the machine in four ways:
 
-1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a Field with no initial value, in an inbound Interface Record: the host writes it before a tick, and the top Network declares it under `requires:`. An outbound Interface Record is read after the tick and declared under `produces:` (GLOSSARY.md, Interface Record). Spacewar's `tick` requires `console, score, controls, outline_code, pause` and produces `display, scoreboard, lights, pause`. The loader lowers them to `reads:` and `writes:`, the inline form's keywords. On a routine, `requires:` is a Precondition instead.
+1. A value comes in, such as the controls, a clock, or the contents of core at power-on. It is a Field with no initial value, in a Record the host writes before a tick, which the top Network declares under `requires:`. An outbound Interface Record is read after the tick and declared under `produces:` (GLOSSARY.md, Interface Record). Spacewar's `tick` requires `console, score, controls, outline_code, pause` and produces `display, scoreboard, lights, pause`. The loader lowers them to `reads:` and `writes:`, the inline form's keywords. On a routine, `requires:` is a Precondition instead.
 2. A value goes out to the Presentation. It is an Interface Record the game writes.
 3. The machine computes something the Game Logic then reads, such as a sum that wraps or a collision a video chip latches. That computation is Game Logic, and it moves inside the game.
 4. Timing. Where the game's state depends on it, timing becomes Game Logic or a value that comes in.

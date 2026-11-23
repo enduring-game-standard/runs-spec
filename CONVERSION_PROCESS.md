@@ -321,7 +321,7 @@ Each Record is the game's, the interface's, or the Presentation's. `game` marks 
    - Every Record with a Field that has no initial value, and that a routine inside reads, goes in `requires:`. The loader refuses a top Network that misses one.
    - Spacewar's `tick` declares `requires: console, score, controls, outline_code, pause` and `produces: display, scoreboard, lights, pause`.
 
-   These Records are the Interface Records: the host writes the inbound ones before a tick and reads the outbound ones after ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Interface Record). The loader lowers them to the inline form's `reads:` and `writes:`. On a routine, a `requires:` condition is a Precondition, a DIGS boolean a Processor declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Precondition).
+   These are the program's inputs and outputs, not its Interface Records: the host writes the inputs before a tick and reads the outputs after, and their Kinds may be any of the three. The loader lowers them to the inline form's `reads:` and `writes:`. On a routine, a `requires:` condition is a Precondition, a DIGS boolean a Processor declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Precondition).
 8. Leave the devices out of RUNS. Which switch, joypad port, device register, light, or start address carries each Field belongs to the Declarations, and each machine's Declarations state it in their events and devices (see [DECLARATIONS.md](./DECLARATIONS.md)). RUNS-Spacewar states all of them in `pdp1/devices.toml`.
 
 Timing, pacing, and the machine underneath are Presentation unless a game value depends on them. A frame budget, a wait for vertical blank, and a delay loop are Presentation. Game Logic that reads how many instructions ran, or which line the beam was on, reads timing, and timing becomes Game Logic or a value that comes in. Lag that reaches the Game Logic comes in as a clock reading, an input.
@@ -352,7 +352,7 @@ Then decide each site:
 | The machine's arithmetic | Nothing more. The machine description's operators state it. |
 | A status flag a later instruction reads | A Field that the operator returns and the RUNS source stores. |
 | Memory the image never loaded | An input, not Game Logic. Fields with no initial value, which the top Networks declare under `requires:`. |
-| A device register | A Field with no initial value in an Interface Record, which the top Networks declare under `requires:`. The devices in the Declarations name the register. |
+| A device register | A Field with no initial value in a Record the top Networks declare under `requires:`. The devices in the Declarations name the register. |
 | Code the program writes from its own data, then runs | Processors that state what the code computes. The compiler reproduces the code. It is Game Logic. |
 | Code the player writes, then the machine runs | The machine's behavior, not Game Logic. The conversion does not carry it ([README](./README.md#the-binary-is-the-original)). |
 | A jump into the middle of code | Game Logic the machine supplied. A Processor states what the machine does on that path. The compiler reproduces the bytes. |

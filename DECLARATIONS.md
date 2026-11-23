@@ -342,7 +342,7 @@ The compiler refuses:
 
 - Declarations with no `devices.toml`.
 - A top Network that no event fires, or an event that names a routine that is not a top Network.
-- A Field that comes in from a device (a Field of an inbound Interface Record, under a top Network's `requires:`, with no initial value, whose word the image does not hold) with no input device. A Field whose value is the machine's power-on contents of a word the image leaves unloaded, such as Spacewar's scores, needs no device.
+- A Field that comes in from a device (a Field of a Record under a top Network's `requires:`, with no initial value, whose word the image does not hold) with no input device. A Field whose value is the machine's power-on contents of a word the image leaves unloaded, such as Spacewar's scores, needs no device.
 - A device declared for a Field of a game Record. Devices carry interface and Presentation Records only: Interface Records and Presentation Records. The split between Game Logic and Presentation is the enduring-games pattern, a `runs-library` convention and not a base-protocol primitive (GLOSSARY.md, Processor). This refusal is the conversion's own rule.
 - A device the compiler does not know for this machine, or a device used two ways at once.
 
@@ -530,7 +530,7 @@ The gate makes each of these, one at a time:
 - **Preconditions.** Each `requires:` deleted.
 - **Loop bounds.** Each loop's bound mutated as a number, a Field, an operator, or a member.
 
-Contract entries belong to the older form. In converted source a Processor declares no Records (GLOSSARY.md, Processor). `requires:` on a top Network's header names its inbound Interface Records (GLOSSARY.md, Interface Record). On a routine, a `requires:` condition is a Precondition, a DIGS boolean a Processor declares (GLOSSARY.md, Precondition), and only that kind is mutated here.
+Contract entries belong to the older form. In converted source a Processor declares no Records (GLOSSARY.md, Processor). `requires:` on a top Network's header names its inputs. On a routine, a `requires:` condition is a Precondition, a DIGS boolean a Processor declares (GLOSSARY.md, Precondition), and only that kind is mutated here.
 
 ### Mutants of the Declarations
 
@@ -583,7 +583,7 @@ Every host does these, and nothing else:
 
 1. **It fires top Networks on events.** Each event the Declarations name fires its top Networks, in order: power-on, reset, a start address, each frame or vertical blank, each interrupt or timer, the main loop starting again. A firing runs to its end before the next begins.
 2. **Before a firing, it gives the world's values.** Each Field that comes in takes the value its device holds now. At power-on, each Field with no initial value takes the machine's power-on contents. Each stream is emptied.
-3. **There is nothing between ticks.** A firing runs to its end. The host writes inbound Interface Records before a tick and reads outbound ones after (GLOSSARY.md, Interface Record). A halt the operator continues past ends the tick, and a Record the tick produces (Spacewar's `pause`) says what the next tick does when the operator answers. The loader still reads `wait`, which hands the firing to the host in the middle, from an earlier form. RUNS source does not use it.
+3. **There is nothing between ticks.** A firing runs to its end. The host writes the top Network's inputs before a tick and reads its outputs after. A halt the operator continues past ends the tick, and a Record the tick produces (Spacewar's `pause`) says what the next tick does when the operator answers. The loader still reads `wait`, which hands the firing to the host in the middle, from an earlier form. RUNS source does not use it.
 4. **`stop` ends the game** as the original halts. No event fires after it.
 5. **After a firing, it takes each stream's contents** to the device the Declarations name, in the order emitted.
 
@@ -599,7 +599,7 @@ network tick
   produces: display, scoreboard, lights, pause
 ```
 
-`requires:` names the inbound Interface Records and `produces:` the outbound ones (GLOSSARY.md, Interface Record). The loader lowers them to the inline form's `reads:` and `writes:`.
+`requires:` names the top Network's inputs and `produces:` its outputs. The loader lowers them to the inline form's `reads:` and `writes:`.
 
 **Sketch.** On the byte-addressed machine, reset fires `power_on` once, vertical blank fires `tick` each frame, the host reads the joypad port into `pad.held` before each firing, and after it writes each tuple of `screen` to the video register. Where the original's main loop runs past the start of the next vertical blank and the interrupt lands inside it, the landing point is timing, as [Interrupts](./CONVERSION_PROCESS.md#3-map-each-routine-to-processors-and-networks) states.
 

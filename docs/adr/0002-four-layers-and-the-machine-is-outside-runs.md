@@ -20,6 +20,7 @@ A Conversion's goal is the game, not the machine the game shipped on. So the lin
 
 ## Consequences
 
+- Game Logic and Presentation meet only at Interface Records, never at a Processor. A Record is data, so it belongs to neither side; a Processor's code is written for one side, so a Processor on the line would already be on one side of it. Any translation is a Processor on one side.
 - `jump code at most N` stays in DIGS: it runs code the program wrote for itself, the way the original machine runs it.
 - Super Mario World's source does not contain Flappy Bird, and its Conversion does not either.
 - "Machine", "compiler", and "runtime" keep their ordinary computing meanings. A runtime environment (an OS, a browser, PICO-8) is part of the machine a binary targets.
