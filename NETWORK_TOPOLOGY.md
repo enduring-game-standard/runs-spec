@@ -143,7 +143,7 @@ processor show
 
 A game Record holds what only the Game Logic uses. An Interface Record holds what the game and its Presentation share: what the game writes for the Presentation to show, and what the world writes for the game to read. A Presentation Record belongs to one platform.
 
-The three kinds are the enduring-games pattern: `game` marks a Game Logic Record, `presentation` a Presentation one, and `interface` a Interface Record (GLOSSARY.md, Processor). The pattern is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor). RUNS-Spacewar's loader enforces it as this project's own rule.
+The three kinds are the enduring-games pattern: `game` marks a Game Logic Record, `presentation` a Presentation one, and `interface` an Interface Record (GLOSSARY.md, Processor). The pattern is a convention, not a base primitive of RUNS (GLOSSARY.md, Processor). RUNS-Spacewar's loader enforces it as this project's own rule.
 
 A Processor that touches a Presentation Record is part of the Presentation. Every other Processor is part of the game. The loader enforces three rules:
 

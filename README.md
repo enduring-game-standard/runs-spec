@@ -50,7 +50,7 @@ RUNS has three parts.
 
 The game runs as a sequence of ticks. A top Network fires once a tick and runs to its end. Nothing computes between ticks. Whatever the original computed between two steps is a transition in the Network, wired so that it fires in its turn.
 
-In RUNS-Spacewar every Record is one of three kinds: a **game** Record, an **interface** Record, or a **Presentation** Record. `game` marks a Game Logic Record, `presentation` a Presentation one, and `interface` a Interface Record. [Three kinds of Record](#three-kinds-of-record) states the rules.
+In RUNS-Spacewar every Record is one of three kinds: a **game** Record, an **interface** Record, or a **Presentation** Record. `game` marks a Game Logic Record, `presentation` a Presentation one, and `interface` an Interface Record. [Three kinds of Record](#three-kinds-of-record) states the rules.
 
 Each value one Processor hands to the next goes through a Record Field that the Network names. Processors connect only through the Network, by way of Records, and composition is bundling (GLOSSARY.md, Network). A Processor never calls another. A body computes with locals, which never leave it, and its only calls are the operators of the [machine description](./MACHINE_DESCRIPTION.md), such as the PDP-1's `rcl`, `scr`, and `popcount`.
 
