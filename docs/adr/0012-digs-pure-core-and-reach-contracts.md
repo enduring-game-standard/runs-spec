@@ -29,5 +29,5 @@ Fixed arithmetic, a static step bound, and a static memory footprint are not par
 - Lists may be unbounded. Spacewar's `object[24]` fits a PDP-1; Factorio's `entities[]` needs an allocator, and a PICO-8 Factorio is impossible, which is the true answer.
 - "No dynamic allocation" becomes "no observable memory": no pointers, no addresses. Lockstep holds because DIGS exposes no addresses.
 - Unbounded state lives in the Game Logic. Each Processor is a bounded loop; the only unbounded loop is the tick, in the wiring, visible in the topology. A leak in the Game Logic is deterministic and reproducible.
-- Changing a reach-contract changes Game Logic, so it makes a Variant, not a Port. Chocolate DOOM on a TI-83 needs smaller limits, so it is a Variant.
+- Changing a reach-contract changes Game Logic, so it makes a Variant, not a Game Port. Chocolate DOOM on a TI-83 needs smaller limits, so it is a Variant.
 - Validity checks the core only. "Too big" or "too slow" is advice or a target's decision.

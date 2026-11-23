@@ -435,7 +435,7 @@ network drift
 
 ### Inputs and outputs
 
-An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Port is the same game on other hardware, made by swapping its Presentation Processors (GLOSSARY.md, Port).
+An input or output is a header line, `direction name: kind`, the same on a Processor and on a Network. It replaces `reads:` and `writes:`. The loader's messages and code call each one a Port, as in `expand_ports`. In the EGS vocabulary a Game Port is the same game on other hardware, made by swapping its Presentation Processors (GLOSSARY.md, Game Port).
 
 | Direction | Meaning |
 |-----------|---------|

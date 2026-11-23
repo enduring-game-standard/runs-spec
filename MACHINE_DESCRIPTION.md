@@ -6,7 +6,7 @@ A **machine description** is a text file, `<machine>.runs-machine`, that states 
 
 The owner described this arithmetic as a RUNS Processor written in DIGS. This page writes the operator bodies in the core, a separate small language. Which form they take is open.
 
-A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Game Logic bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
+A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Game Port). Its types and operators pin the original's arithmetic bit for bit, so a Game Port can keep the Game Logic bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
 
 A machine description holds four things:
 
