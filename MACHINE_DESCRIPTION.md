@@ -2,11 +2,11 @@
 
 > Blocks tagged `runs-machine` on this page are machine-description source. `tools/check_examples.py` does not run them. RUNS-Spacewar's evaluator, `tools/runs.py`, holds [The PDP-1 description](#the-pdp-1-description) in code.
 
-A **machine description** is a text file, `<machine>.runs-machine`, that states the arithmetic of the games written for one machine: its number types and every operation on them, each with a body. That arithmetic is part of each game's logic, by the test in [Game logic or machine](./CONVERSION_PROCESS.md#game-logic-or-machine-the-one-test). The description is named for the machine because every game on that machine shares it: a conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches. Registers, addresses, and other choices that change nothing belong to the [declarations](./DECLARATIONS.md). Every type RUNS source uses that is not a count, a condition, or an enum comes from the description. An evaluator reads it. RUNS-Spacewar's evaluator holds the PDP-1 description in code, and no `pdp1.runs-machine` file exists yet.
+A **machine description** is a text file, `<machine>.runs-machine`, that states the arithmetic of the games written for one machine: its number types and every operation on them, each with a body. That arithmetic is part of each game's logic, by the test in [Game Logic or machine](./CONVERSION_PROCESS.md#game-logic-or-machine-the-one-test). The description is named for the machine because every game on that machine shares it: a conversion of a second PDP-1 game uses the same `pdp1.runs-machine`, and extends it only with an operator that game's play reaches. Registers, addresses, and other choices that change nothing belong to the [Declarations](./DECLARATIONS.md). Every type RUNS source uses that is not a count, a condition, or an enum comes from the description. An evaluator reads it. RUNS-Spacewar's evaluator holds the PDP-1 description in code, and no `pdp1.runs-machine` file exists yet.
 
 The owner described this arithmetic as a RUNS Processor written in DIGS. This page writes the operator bodies in the core, a separate small language. Which form they take is open.
 
-A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the game logic bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
+A machine description is how RUNS source declares its arithmetic, which every RUNS game declares ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), DIGS and Port). Its types and operators pin the original's arithmetic bit for bit, so a Port can keep the Game Logic bit-exact. GLOSSARY.md calls these game-defined numeric types; here a game takes them from its machine's description. This page's rule that every program names one machine is the rule of this format.
 
 A machine description holds four things:
 
@@ -41,19 +41,19 @@ The loader reads a program in this order:
 1. It reads every `.runs` and `.runs-prim` file of the program and finds the `machine` line.
 2. It finds the description and reads it. It checks the description's grammar, each type's width, the literal forms, each address space, and each operator's signature and body. It computes the type of every expression in every body and refuses a mismatch. [What the loader rejects](#what-the-loader-rejects) lists each error.
 3. It reads every number in the RUNS source by the description's literal forms. Collection sizes, loop bounds, and layout addresses are numbers too.
-4. It takes the description's type names as the names a Record field or a stream field may have, besides the enums the source declares and `int`, the count.
+4. It takes the description's type names as the names a Record Field or a stream Field may have, besides the enums the source declares and `int`, the count.
 5. `runs.check` resolves each operator symbol and each operator call in the RUNS source to one operator of the description, by the operands' types. It checks each operand where the signature has a literal, and each `requires:` whose operands are all constants.
 6. It checks each `layout` declaration against the description's address spaces.
 7. While a routine runs, the evaluator runs each operator's body in the core. A value of a machine type is a bit vector of the type's width.
 
 ### How RUNS uses the description's types
 
-- A field's type is an enum, `int` in a stream, or a type of the description.
+- A Field's type is an enum, `int` in a stream, or a type of the description.
 - An operator symbol in RUNS source, such as `a + b`, runs the operator the description gives that symbol for the operands' types. A call by name, such as `rcl(h, l, 2)`, runs the operator of that name.
 - A name that is not an operator of the description, a declared instruction, or a RUNS form is refused. A routine is run, not called.
 - An operator's result may be a tuple. RUNS takes it apart with `let (a, b) = ...` or `set (a, b) = ...`, one place per element. `_` takes an element that nothing reads.
 - **Counts meet machine types.** A count is RUNS's own integer, and RUNS computes on counts itself. If either operand of `+`, `-`, `==`, `!=`, `<`, `<=`, `>`, or `>=` is a count, the other converts to a count by its type's `as count` operator, and RUNS computes on the two integers. In every other place, a count where an operator's parameter is a machine type converts to that type by the type's `as literal` operator. A value of a machine type where RUNS needs a count, such as an index or a loop bound, converts by its type's `as count` operator.
-- **A literal's type.** A literal takes the machine type its context gives: the type of the field it is stored in, of the parameter it fills, or of the other operand. Where its context gives no machine type, a literal is a value of the description's literal type, and a count context converts it by `as count`. On the PDP-1 every literal is a `word`.
+- **A literal's type.** A literal takes the machine type its context gives: the type of the Field it is stored in, of the parameter it fills, or of the other operand. Where its context gives no machine type, a literal is a value of the description's literal type, and a count context converts it by `as count`. On the PDP-1 every literal is a `word`.
 - Enums, conditions, and counts are RUNS's own. Their comparisons and the count arithmetic are not in the description.
 
 ## Types
@@ -174,7 +174,7 @@ operator word_of(n: count) -> word as literal
 
 If the condition is false, the RUNS source is wrong, and the evaluator stops with the message. A parameter's name in braces stands for its value. `runs.check` evaluates a `requires:` before anything runs when every operand is a constant in the RUNS source.
 
-GLOSSARY.md calls a condition of this kind a precondition (Precondition), and also uses `requires:` for a top Network's inbound boundary Records (Boundary Record). In an operator, `requires:` is always a condition.
+GLOSSARY.md calls a condition of this kind a Precondition (Precondition), and also uses `requires:` for a top Network's inbound boundary Records (Boundary Record). In an operator, `requires:` is always a condition.
 
 ### Bodies
 
@@ -237,7 +237,7 @@ The core has no recursion, no unbounded loop, no floating point, no memory, no R
 
 A carry, an overflow, or a condition bit is not part of a type. A type is a bit vector, and an operator is a function of its operands. An operator that the machine runs with a flag takes the flag as an operand and returns the new flag in its result.
 
-A flag that one routine leaves and another reads is a value the original carried between routines. It is a field of the Record of the concern it belongs to, exactly as a value the original carried in AC or IO is. The operator returns it, and the RUNS source stores it. A flag that a routine sets and reads before it hands it on is a local.
+A flag that one routine leaves and another reads is a value the original carried between routines. It is a Field of the Record of the concern it belongs to, exactly as a value the original carried in AC or IO is. The operator returns it, and the RUNS source stores it. A flag that a routine sets and reads before it hands it on is a local.
 
 A machine's add with carry shows the form. It returns the byte, the carry out, and the signed overflow:
 
@@ -248,7 +248,7 @@ operator adc(a: byte, m: byte, c: bit) -> (byte, bit, bit)
   (r, vec(s div 256, 1), and(not(xor(a[7], m[7])), xor(a[7], r[7])))
 ```
 
-A 16-bit score kept in two bytes adds its low bytes in one routine and its high bytes in the next. The carry between them is a field:
+A 16-bit score kept in two bytes adds its low bytes in one routine and its high bytes in the next. The carry between them is a Field:
 
 ```text
 game record score
@@ -269,9 +269,9 @@ processor add_high
   set score.high = high
 ```
 
-This example is in the older form, where each Processor declares the Records it reads and writes, and both set fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (GLOSSARY.md, Processor). A Processor that sets a field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (GLOSSARY.md, Record).
+This example is in the older form, where each Processor declares the Records it reads and writes, and both set Fields of `score`. In converted source a Processor knows no Record, and the Network wires each Field to its inputs and outputs (GLOSSARY.md, Processor). A Processor that sets a Field it read is allowed: only a Processor changes a Record, and it may put its result back where it took the value from (GLOSSARY.md, Record).
 
-A register is the same. A value the original carries in a register from one routine to the next is a field. A comment may name the register. The declarations say which register holds the field.
+A register is the same. A value the Original carries in a register from one routine to the next is a Field. A comment may name the register. The Declarations say which register holds the Field.
 
 ## Floating point
 
@@ -346,7 +346,7 @@ A machine with several memories that play reads, such as a console's video memor
 
 ## Stated layout
 
-Where the program reads past the last entry of a collection, or reads one kind of object as another, the machine supplies the answer: whatever lies there in memory, the same every time. Where play observes that value, the layout is part of the complete game logic ([README](./README.md#the-game-logic-is-complete-and-glitches-emerge-from-it)). The RUNS source states it with a **layout** declaration in a `.runs` file. The declarations place everything the layout does not, and follow the layout where it states it.
+Where the program reads past the last entry of a collection, or reads one kind of object as another, the machine supplies the answer: whatever lies there in memory, the same every time. Where play observes that value, the layout is part of the complete Game Logic ([README](./README.md#the-game-logic-is-complete-and-glitches-emerge-from-it)). The RUNS source states it with a **layout** declaration in a `.runs` file. The Declarations place everything the layout does not, and follow the layout where it states it.
 
 ```text
 layout ram
@@ -360,32 +360,32 @@ layout ram
 | `record R at A` | R's first unit lies at address A. |
 | `record R after Q` | R's first unit lies right after the last unit of Q. |
 | `record R over Q` | R's first unit lies at Q's first unit. R and Q share units. |
-| `... by slot` | A collection's fields lie slot by slot: slot 0's fields in declared order, then slot 1's. This is the default. |
-| `... by field` | A collection's fields lie field by field: every slot of the first field, then every slot of the next. |
-| `field R.f at A`, `field R.f after Q` | One field's slots lie together, for a Record whose fields do not. |
+| `... by slot` | A collection's Fields lie slot by slot: slot 0's Fields in declared order, then slot 1's. This is the default. |
+| `... by field` | A collection's Fields lie Field by Field: every slot of the first Field, then every slot of the next. |
+| `field R.f at A`, `field R.f after Q` | One Field's slots lie together, for a Record whose Fields do not. |
 | `fixed at A: v, ...` | Units whose contents play reads and the game never writes, such as the bytes of code a stray read reaches. One value per unit. |
 
-Only Records that play reads through layout are placed. A placed Record has no enum field: where play reads a value's bits through layout, the bits are the game's, so the field has a machine type and the RUNS source gives its values. Each field's type is a whole number of the space's units wide. Two placements that share a unit are refused, unless one is `over` the other.
+Only Records that play reads through layout are placed. A placed Record has no enum Field: where play reads a value's bits through layout, the bits are the game's, so the Field has a machine type and the RUNS source gives its values. Each Field's type is a whole number of the space's units wide. Two placements that share a unit are refused, unless one is `over` the other.
 
 ### The read rule
 
-A placed Record's fields live in the space's units. A field of type T is `k` units wide, its type's bits over the space's unit. Slot i of field f lies at:
+A placed Record's Fields live in the space's units. A Field of type T is `k` units wide, its type's bits over the space's unit. Slot i of Field f lies at:
 
-- `by slot`: R's address, plus i times the units of one slot, plus the units of the fields declared before f.
-- `by field`: R's address, plus R's count times the units of the fields declared before f, plus i times k.
+- `by slot`: R's address, plus i times the units of one slot, plus the units of the Fields declared before f.
+- `by field`: R's address, plus R's count times the units of the Fields declared before f, plus i times k.
 - `field R.f`: f's address, plus i times k.
 
 The address wraps at the space's address width. i is any integer. A slot from 0 to the last reads and writes as it always does. An index past the last slot, or below 0, reads what the layout puts at that address:
 
 1. Take the k units from the address up.
-2. Take each unit's bits from the field slot or the `fixed` value that holds that unit.
+2. Take each unit's bits from the Field slot or the `fixed` value that holds that unit.
 3. Join the units in the space's order into one vector of k units. That vector is the value, of f's type.
 
-A write past the last slot splits the value into k units in the space's order and writes each unit into the field slot that holds it. It replaces that slice of the slot's value and leaves its other bits.
+A write past the last slot splits the value into k units in the space's order and writes each unit into the Field slot that holds it. It replaces that slice of the slot's value and leaves its other bits.
 
 Every unit a read or write reaches is placed. A read or write that reaches a unit no layout places, or a write that reaches a `fixed` unit, means the RUNS source is wrong. A unit the game writes is part of a Record, and the conversion places that Record.
 
-The contract still holds. A Processor that reads through layout declares every Record whose units it reads, under `reads:` or `writes:`. A Processor that writes through layout declares every Record whose units it writes, under `writes:`. A field slot with no initial value is unknown until the game sets it or the world gives it, through layout as elsewhere. A read through layout that reaches it is the same error as any read of an unknown field. A write through layout that covers only part of an unknown slot is an error too.
+The contract still holds. A Processor that reads through layout declares every Record whose units it reads, under `reads:` or `writes:`. A Processor that writes through layout declares every Record whose units it writes, under `writes:`. A Field slot with no initial value is unknown until the game sets it or the world gives it, through layout as elsewhere. A read through layout that reaches it is the same error as any read of an unknown Field. A write through layout that covers only part of an unknown slot is an error too.
 
 Records placed `over` each other are one memory read two ways. Every read or write of one is a read or write of the units they share, so a Processor that touches one declares both.
 
@@ -406,21 +406,21 @@ game record lines
 
 `hits` takes units 0x0300 to 0x030f. `lines.count` lies at 0x0310, and `lines.first` at 0x0311 and 0x0312. A read of `hits.line[8]` reaches 0x0310 and 0x0311. Little-endian, the unit at 0x0310 is the low byte. So the read gives `cat(low byte of lines.first, lines.count)`, and the Processor declares `reads: lines`. A write of `hits.line[8]` sets `lines.count` to the value's low byte and the low byte of `lines.first` to its high byte.
 
-A reference the original kept as an address becomes an index into the collection it points into. The declarations encode the index as the machine's address. A stale reference is an index the game kept after its slot changed meaning. In range, it reads that slot as it is now. Past the end, it reads what the layout puts there.
+A reference the original kept as an address becomes an index into the collection it points into. The Declarations encode the index as the machine's address. A stale reference is an index the game kept after its slot changed meaning. In range, it reads that slot as it is now. Past the end, it reads what the layout puts there.
 
 ## Instructions are not part of the description
 
 `type insn` is not part of a machine description. A Record that holds code is impure, because instructions a Processor runs are logic, and logic lives in a Processor's own source. [A Record holds no code](./DIGS_EXPRESSION_LANGUAGE.md#a-record-holds-no-code) states the rule.
 
-Where the program runs code it fixed for itself or jumps into the middle of a routine, the game logic on that path is what the machine does with those bytes. It is part of the complete game logic, and the RUNS source states it in a Processor. Code the program never contained, such as code the player writes and the machine then runs, is the machine's behavior, not game logic ([README](./README.md#the-binary-is-the-original)). The instruction encodings that rebuild the bytes belong to the target's compiler.
+Where the program runs code it fixed for itself or jumps into the middle of a routine, the Game Logic on that path is what the machine does with those bytes. It is part of the complete Game Logic, and the RUNS source states it in a Processor. Code the program never contained, such as code the player writes and the machine then runs, is the machine's behavior, not Game Logic ([README](./README.md#the-binary-is-the-original)). The instruction encodings that rebuild the bytes belong to the target's compiler.
 
 ## The host is not part of the description
 
-A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves belong to the machine's declarations. [Declarations](./DECLARATIONS.md) states them. The description holds types, literals, operators, and address spaces.
+A machine description says nothing about how the world drives the game. The events that fire a top Network (power-on, reset, a start address, a frame, an interrupt) and the devices that carry what comes in and what leaves belong to the machine's Declarations. [Declarations](./DECLARATIONS.md) states them. The description holds types, literals, operators, and address spaces.
 
 ## What counts as the machine
 
-Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the game logic. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Glitch).
+Sorting a behavior at the machine's edge ([README](./README.md#sort-a-behavior-at-the-machines-edge)) needs a machine to sort against. Which machine that is remains a judgment. It covers which revision of the machine counts, and where specified behavior ends and physical fault begins. A flipped bit is a fault, not the machine's behavior. A documented CPU quirk is behavior, and so part of the Game Logic. The judgment is made once per machine, in that machine's description, and every game on the machine shares it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Glitch).
 
 The form a description states this in is not settled, and this page defines none. The PDP-1 description below does not state it yet. RUNS-Spacewar checks against SIMH's PDP-1 simulator, whose CPU semantics it never alters.
 
@@ -727,7 +727,7 @@ Each error comes from one of four stages. The description stage finds an error a
 | `operator <X>: cites no operation <text>` | Description | A citation names a format, operation, rounding, or NaN rule the tables above do not list. |
 | `<t> is not an octal number` (or `binary`, `decimal`, `hexadecimal`) | Parser | A literal holds a digit outside its base. |
 | `<X> is not an operator of the machine; a routine is run, not called` | Parser | RUNS source calls a name that is not an operator of the description or a declared instruction. |
-| `no type <T>` | `runs.check` | A field's type is not an enum, `int` in a stream, or a type of the description. |
+| `no type <T>` | `runs.check` | A Field's type is not an enum, `int` in a stream, or a type of the description. |
 | `no operator <b> on (<types>)` | `runs.check` | RUNS source uses a symbol on operand types no operator takes. |
 | `<X> takes <n> values, not <m>` | `runs.check` | A call passes the wrong number of operands. |
 | `<X> takes a <T>, not a <U>` | `runs.check` | An operand has another type than its parameter, and no conversion makes it one. |
@@ -737,22 +737,22 @@ Each error comes from one of four stages. The description stage finds an error a
 | the operator's `requires:` message | `runs.check`, run time | A `requires:` is false. `runs.check` finds it when its operands are constants. On the PDP-1 these are `<n> does not fit a word` and `not a count`. |
 | `operator <X> divides by zero`, `operator <X>: bit <i> of a <w>-bit vector` | Run time | A body reaches `div` or `mod` by 0, or a bit outside a vector. |
 | `layout <S>: no space <S> on machine <M>` | Layout | A `layout` names a space the description does not declare. |
-| `layout <S>: <R> is placed twice` | Layout | Two lines place one Record or one field. |
+| `layout <S>: <R> is placed twice` | Layout | Two lines place one Record or one Field. |
 | `layout <S>: <R> and <Q> share address <A>` | Layout | Two placements share a unit, and neither is `over` the other. |
 | `layout <S>: <R> is not placed` | Layout | `after` or `over` names a Record that no line before it places. |
-| `layout <S>: <R>.<f> is an enum; its bits are the game's, so give it a machine type` | Layout | A placed Record has an enum field. |
-| `layout <S>: <R>.<f> is a <T> of <n> bits, not whole <u>-bit units` | Layout | A placed field's type is not a whole number of units wide. |
-| `layout <S>: <R>.<f> spans units in a space with no order` | Layout | A field wider than one unit lies in a space that states no `order`. |
+| `layout <S>: <R>.<f> is an enum; its bits are the game's, so give it a machine type` | Layout | A placed Record has an enum Field. |
+| `layout <S>: <R>.<f> is a <T> of <n> bits, not whole <u>-bit units` | Layout | A placed Field's type is not a whole number of units wide. |
+| `layout <S>: <R>.<f> spans units in a space with no order` | Layout | A Field wider than one unit lies in a space that states no `order`. |
 | `layout <S>: <A> is past the space's <N> units` | Layout | A placement or a `fixed` value reaches past the space. |
 | `layout <S>: <v> does not fit a <u>-bit unit` | Layout | A `fixed` value is wider than a unit. |
 | `address <A> of <S> holds nothing the layout places` | Run time | A read or write through layout reaches an unplaced unit. |
 | `address <A> of <S> is fixed; a unit the game writes is a Record's` | Run time | A write through layout reaches a `fixed` unit. |
 | `<P> does not declare reads: <Q>`, `... writes: <Q>` | Run time | A read or write through layout reaches units of a Record the Processor does not declare. |
-| `<R>.<f>[<i>] is unknown: the game has not set it, so the world gives it` | Run time | A read through layout, or a write that covers part of a slot, reaches a field slot with no value. |
+| `<R>.<f>[<i>] is unknown: the game has not set it, so the world gives it` | Run time | A read through layout, or a write that covers part of a slot, reaches a Field slot with no value. |
 
 ## Grammar
 
-This grammar describes a `.runs-machine` file, the core, and the two declarations a `.runs` file gains. Indentation is two spaces a level. A comment runs from `#` to the end of the line.
+This grammar describes a `.runs-machine` file, the core, and the two Declarations a `.runs` file gains. Indentation is two spaces a level. A comment runs from `#` to the end of the line.
 
 ```text
 description = "machine" NAME { declaration }
@@ -817,6 +817,6 @@ placement   = "record" NAME ( "at" NUMBER | "after" NAME | "over" NAME ) [ "by" 
             | "fixed" "at" NUMBER ":" NUMBER { "," NUMBER }
 ```
 
-In `body`, `steps`, and `value`, each line is indented one level from the line that opens it. A body's last line is its value, so an `if` on the last line of a body is a `value`, and an `if` on any other line is a `step`. A call in `primary` names a core primitive (`bits`, `vec`, `cat`, `and`, `or`, `xor`, `not`) or an operator defined above. In the `.runs` declarations, NUMBER is read by the description's literal forms, and in a body by the core's.
+In `body`, `steps`, and `value`, each line is indented one level from the line that opens it. A body's last line is its value, so an `if` on the last line of a body is a `value`, and an `if` on any other line is a `step`. A call in `primary` names a core primitive (`bits`, `vec`, `cat`, `and`, `or`, `xor`, `not`) or an operator defined above. In the `.runs` Declarations, NUMBER is read by the description's literal forms, and in a body by the core's.
 
 *MIT License. Open for implementation, extension, and critique.*

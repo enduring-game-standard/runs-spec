@@ -10,6 +10,6 @@ The law holds at every scale: across the Network, where a fan-in is a fold that 
 ## Consequences
 
 - `position = position + velocity` is pure as written: one link of a chain, `position_v0` to `position_v1`.
-- Game logic that overwrites a Record outside the wiring, or needs authored execution order, likely carries an original machine's workaround. Pass it hand to hand instead, and the order follows (ADR-0005).
-- The game logic steps by a fixed quantum, delivered on an Interface Record (a tick count or a constant step). Variable time, such as render interpolation, is presentation.
+- Game Logic that overwrites a Record outside the wiring, or needs authored execution order, likely carries an original machine's workaround. Pass it hand to hand instead, and the order follows (ADR-0005).
+- The Game Logic steps by a fixed quantum, delivered on an Interface Record (a tick count or a constant step). Variable time, such as render interpolation, is Presentation.
 - A validator lowers bodies to static single assignment, then checks the two rules of ADR-0005 in one pass.
