@@ -503,7 +503,7 @@ The PDP-1 compiler's rules are this kind. Among them:
 - A `match` whose arms each run the routine their member is encoded as is a jump through the Field's word.
 - `stop` is a halt that halts again when continued (`hlt / jmp .-1`).
 
-These rules read the inline form that Network files lower to, whose loops may exit mid-body with `break`. A bounded loop has a count fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Processor and Network). RUNS-Spacewar writes a loop with a data-dependent exit as a loop bundle that a Guard stops, under the loop rule of [The Network loop](./NETWORK_TOPOLOGY.md#the-network-loop).
+These rules read the inline form that Network files lower to, whose loops may exit mid-body with `break`. A bounded loop has a count fixed before it starts, with no `break`, `continue`, or early return (GLOSSARY.md, Processor and Network). RUNS-Spacewar writes a loop with a data-dependent exit as a loop Bundle that a Guard stops, under the loop rule of [The Network loop](./NETWORK_TOPOLOGY.md#the-network-loop).
 
 RUNS-Spacewar's `pdp1/README.md` lists every rule. A compiler for another machine gains a rule only for an idiom a second program on that machine would use.
 
