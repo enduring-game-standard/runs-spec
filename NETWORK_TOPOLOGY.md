@@ -356,6 +356,7 @@ network frame
   if objects.routine[0] == none:
     if console.hold == off:
       run launch
+        becomes: torpedo
         routine: objects.routine[0]
         counter: objects.counter[0]
         dx: objects.dx[0]
@@ -366,6 +367,7 @@ network frame
   for slot in 0 .. 3:
     if objects.routine[slot] != none:
       run calc
+        becomes: explosion
         routine: objects.routine[slot]
         counter: objects.counter[slot]
         x: objects.x[slot]
@@ -381,6 +383,7 @@ network frame
         points: display
 
 network calc
+  in becomes: calc_routine
   inout routine: calc_routine
   inout counter: word
   inout x: word
@@ -400,6 +403,7 @@ network calc
     explosion: run explosion
 
 network torpedo
+  in becomes: calc_routine
   inout routine: calc_routine
   inout counter: word
   inout x: word
@@ -447,9 +451,29 @@ An input or output carries one place. Its kind says how much: a type of the mach
 
 ### Wires
 
-A `run` wires each input and output of the routine it fires, one per indented line, `port: field`. The field is a field of a Record, a slot of one, a whole Record or stream, or an input or output of the Network that runs it. Each input and output is wired exactly once. A wire to a field of the same name may be left out: `run inertia` in `drift` wires `velocity` to `drift`'s input `velocity`, `position` to its `position`, and `acceleration` to its `acceleration`. `run torpedo` in `calc` leaves out every wire.
+A `run` wires each input and output of the routine it fires, one per indented line, `port: field`. The field is a field of a Record, a slot of one, a whole Record or stream, or an input or output of the Network that runs it. An `in` of an enum kind may instead take a member, as below. Each input and output is wired exactly once. A wire to a field of the same name may be left out: `run inertia` in `drift` wires `velocity` to `drift`'s input `velocity`, `position` to its `position`, and `acceleration` to its `acceleration`. `run torpedo` in `calc` leaves out every wire.
 
 A bundle is a Sub-Network: a Network used as a Processor from outside, with typed inputs and outputs at its boundary, whose content references its parts by ID. There is no privileged sub-network entity, only regions of one graph at different zoom levels (GLOSSARY.md, Sub-Network and Network). In the inline form a bundle collapsed is `run name` and its wires. Expanded, it is its own lines. In a network file it is one transition, and expanded it is its own file. A bundle's input or output wired to an outer one resolves through to the field the top Network wires: the first `run drift` in `torpedo` moves `objects.dx[slot]` and `objects.x[slot]`, and the second moves `objects.dy[slot]` and `objects.y[slot]`. Any bundle, from one Processor up to the whole game, can be read and published alone, because its inputs and outputs are its whole contract.
+
+A member that names a routine is wired too. An enum whose members the top Network's `match` turns into routines, such as `calc_routine`, says which routine runs an object. A Processor or bundle that sets such a field, or tests it in a guard, takes the member through an input and never names it: `explode` sets `routine = becomes`, and the top Network wires `becomes: explosion`. The top Network decides what the torpedo becomes, and the torpedo only carries the member, so a torpedo published alone does not name the explosion. A member is a constant the Network picks, not a value computed at run time, so it goes on the wire itself, with no Record to hold it. The compiler encodes it at each use as the target's declarations encode the member, so the image is unchanged. A Processor that writes an "expired" field for a guard to test is not a substitute: the extra field and guard are instructions the original does not have (owner, 2026-11-24). RUNS-Spacewar's `explode_torpedo`, `lost_in_hyperspace` and `collision` still name `explosion`, and `collide_pairs` still tests `== explosion`.
+
+```runs-rejected
+# rejected: a member is a constant the Network picks, wired only to an in
+enum calc_routine
+  none
+  explosion
+
+game record objects
+  routine: calc_routine = none
+
+processor clear
+  out routine: calc_routine
+  set routine = none
+
+network frame
+  run clear
+    routine: explosion
+```
 
 Values between Processors stay Records that the Network names. A `let` stays local to one Processor, and no local outlives the firing.
 
@@ -492,7 +516,7 @@ A Dispatch is a bounded fold whose count is fixed before it starts, with no `bre
 
 An inline guard compares values that Records hold, with each other or with constants, and joins comparisons with `and`, `or` and `not`. A bundle's guard tests its inputs and outputs, which are fields. It uses the expression syntax of [DIGS](./DIGS_EXPRESSION_LANGUAGE.md#expressions), so word comparisons follow the word's rules. Arithmetic inside a slot's index chooses a slot and is allowed. Arithmetic on a value belongs in a Processor, as [Guards](#guards) states.
 
-A `run` passes only wires. `slot` stays in the one Network that walks the slots, `frame` above, and a bundle gets `objects.x[slot]` already chosen. A slot that the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it. A `run` that passes a value instead of a wire, in the form a conversion starts from, is an impurity. The loader reports a guard that computes and a `run` that passes a value, and refuses them.
+A `run` passes only wires. `slot` stays in the one Network that walks the slots, `frame` above, and a bundle gets `objects.x[slot]` already chosen. A slot that the game computes, such as the free slot a new torpedo takes, lives in a Record, and the walking Network wires the whole field beside it. A `run` that passes a value instead of a wire, in the form a conversion starts from, is an impurity. A member wired to an `in` is a constant the Network picks, not such a value. The loader reports a guard that computes and a `run` that passes a value, and refuses them.
 
 A guard that computes is refused:
 
@@ -650,11 +674,12 @@ These Processors complete the running example. [DIGS expression language](./DIGS
 
 ```runs-prim
 processor launch
+  in becomes: calc_routine
   out routine: calc_routine
   out counter: word
   out dx: word
   out busy: light
-  set routine = torpedo
+  set routine = becomes
   set counter = -2
   set dx = 040
   set busy = on
@@ -664,9 +689,10 @@ processor count_down
   set counter = counter + 1
 
 processor explode
+  in becomes: calc_routine
   out routine: calc_routine
   out counter: word
-  set routine = explosion
+  set routine = becomes
   set counter = -2
 
 processor coast
