@@ -2,13 +2,21 @@
 
 > Every accepted example on this page loads in RUNS-Spacewar's evaluator, `tools/runs.py`, passes `runs.check`, and runs. Every rejected example fails with the error its first line quotes. [Check the examples](./README.md#check-the-examples) says how.
 
-DIGS is the language of Rules Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network guards use the expressions on this page.
+DIGS is the language of Game Logic Processor bodies. Processors live in `.runs-prim` files. Records, streams, enums, and Networks live in `.runs` files and are described in [Network topology](./NETWORK_TOPOLOGY.md). Network Guards use the expressions on this page.
 
-A Processor is one rule of the game, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
+A Processor computes its outputs from its inputs, and it is stateless. It names no Record. It declares its inputs and outputs, and the Network that runs it wires each one to one Field. It takes values from its `in` and `inout` lines and gives values to its `out` and `inout` lines. Inside its body it declares locals and runs loops, and no local outlives the firing. What a Processor does depends only on its inputs, and its only effects are on the Fields wired to the outputs it sets. A Record is data and nothing else, so a Processor's logic lives in its own source and never in a Record.
 
-A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (GLOSSARY.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
+A body's semantics are single-assignment dataflow: a `set` that looks like reassignment is a new version of the value, and a loop is a bounded fold. That rule covers a body's locals. A Record keeps its value until a Processor gives it a new one, in the same place or in another (GLOSSARY.md, Record). RUNS-Spacewar's evaluator runs a body as statements in order, and its `loop` can exit early (see [Statements](#statements)).
 
-A Realization Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor). RUNS-Spacewar writes its presentation Processors in DIGS too, as `plot_particle` below shows.
+A Presentation Processor's body is not DIGS, and the standard specifies no language for it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Presentation). RUNS-Spacewar writes its Presentation Processors in DIGS too, as `plot_particle` below shows.
+
+## What a body guarantees
+
+A DIGS body is pure: it reads only its inputs and writes only its outputs. It is total: it halts on every input. It is deterministic: its order of evaluation is fixed. It is inspectable: nothing in it is hidden, because every value enters and leaves by a declared input or output, and every loop states its bound.
+
+Every game declares its arithmetic in DIGS: its number types and their operations, typed like any value. A declaration states as much as the game chooses: a fixed-point algorithm, an exact float algorithm, or `float` as each machine computes it. All three are the same kind of declaration, and each fixes exactly what it states: `float` leaves the bits to each machine, so Quake's demos fall out of sync between machines. The arithmetic is Game Logic: it is to DOOM what the six-sided die is to Yahtzee, and DOOM computed with floats is not DOOM. No arithmetic declaration ranks above another, and `float` is a declaration like the others.
+
+A game may also declare a fixed bound on its running time or its memory, to reach machines that need one. Neither follows from totality: "total" means only that a body halts.
 
 ## A running example
 
@@ -59,7 +67,7 @@ network demo
     points: display
 ```
 
-## Processor declarations
+## Processor Declarations
 
 A Processor has a name, inputs and outputs, optional headers, and a body:
 
@@ -80,11 +88,11 @@ processor take_entry
 | `in name: kind` | An input the body reads and never sets. |
 | `out name: kind` | An output the body sets. |
 | `inout name: kind` | An input and output the body reads and sets. |
-| `requires: condition` | A precondition. If it is false when the Processor fires, the RUNS source is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
+| `requires: condition` | A Precondition. If it is false when the Processor fires, the RUNS source is wrong. If it is not a condition, such as a word, the evaluator rejects it. |
 
-An input's or output's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole field of a collection of N, which the body indexes itself. The body uses its name as it would use the field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#inputs-and-outputs) states how a Network wires them, and the checks on each wire.
+An input's or output's kind is a type of the machine description or an enum, for one word or one slot, or `type[N]` for a whole Field of a collection of N, which the body indexes itself. The body uses its name as it would use the Field: it reads it, sets it, and indexes it. [Network topology](./NETWORK_TOPOLOGY.md#inputs-and-outputs) states how a Network wires them, and the checks on each wire.
 
-A precondition is a DIGS boolean a Processor declares, and the guards that route to the Processor discharge it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Precondition). A top Network's inbound boundary Records are also named `requires:` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Boundary Record). The line shows which is meant: a condition on a Processor is a precondition.
+A Precondition is a DIGS boolean a Processor declares, and the Guards that route to the Processor discharge it ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Precondition). A top Network's inputs are also named `requires:`. The line shows which is meant: a condition on a Processor is a Precondition.
 
 A conversion starts from an older form, which the loader still reads. That Processor names Records under `reads:` (Records the body may read) and `writes:` (Records and streams the body may write, and read), and takes parameters, the slot a Network passes with `run`, as in `run count_down(slot)`. A parameter only chooses a slot of a collection, so a Network passes a count. A conversion converts it away: a Processor knows nothing of a Record, and only the Network knows both sides ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network).
 
@@ -106,7 +114,7 @@ processor peek
   set seen.value = random.number
 ```
 
-A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and composition is bundling ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Network). A body computes with its own locals:
+A Processor fires no routine. It has no `run`, `match`, `stop`, or `wait`, and an expression calls only operators of the machine description, never a Processor or a Network. Processors connect only through the Network, by way of Records, and Networks compose by nesting Sub-Networks ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Sub-Network). A body computes with its own locals:
 
 ```runs-prim-rejected
 # rejected: square_root is not an operator of the word; a routine is run, not called
@@ -115,7 +123,7 @@ processor half_root
   set square_root_call.root = square_root(square_root_call.entry) >> 1
 ```
 
-A routine the original called, such as the square root subroutine, becomes a Processor whose inputs and outputs are the values it hands through. The caller becomes a Network that wires them: it fires a Processor that sets the input field, fires the routine with its inputs and outputs wired to that field and to the result fields, and then fires a Processor that uses the output.
+A routine the original called, such as the square root subroutine, becomes a Processor whose inputs and outputs are the values it hands through. The caller becomes a Network that wires them: it fires a Processor that sets the input Field, fires the routine with its inputs and outputs wired to that Field and to the result Fields, and then fires a Processor that uses the output.
 
 ## Statements
 
@@ -123,18 +131,18 @@ A routine the original called, such as the square root subroutine, becomes a Pro
 |-----------|---------|
 | `let name = e` | Declare a new local. |
 | `let (a, b) = e` | Declare one local for each element of a tuple, such as the pair `scr` gives. `_` takes an element that nothing reads. |
-| `set target = e` | Update a local bound by `let`, an output (`out` or `inout`), or, in the older form, a field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
+| `set target = e` | Update a local bound by `let`, an output (`out` or `inout`), or, in the older form, a Field of a declared Record. The target may be a pair, as in `set (high, low) = rcl(high, low, 18)`. |
 | `if e:` ... `elif e:` ... `else:` | Run the first arm whose condition is true. |
 | `loop at most N:` | Run the body again and again until `break` or `return`. Running more than N passes means the RUNS source is wrong. |
-| `jump code at most N` | Run the words of code from `code`, a slot of a Record field of type `insn`, by the original machine's rules. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
+| `jump code at most N` | Run the words of code from `code`, a slot of a Record Field of type `insn`, as the original machine runs them. It is impure. [A Record holds no code](#a-record-holds-no-code) says why. |
 | `for i in a .. b:` | Run the body once for each count from `a` to `b`, both included, in ascending order. |
 | `break` | Leave the innermost `loop`. |
 | `continue` | Start the next pass of the innermost `loop`. |
 | `return` | End the Processor. It takes no value. |
-| `emit stream: a, b, c` | Append one entry to a stream, one value per field in order. The Processor takes the stream as an `inout` of the stream's kind, such as `inout points: display`, and emits to it by that name. |
+| `emit stream: a, b, c` | Append one entry to a stream, one value per Field in order. The Processor takes the stream as an `inout` of the stream's kind, such as `inout points: display`, and emits to it by that name. |
 | `unreachable` | Mark a path the game never takes. Reaching it means the RUNS source is wrong. |
 
-A loop in a body is a bounded fold whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor and Phase / Dispatch / Guard). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
+A loop in a body is a bounded loop, whose count is fixed before it starts, with no `break`, `continue`, or early `return` ([GLOSSARY.md](https://github.com/enduring-game-standard/.github/blob/main/GLOSSARY.md), Processor and Network). RUNS-Spacewar's evaluator also reads `loop`, `break`, `continue`, and `return`, which do not have that shape. How a body states a loop whose exit depends on data, such as the square root below, is open.
 
 `runs.check` follows each local through every path. A local that some path reaches unbound is an error before anything runs.
 
@@ -171,7 +179,7 @@ processor square_root                                       # sqt
     set root = root + 1
 ```
 
-`passes_left` and `root` are outputs, not locals, because the Network hands them on: a value one rule hands to the next is a field. The Network wires them to fields of `square_root_call`. Which words held them in the original, `sq1` and `sq2`, is the declarations' choice. A value that a Processor sets before it reads it, and never hands on, is a local.
+`passes_left` and `root` are outputs, not locals, because the Network hands them on: a value one Processor hands to the next is a Field. The Network wires them to Fields of `square_root_call`. Which words held them in the Original, `sq1` and `sq2`, is the Declarations' choice. A value that a Processor sets before it reads it, and never hands on, is a local.
 
 ## Expressions
 
@@ -186,12 +194,12 @@ An expression produces one of six kinds of value:
 
 ### Names and places
 
-- `record.field` reads a field of a single Record.
-- `record.field[i]` reads element `i` of a field of a collection. `i` is a count. A slot past the last is an error.
+- `record.field` reads a Field of a single Record.
+- `record.field[i]` reads element `i` of a Field of a collection. `i` is a count. A slot past the last is an error.
 - A bare name is a parameter, a local, an enum member, or an instruction that takes no operand.
-- A Record's name alone is not a value. A Record is read by its fields.
+- A Record's name alone is not a value. A Record is read by its Fields.
 
-Reading a field that has no initial value, before the game sets it or the world gives it, is an error.
+Reading a Field that has no initial value, before the game sets it or the world gives it, is an error.
 
 A number literal starts with a digit. The machine description's [literal forms](./MACHINE_DESCRIPTION.md#literals) say how it is read. On the PDP-1 a literal with a leading `0` is octal, as in `0355670` and `-04000`, and holds only the digits 0 to 7, other literals are decimal, and a literal fits in 18 bits. RUNS has no fractional or string literals.
 
@@ -235,7 +243,7 @@ If either operand of `+`, `-`, or a comparison is a count, the operation is on c
 
 ## The word
 
-Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The `word` is the game's number. That it is 18 bits in ones' complement is a rule of Spacewar, which the RUNS source states exactly: the examples on this page use the PDP-1 description, where Spacewar's word is defined. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
+Every operator on a machine type comes from the program's [machine description](./MACHINE_DESCRIPTION.md). The `word` is the game's number. That it is 18 bits in ones' complement is part of Spacewar's Game Logic, which the RUNS source states exactly: the examples on this page use the PDP-1 description, where Spacewar's word is defined. [The PDP-1 description](./MACHINE_DESCRIPTION.md#the-pdp-1-description) defines each operator below with a body. These tables summarize them.
 
 | Operation | What it does |
 |-----------|--------------|
@@ -258,7 +266,7 @@ The machine description's named operators are the only calls in RUNS. The PDP-1'
 | `dis(h, l, m)` | One step of the PDP-1's divide (`dis`). The result is a pair. |
 | `popcount(a)` | The number of bits set in `a`, as a count. |
 
-The explosion's dot shows the pair operators. The original builds an `scl` instruction from a random number and then executes it. RUNS states that rule as a shift by `popcount` places.
+The explosion's dot shows the pair operators. The original builds an `scl` instruction from a random number and then executes it. RUNS states that Game Logic as a shift by `popcount` places.
 
 ```runs-prim
 # The original builds an scl from the random number's low 9 bits; it
@@ -291,11 +299,11 @@ processor plot_particle
 
 A Record holds data and nothing else. Instructions that a Processor runs are logic. So instructions kept in a Record and run with `jump` are logic in a Record, and that is impure.
 
-Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. Pure RUNS source states what that code computes, in Processors of its own. The binary holds the instructions. A general compiler for the machine reproduces those bytes, and RUNS itself does not hold them. That code is fixed by the program's own tables, so the edition carries it. Code the player writes and the program then runs is the standard example of an exclusion instead ([README](./README.md#the-binary-is-the-original-the-runs-source-is-its-edition)). The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
+Some original programs run data as code. Spacewar's outline compiler writes each ship's outline as PDP-1 instructions at the start of each game, and each frame the spaceship jumps into that code to draw the ship. Pure RUNS source states what that code computes, in Processors of its own. The binary holds the instructions. A general compiler for the machine reproduces those bytes, and RUNS itself does not hold them. That code is fixed by the program's own tables, so it is Game Logic. Code the program never contained, such as code the player writes, is the machine's behavior instead ([README](./README.md#the-binary-is-the-original)). The explosion's dot above shows the pattern on a smaller scale. The original builds an `scl` and executes it, and RUNS states the shift it computes.
 
 The language parses `type insn`, the instruction constructors, and `jump` for source that keeps code in a Record, as an earlier RUNS-Spacewar outline did. The loader counts each use as an impurity, with one of two messages:
 
-- `<record>.<field>: a Record holds data; instructions a Processor runs are logic`, for each field of type `insn`.
+- `<record>.<field>: a Record holds data; instructions a Processor runs are logic`, for each Field of type `insn`.
 - `processor <name>: runs instructions from a Record (jump); its logic belongs in a Processor of its own`, for each Processor that runs `jump`.
 
 A program does not load while it keeps instructions in a Record:
@@ -339,8 +347,8 @@ The pure form of `patched` is one Processor that adds the step to the value, the
 
 To read source that uses these forms:
 
-- A field of type `insn` holds one word of code. An expression builds an instruction by its name and operand, as in `lac(counter.value)` or `jmp(after_patch)`. An instruction with no operand, such as `cma`, is a bare name. Naming a word does not read it, so building `lac(counter.value)` is not a read of `counter`. `rcl` with one operand is the instruction. With three, it is the pair operator.
-- `jump code at most N` runs the words from `code` by the original machine's rules, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
+- A Field of type `insn` holds one word of code. An expression builds an instruction by its name and operand, as in `lac(counter.value)` or `jmp(after_patch)`. An instruction with no operand, such as `cma`, is a bare name. Naming a word does not read it, so building `lac(counter.value)` is not a read of `counter`. `rcl` with one operand is the instruction. With three, it is the pair operator.
+- `jump code at most N` runs the words from `code` as the original machine runs them, at most N instructions. Each word it fetches, reads, or writes goes through the running Processor's contract. AC, IO, and the program flags belong to the code, and are unknown until it sets them. The code ends at a jump to a routine, and the Network must run that routine next.
 - The parser needs `type insn` to read an instruction, so a file that builds instructions loads only together with the file that declares it. [Network topology](./NETWORK_TOPOLOGY.md#types) describes `type insn`.
 
 ## What the evaluator rejects
@@ -360,7 +368,7 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `... declares ... under reads: and writes:` | `runs.check` | A Processor lists a Record under both. `writes:` lets it read the Record too. |
 | `... writes ...; declare writes: ...`, `... reads ...; declare reads: ...` | `runs.check` | The routine touches a Record its headers do not declare. |
 | `... declares reads: ..., but nothing in it reads ...`, the same for `writes:` | `runs.check` | A header declares a Record the routine never touches. |
-| `... holds ..., not ...`, `... is passed ...` | `runs.check` | A value of one type goes where another is wanted: a member into a word field, an instruction where a word goes, or a parameter passed different types by different runs. |
+| `... holds ..., not ...`, `... is passed ...` | `runs.check` | A value of one type goes where another is wanted: a member into a word Field, an instruction where a word goes, or a parameter passed different types by different runs. |
 | `... fires itself` | `runs.check` | A routine fires itself. A recursion is written as a stack Record and a bounded Network loop. |
 | `... compares a word with 0 only, or a slot or count with a number` | `runs.check` | An ordering compare has a word on the left and anything but 0 on the right. |
 | `... of two constants is constant` | `runs.check` | A comparison or operator has a constant on both sides. |
@@ -372,22 +380,22 @@ Each error comes from one of three stages. The parser finds an error as it reads
 | `... outside a loop` | `runs.check` | `break` or `continue` stands outside a `loop`. |
 | `unknown name ...` | `runs.check` | A name is not a parameter, a local bound on every path, an enum member, or an instruction. |
 | `set ... before let` | `runs.check` | `set` names a local that `let` has not bound on every path. |
-| `let binds a local name` | `runs.check` | `let` names a Record field. |
-| `... has no field ...`, `... is a collection`, `... is one word` | `runs.check` | A place names a field its Record lacks, or indexes it wrongly. |
+| `let binds a local name` | `runs.check` | `let` names a Record Field. |
+| `... has no field ...`, `... is a collection`, `... is one word` | `runs.check` | A place names a Field its Record lacks, or indexes it wrongly. |
 | `... is no stream`, `... takes N values` | `runs.check` | An `emit` names something that is not a stream, or passes the wrong number of values. |
 | `... takes a number`, `... names a word of a Record` | `runs.check` | An instruction's operand is not the kind of operand the instruction takes. |
 | `code is a slot of a collection` | `runs.check` | A `jump` names a word that is not a slot of a collection. |
-| `an initial value touches no Record` | Initial values | A Record field's initial value reads a Record. |
+| `an initial value touches no Record` | Initial values | A Record Field's initial value reads a Record. |
 | `... does not fit a word` | Run time | A literal is wider than 18 bits. |
 | `a word compares with 0 only` | Run time | `<`, `<=`, `>`, or `>=` runs with a word on the left and anything but the word 0 on the right. |
-| `not a condition` | Run time | A `requires:`, a guard, `and`, `or`, or `not` gets a value that is not `true` or `false`. |
+| `not a condition` | Run time | A `requires:`, a Guard, `and`, `or`, or `not` gets a value that is not `true` or `false`. |
 | `not a count` | Run time | A negative word stands where a count is needed, such as an index, a bound, or a shift amount. |
-| `... holds ..., not ...`, `... holds an instruction, not ...` | Run time | A `set` stores a value of the wrong type in a field of an enum or of `insn`. |
-| `... is unknown: the game has not set it, so the world gives it` | Run time | A routine reads a field with no initial value before the game sets it or the world gives it. |
+| `... holds ..., not ...`, `... holds an instruction, not ...` | Run time | A `set` stores a value of the wrong type in a Field of an enum or of `insn`. |
+| `... is unknown: the game has not set it, so the world gives it` | Run time | A routine reads a Field with no initial value before the game sets it or the world gives it. |
 | `slot ... is past the collection's ... slots` | Run time | An index reaches past a collection's last slot. |
 | `break or continue outside a loop` | Run time | A Processor runs `break` or `continue` outside a `loop`. |
 | `the code ran past N instructions` | Run time | A `jump` runs more instructions than its bound. |
-| `a jump from ... to ...` | Run time | Code that `jump` runs jumps into another Record field. |
+| `a jump from ... to ...` | Run time | Code that `jump` runs jumps into another Record Field. |
 | `the code jumped to ..., so the Network runs it next` | Run time | The Network does not run the routine that the code jumped to right after the Processor. |
 | `loop ran past its bound` | Run time | A `loop` runs more passes than its bound. |
 | `precondition fails` | Run time | A `requires:` is false when the Processor fires. |
